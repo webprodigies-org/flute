@@ -129,7 +129,13 @@ export function createRegistry() {
         });
         observer?.observe(binding.element);
       }
-      if (measure() || changed) publish();
+      // Playback re-renders every binding. Unchanged registration must not perform
+      // N full layout walks; Scene refreshes once after the commit, while resize
+      // and scroll observers handle external geometry changes.
+      if (changed) {
+        measure();
+        publish();
+      }
     },
     remove(token: symbol) {
       const previous = entries.get(token);

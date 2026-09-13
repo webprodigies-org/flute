@@ -24,6 +24,7 @@
     "demo",
     "tests",
     "vite.config.ts",
-    "playwright.config.ts"
+    "playwright.config.ts",
+    "playwright.performance.config.ts"
   ]
 }

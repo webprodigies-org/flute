@@ -256,20 +256,21 @@ export function focusMask(
   width: number,
   height: number,
   band: number,
-): string {
+) {
   const extent = Math.max(1, (f.radius + f.falloff) / f.scale);
-  const stops = Array.from({ length: 65 }, (_, i) => {
-    const t = i / 64;
-    const b =
-      f.maxBlur === 0
-        ? 0
-        : (sampleFocus(f, f.x + t * extent, f.y) / f.maxBlur) * FOCUS_BANDS;
-    const weight = Math.max(0, 1 - Math.abs(b - band));
-    return `<stop offset="${t}" stop-color="white" stop-opacity="${weight}"/>`;
-  }).join("");
-  const pad = (3 * f.maxBlur) / f.scale;
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width + 2 * pad}" height="${height + 2 * pad}" viewBox="${-pad} ${-pad} ${width + 2 * pad} ${height + 2 * pad}"><defs><radialGradient id="g" gradientUnits="userSpaceOnUse" cx="${f.x + width / 2}" cy="${f.y + height / 2}" r="${extent}">${stops}</radialGradient></defs><rect x="${-pad}" y="${-pad}" width="${width + 2 * pad}" height="${height + 2 * pad}" fill="url(#g)"/></svg>`;
-  return "data:image/svg+xml," + encodeURIComponent(svg);
+  return {
+    x: f.x + width / 2,
+    y: f.y + height / 2,
+    radius: extent,
+    stops: Array.from({ length: 33 }, (_, i) => {
+      const b =
+        f.maxBlur === 0
+          ? 0
+          : (sampleFocus(f, f.x + (i / 32) * extent, f.y) / f.maxBlur) *
+            FOCUS_BANDS;
+      return Math.max(0, 1 - Math.abs(b - band));
+    }),
+  };
 }
 export function cameraToCss(input: CameraInput = {}): string {
   const c = CameraSchema.parse(input);

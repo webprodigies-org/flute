@@ -259,7 +259,11 @@ export function Surface({
   );
   const blur = node?.blur ?? 0;
   const filtering =
-    node && node.width > 0 && node.height > 0 && node.focus.maxBlur > 0;
+    node &&
+    node.width > 0 &&
+    node.height > 0 &&
+    node.focus.maxBlur > 0 &&
+    (content !== undefined || !grouped);
   const leafStyle: CSSProperties = {
     pointerEvents: style?.pointerEvents ?? "auto",
     opacity: context.opacities.get(id) ?? 1,

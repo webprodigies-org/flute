@@ -14,7 +14,8 @@
     "verify:surface": "npm run typecheck && npm run test:core && npm run test:react && npm run test:architecture && npm run build && npm run test:browser",
     "build:library": "vite build --config vite.lib.config.ts && tsc -p tsconfig.lib.json",
     "preview": "vite preview --host 127.0.0.1",
-    "verify:motion": "npm run typecheck && npm run test:core && npm run test:react && npm run test:architecture && npm run build && npm run test:browser"
+    "verify:motion": "npm run typecheck && npm run test:core && npm run test:react && npm run test:architecture && npm run build && npm run test:browser && npm run test:performance",
+    "test:performance": "playwright test --config playwright.performance.config.ts"
   },
   "dependencies": {
     "zod": "4.3.6"
