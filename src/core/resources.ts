@@ -1,3 +1,4 @@
+import { ExportVideoSchema } from "./export";
 import { InitProjectSchema, LoadProjectSchema, ValidateProjectSchema, OpenPreviewSchema } from "./project";
 import { evaluateScene } from "./spatial";
 import { evaluateMotion } from "./motion";
@@ -9,6 +10,7 @@ import { validateScene } from "./scene";
  * This local renderer has no permissions, product account or navigation gates.
  */
 export const RESOURCES = Object.freeze({
+  "export-video": ExportVideoSchema,
   "init-project": InitProjectSchema,
   "load-project": LoadProjectSchema,
   "validate-project": ValidateProjectSchema,

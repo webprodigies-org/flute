@@ -12,11 +12,12 @@ import { fileURLToPath } from 'node:url';
  * New external dependencies require an explicit layer decision here and a fixture.
  */
 const owners = new Map([
+  ['ExportVideoSchema','src/core/export.ts'], ['CaptureManifestSchema','src/core/export.ts'], ['executeVideoExport','src/export/commands.ts'],
   ['executeProjectCommand', 'src/project/commands.ts'],
   ['InitProjectSchema', 'src/core/project.ts'],
   ['SceneSchema', 'src/core/scene.ts'], ['TransformSchema', 'src/core/scene.ts'],
   ['uniformFocusBlur','src/core/spatial.ts'], ['focusForSurface','src/core/spatial.ts'], ['sampleFocus','src/core/spatial.ts'], ['focusMask','src/core/spatial.ts'], ['cameraToCss','src/core/spatial.ts'],
-  ...['motionDuration','motionTime','cinematicProgress','cinematicTimeAtProgress'].map(name=>[name,'src/core/motion.ts']),
+  ...['motionDuration','motionTime','cinematicProgress','cinematicTimeAtProgress','sampleFrameTime'].map(name=>[name,'src/core/motion.ts']),
   ['CascadeSchema','src/core/choreography.ts'], ['createCascadeTracks','src/core/choreography.ts'],
   ['MotionSchema','src/core/motion.ts'], ['evaluateMotion','src/core/motion.ts'],
   ['evaluateScene', 'src/core/spatial.ts'], ['transformToCss', 'src/core/spatial.ts'],

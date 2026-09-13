@@ -1,4 +1,5 @@
-import { CaptureManifestSchema, ExportVideoSchema, type ExportVideoResult } from "../core/export";
+import { RESOURCES } from "../core/resources";
+import { CaptureManifestSchema, type ExportVideoResult } from "../core/export";
 import { fault } from "../project/errors";
 import * as services from "./services";
 
@@ -10,7 +11,7 @@ import * as services from "./services";
 export async function executeVideoExport(input: unknown, context: { root: string; signal?: AbortSignal }): Promise<ExportVideoResult> {
   let session: Awaited<ReturnType<typeof services.openCapture>> | undefined;
   try {
-    const parsed = ExportVideoSchema.safeParse(input);
+    const parsed = RESOURCES["export-video"].safeParse(input);
     if (!parsed.success) return { success: false, issues: parsed.error.issues.map(i => ({ code: "invalid-export", message: `${i.path.join(".")}: ${i.message}` })) };
     services.validateTarget(parsed.data.output);
     const scope = await services.prepareScope(context.root, parsed.data.output);

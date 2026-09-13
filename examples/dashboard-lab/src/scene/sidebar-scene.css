@@ -23,3 +23,11 @@ html, body, #root { margin: 0; min-height: 100%; }
 .study-controls select { color: inherit; background: #151619; border: 1px solid #353940; border-radius: 6px; padding: 7px; font-size: 11px; }
 .study-controls label { font-size: 11px; display:flex; align-items:center; gap:5px; }
 .study-controls label input[type=checkbox] { width:14px; min-width:14px; }
+
+.export-panel { padding: 0 5vw 24px; font-size:12px; color:#9ea6b3; }
+.export-panel summary { cursor:pointer; padding:10px 0; color:#d4dae5; }
+.export-panel > div { display:flex; flex-wrap:wrap; align-items:center; gap:25px; margin:12px 0; }
+.export-panel select { background:#17191e; padding:6px; margin-left:12px; border-radius:5px; color:#e0e5ef; }
+.export-panel code { display:block; padding:12px; background:#15171b; color:#b7c6e1; overflow-wrap:anywhere; margin:12px 0; }
+.export-panel a, .export-panel button { color:#dfe6f5; cursor:pointer; text-decoration:underline; }
+.export-panel p { margin:10px 0; }

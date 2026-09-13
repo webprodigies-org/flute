@@ -19,6 +19,19 @@ const spatialDoc = `/** SOURCE OF TRUTH: evaluateScene, transformToCss, focusFor
  * WHERE: consumed by React adapter.
  */`;
 const valid = {
+ 'src/core/export.ts': `/** SOURCE OF TRUTH: ExportVideoSchema, CaptureManifestSchema.
+ * WHAT: validate capture configuration.
+ * WHY: share one export contract.
+ * WHERE: consumed by export commands.
+ */
+import {z} from 'zod'; export const ExportVideoSchema=z.strictObject({}); export const CaptureManifestSchema=z.strictObject({});`,
+ 'src/export/commands.ts': `/** SOURCE OF TRUTH: executeVideoExport.
+ * WHAT: validate and run export requests.
+ * WHY: centralize the export policy.
+ * WHERE: CLI calls the command.
+ */
+export function executeVideoExport(){return {};}`,
+
  'src/core/choreography.ts': `/** SOURCE OF TRUTH: CascadeSchema, createCascadeTracks.
  * WHAT: define validated entrances.
  * WHY: prevent duplicate choreography.
@@ -30,7 +43,7 @@ import {z} from 'zod'; export const CascadeSchema=z.strictObject({}); export fun
   'src/project/commands.ts': `/** SOURCE OF TRUTH: executeProjectCommand.\n * WHAT: execute validated project commands.\n * WHY: protect scoped project state.\n * WHERE: invoked through CLI adapters.\n */\nexport async function executeProjectCommand(){return {};}`, 
   'src/core/scene.ts': `${sceneDoc}\nimport { z } from 'zod';\nexport const TransformSchema = z.strictObject({ x: z.number() });\nexport const SceneSchema = z.strictObject({ transform: TransformSchema }).superRefine(() => {});`,
   'src/core/spatial.ts': `${spatialDoc}\nimport { SceneSchema } from './scene';\nexport function evaluateScene(input: unknown) { return SceneSchema.parse(input); }\nexport const transformToCss = () => 'none'; export const focusForSurface=()=>0; export const sampleFocus=()=>0; export const focusMask=()=>''; export const cameraToCss=()=>''; export const uniformFocusBlur=()=>0;`,
-  'src/core/motion.ts': '/** SOURCE OF TRUTH: MotionSchema, evaluateMotion, motionDuration, motionTime, cinematicProgress, cinematicTimeAtProgress.\n * WHAT: validate motion and time.\n * WHY: prevent multiple competing clocks.\n * WHERE: consumed by React adapters.\n */\nimport { z } from \'zod\'; export const MotionSchema=z.strictObject({}); export function evaluateMotion(){return 0;} export function motionDuration(){return 0;} export function motionTime(){return 0;} export function cinematicProgress(){return 0;} export function cinematicTimeAtProgress(){return 0;}',
+  'src/core/motion.ts': '/** SOURCE OF TRUTH: MotionSchema, evaluateMotion, motionDuration, motionTime, cinematicProgress, cinematicTimeAtProgress, sampleFrameTime.\n * WHAT: validate motion and time.\n * WHY: prevent multiple competing clocks.\n * WHERE: consumed by React adapters.\n */\nimport { z } from \'zod\'; export const MotionSchema=z.strictObject({}); export function evaluateMotion(){return 0;} export function motionDuration(){return 0;} export function motionTime(){return 0;} export function cinematicProgress(){return 0;} export function cinematicTimeAtProgress(){return 0;} export function sampleFrameTime(){return 0;}',
   'src/core/index.ts': `export * from './scene'; export { evaluateScene, transformToCss } from './spatial';`,
 };
 const fixture = (file, text, options) => checkArchitecture({ ...valid, [file]: text }, options);

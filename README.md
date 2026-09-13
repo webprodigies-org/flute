@@ -99,7 +99,7 @@ Keep wrappers and child identity stable during edits. Adding/removing wrappers a
 | `demo/` | Storage study and provider/API-backed host components |
 | `scripts/check-architecture.mjs` | Executable dependency and named-owner checks |
 
-Inline SOURCE OF TRUTH comments explain WHAT, WHY and WHERE. Scene metadata never contains React instances, secrets or host database content. The CLI uses canonical project commands. Coding-agent conventions, saved recipes, hosted accounts and exports remain later work; Flute does not authenticate to AI providers.
+Inline SOURCE OF TRUTH comments explain WHAT, WHY and WHERE. Scene metadata never contains React instances, secrets or host database content. The CLI uses canonical project commands. Coding-agent conventions, saved recipes, hosted accounts and still-image output remain later work; Flute does not authenticate to AI providers.
 
 ## Verify
 
@@ -119,3 +119,25 @@ See [performance evidence](docs/architecture.md#progressive-focus-performance) f
 ## Launch verification
 
 `npm run verify:launch` includes the existing renderer/performance suite, project command and preview tests, CLI tests, and an independently installed tarball fixture. The installed fixture starts its own Vite server on a free configured port, checks source/config preservation and repeated init, rejects missing/wrong servers, exercises a provider-backed live counter, and checks the normal route and production preview exclusion. It cleans up its temporary project and servers. npm cache must contain the fixture dependencies for its offline initial install.
+
+## Cinematic defaults and agent guidance
+
+- Use existing components with their original theme, classes and providers. Wrappers own spatial placement, not a redesigned UI. Carry a transparent element's original backing paint when lifting it; do not invent borders, colors or corner radii. Verify computed styles against the normal view.
+- Motion defaults to `speed: 0.5` and `easing: "cinematic"`: gentle starts and finishes. `durationMs` and keyframes are authored time; pass elapsed presentation time to Scene and use `motionDuration(recipe)` for controls/export duration. Host animations read `useSceneTime()` instead of starting another clock. An 11-second recipe plays for 22 seconds. Creators may explicitly override speed/easing.
+- Use `createCascadeTracks({items:[{id:"first"},{id:"second"}]})` for ordered entrances. It creates varying depth and overlapping settling, like a shrinking staircase. `cascade:false` opts out; depth, depthStep, staggerMs, entranceMs and item atMs are explicit controls. Do not copy its math into generated scenes.
+- Prefer one continuous eased camera move. `cinematicTimeAtProgress` locates corresponding entrance times along that curve. Keep focus independent of component IDs, and use a narrow radius when the shot should emphasize one or two items.
+
+## Export MP4 locally
+
+Install FFmpeg on your machine and `npx playwright install chromium`. The CLI uses optional Playwright; if omitted from installation, install it in the project. Register the scene once with `useSceneCapture({durationMs: motionDuration(recipe), seek})`, where seek pauses playback and sets the same elapsed time passed to Scene. Mark the fixed capture viewport `data-flute-capture="scene"`. The dashboard already does this.
+
+From your installed project:
+
+```sh
+npx flute export --url 'http://127.0.0.1:5173/?scene=sidebar' \
+  --output sidebar-60.mp4 --fps 60
+```
+
+Choose 30, 60 or 120 FPS; output resolution defaults 1440×1000 (`--width`/`--height` override it). FPS changes cadence, not animation speed or duration. Use a new relative filename; existing files are never overwritten. Export is offline frame capture and may take longer than playback. It preserves live DOM rendering, without asking for source screenshots. No sound track is produced.
+
+For this repository's example: `npm run export:dashboard -- 60 30`. The Export MP4 panel offers completed sample downloads and a command for new renders. Export uses [Playwright screenshots](https://playwright.dev/docs/screenshots) and [FFmpeg's image stream input](https://ffmpeg.org/ffmpeg-formats.html#image2).

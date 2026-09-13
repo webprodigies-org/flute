@@ -67,6 +67,18 @@ try {
  await page.getByRole('checkbox',{name:'Cascade',exact:true}).check();
  await page.evaluate(()=>window.__FLUTE_CAPTURE__.seek(10000));
  assert.equal(await page.getByTestId('scene-time').textContent(),'10.0 / 22s');
+ await page.getByRole('combobox',{name:'Preview FPS',exact:true}).selectOption('30');
+ await page.getByRole('button',{name:'Play',exact:true}).click();
+ await page.waitForTimeout(250);
+ await page.getByRole('button',{name:'Pause',exact:true}).click();
+ const sampled=Number(await page.getByRole('slider',{name:'Scene time'}).getAttribute('value'));
+ assert.ok(Math.abs(sampled*30/1000-Math.round(sampled*30/1000))<.001,'30 FPS samples the same clock on frame boundaries');
+ await page.getByRole('combobox',{name:'Preview FPS',exact:true}).selectOption('native');
+ await page.getByText('Export MP4',{exact:true}).click();
+ await page.getByRole('combobox',{name:'Export frame rate',exact:true}).selectOption('120');
+ assert.match(await page.locator('.export-panel code').textContent(),/--fps 120/);
+ await page.getByRole('combobox',{name:'Export frame rate',exact:true}).selectOption('30');
+ assert.match(await page.locator('.export-panel code').textContent(),/--fps 30/);
  await page.setViewportSize({width:390,height:844});
  await page.emulateMedia({reducedMotion:'reduce'});
  await page.reload();await page.locator('[data-flute-id="user"]').waitFor();

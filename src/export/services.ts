@@ -37,7 +37,7 @@ export async function openCapture(input: ExportVideo, signal?: AbortSignal) {
     check();
     try {
       const { chromium } = await import("playwright");
-      browser = await chromium.launch({ headless: true });
+      browser = await chromium.launch({ headless: true, channel: "chromium" });
     } catch { throw fault("missing-chromium", "Install Playwright and its browser: npm install playwright && npx playwright install chromium."); }
     page = await browser.newPage({ viewport: { width: input.width, height: input.height }, deviceScaleFactor: 1 });
     page.setDefaultTimeout(10_000);
@@ -68,6 +68,7 @@ export async function openCapture(input: ExportVideo, signal?: AbortSignal) {
           check();
           const locator = page.locator(manifest.selector);
           if (await locator.count() !== 1) throw fault("invalid-capture", "Capture must identify exactly one visible scene viewport.");
+          await locator.scrollIntoViewIfNeeded();
           const rect = await locator.boundingBox();
           if (!rect || rect.width < 1 || rect.height < 1 || rect.width > 3840 || rect.height > 3840) throw fault("invalid-capture", "Scene viewport must be visible and at most 3840 pixels per side.");
           const target = await scopedPath(scope.root, scope.output);
@@ -88,7 +89,8 @@ export async function openCapture(input: ExportVideo, signal?: AbortSignal) {
           for (let i = 0; i < frames; i++) {
             check();
             await page.evaluate(elapsed => (window as unknown as { __FLUTE_CAPTURE__: CaptureBridge }).__FLUTE_CAPTURE__.seek(elapsed), i * 1000 / options.fps);
-            const png = await locator.screenshot({ type: "png", animations: "disabled", timeout: 10_000 });
+            const png = await page.screenshot({clip:rect, type: "png", animations: "disabled", timeout: 10_000 });
+            if(i>0 && i % (options.fps*2)===0) process.stderr.write(`Captured ${i}/${frames} frames\n`);
             await Promise.race([new Promise<void>((resolve, reject) => encoder!.stdin!.write(png, error => error ? reject(error) : resolve())), finished.then(() => { throw fault("encoding-failed", "Encoder stopped before all scene frames were written."); })]);
           }
           encoder.stdin!.end();

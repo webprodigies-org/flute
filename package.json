@@ -24,7 +24,8 @@
     "dev:storage": "vite --host 127.0.0.1",
     "setup:dashboard": "node scripts/setup-dashboard.mjs",
     "verify:dashboard": "npm run setup:dashboard && npm --prefix examples/dashboard-lab run build && node scripts/check-dashboard.mjs",
-    "test:export": "vitest run tests/export tests/cli"
+    "test:export": "vitest run tests/export tests/cli",
+    "export:dashboard": "npm --prefix examples/dashboard-lab run build && node scripts/render-dashboard.mjs"
   },
   "dependencies": {
     "react-error-boundary": "6.1.5",

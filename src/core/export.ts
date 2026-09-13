@@ -8,11 +8,7 @@ import { z } from "zod";
 export const SUPPORTED_EXPORT_FPS = Object.freeze([30, 60, 120] as const);
 export const ExportFrameRateSchema = z.union(SUPPORTED_EXPORT_FPS.map(fps => z.literal(fps)));
 export const ExportVideoSchema = z.strictObject({
-  url: z.url().refine(value => {
-    const url = new URL(value);
-    return url.protocol === "http:" && ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname)
-      && !url.username && !url.password;
-  }, "Use an HTTP loopback URL without credentials."),
+  url: z.url().regex(/^http:\/\/(?:localhost|127\.0\.0\.1|\[::1\])(?::\d{1,5})?(?:[/?#]|$)/, "Use an HTTP loopback URL without credentials."),
   output: z.string().min(1).endsWith(".mp4").refine(value =>
     !value.includes("\\") && !value.includes("\0") && !/^[A-Za-z]:/.test(value)
     && value.split("/").every(part => part !== "" && part !== "." && part !== ".."),

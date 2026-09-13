@@ -1,3 +1,4 @@
+import { CaptureManifestSchema, type CaptureBridge } from "../core/export";
 import { useEffect, useRef } from "react";
 import { flushSync } from "react-dom";
 /** SOURCE OF TRUTH: useSceneCapture.
@@ -13,7 +14,7 @@ export function useSceneCapture({durationMs,seek,selector='[data-flute-capture="
   useEffect(()=>{
     const host=window as typeof window & {__FLUTE_CAPTURE__?:unknown};
     if(host.__FLUTE_CAPTURE__) throw new Error("Only one capture viewport can be registered per page.");
-    const bridge={version:1,durationMs,selector,seek:(elapsedMs:number)=>{
+    const bridge:CaptureBridge={...CaptureManifestSchema.parse({version:1,durationMs,selector}),seek:(elapsedMs:number)=>{
       if(!Number.isFinite(elapsedMs)||elapsedMs<0||elapsedMs>durationMs) throw new Error("Capture time is outside the scene.");
       flushSync(()=>current.current(elapsedMs));
     }};

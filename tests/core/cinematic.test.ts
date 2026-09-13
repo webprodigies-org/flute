@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { evaluateMotion, motionDuration, motionTime, cinematicProgress, cinematicTimeAtProgress } from "../../src/core/motion";
+import { evaluateMotion, motionDuration, motionTime, cinematicProgress, cinematicTimeAtProgress, sampleFrameTime } from "../../src/core/motion";
 import { createCascadeTracks } from "../../src/core/choreography";
 describe('cinematic defaults',()=>{
  const input={durationMs:1000,tracks:[{target:{kind:'camera'},property:'x',keyframes:[{timeMs:0,value:0},{timeMs:1000,value:100}]}]};
@@ -24,6 +24,13 @@ describe('cinematic defaults',()=>{
   expect(evaluateMotion(recipe,0).surfaces).toEqual({a:{z:80},b:{z:92},c:{z:104}});
   for(let time=0;time<=2160;time+=20){const s=evaluateMotion(recipe,time).surfaces;expect(s.a.z!).toBeLessThanOrEqual(s.b.z!);expect(s.b.z!).toBeLessThanOrEqual(s.c.z!)}
   expect(evaluateMotion(recipe,2160).surfaces).toEqual({a:{z:0},b:{z:0},c:{z:0}});
+ });
+ it('preview frame cadence does not alter timeline speed',()=>{
+  expect(sampleFrameTime(50,'native')).toBe(50);
+  expect(sampleFrameTime(50,30)).toBeCloseTo(1000/30);
+  expect(sampleFrameTime(50,60)).toBe(50);
+  expect(()=>sampleFrameTime(50,0)).toThrow();
+  expect(evaluateMotion({...input,durationMs:Number.MAX_VALUE},1).issues.length).toBeGreaterThan(0);
  });
  it('offers an opt-out and rejects malformed recipes',()=>{
   const tracks=createCascadeTracks({items:[{id:'a'},{id:'b'}],cascade:false});

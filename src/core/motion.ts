@@ -6,7 +6,7 @@ import {
   type SceneIssue,
 } from "./scene";
 
-/** SOURCE OF TRUTH: MotionSchema, evaluateMotion, motionDuration, motionTime, cinematicProgress, cinematicTimeAtProgress, explicit scene time.
+/** SOURCE OF TRUTH: MotionSchema, evaluateMotion, motionDuration, motionTime, cinematicProgress, cinematicTimeAtProgress, sampleFrameTime, explicit scene time.
  * WHAT: typed motion tracks, target/property validation and deterministic interpolation.
  * WHY: all callers must evaluate the same frame without clocks or mutable playback state.
  * WHERE: core/motion.ts owns motion; core/scene.ts validates merged scene values;
@@ -88,6 +88,8 @@ export const MotionSchema = z
     tracks: z.array(MotionTrackSchema),
   })
   .superRefine((motion, ctx) => {
+    if (!Number.isFinite(motion.durationMs / motion.speed))
+      ctx.addIssue({code:"custom",path:["durationMs"],message:"Presentation duration must remain finite at the chosen speed."});
     const seen = new Set<string>();
     for (const [index, track] of motion.tracks.entries()) {
       const key = JSON.stringify([
@@ -222,4 +224,14 @@ export function cinematicTimeAtProgress(progress: number): number {
     if (cinematicProgress(middle) < progress) low = middle; else high = middle;
   }
   return (low + high) / 2;
+}
+
+/** Quantize presentation time only when a preview cadence is explicitly chosen.
+ * Export still samples its own exact frame times; speed and easing do not change.
+ */
+export function sampleFrameTime(elapsedMs:number, fps:number | "native" = "native"):number {
+  if(!Number.isFinite(elapsedMs)||elapsedMs<0) throw new Error("Frame time must be finite and nonnegative.");
+  if(fps==="native") return elapsedMs;
+  if(!Number.isFinite(fps)||fps<=0||fps>240)throw new Error("Frame rate must be between 0 and 240.");
+  return Math.floor(elapsedMs*fps/1000)*1000/fps;
 }
