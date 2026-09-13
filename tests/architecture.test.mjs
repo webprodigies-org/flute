@@ -21,7 +21,7 @@ const spatialDoc = `/** SOURCE OF TRUTH: evaluateScene, transformToCss, focusFor
 const valid = {
   'src/core/scene.ts': `${sceneDoc}\nimport { z } from 'zod';\nexport const TransformSchema = z.strictObject({ x: z.number() });\nexport const SceneSchema = z.strictObject({ transform: TransformSchema }).superRefine(() => {});`,
   'src/core/spatial.ts': `${spatialDoc}\nimport { SceneSchema } from './scene';\nexport function evaluateScene(input: unknown) { return SceneSchema.parse(input); }\nexport const transformToCss = () => 'none'; export const focusForSurface=()=>0; export const sampleFocus=()=>0; export const focusMask=()=>''; export const cameraToCss=()=>'';`,
-  'src/core/motion.ts': '/** SOURCE OF TRUTH: MotionSchema, evaluateMotion.\n * WHAT: validate motion and time.\n * WHY: prevent multiple competing clocks.\n * WHERE: consumed by React adapters.\n */\nexport const MotionSchema={}; export function evaluateMotion(){}',
+  'src/core/motion.ts': '/** SOURCE OF TRUTH: MotionSchema, evaluateMotion.\n * WHAT: validate motion and time.\n * WHY: prevent multiple competing clocks.\n * WHERE: consumed by React adapters.\n */\nimport { z } from \'zod\'; export const MotionSchema=z.strictObject({}); export function evaluateMotion(){return 0;}',
   'src/core/index.ts': `export * from './scene'; export { evaluateScene, transformToCss } from './spatial';`,
 };
 const fixture = (file, text, options) => checkArchitecture({ ...valid, [file]: text }, options);
@@ -111,7 +111,7 @@ for (const text of [
 });
 test('empty function or signature cannot satisfy evaluator presence', () => {
   const issues = fixture('src/core/spatial.ts', `${spatialDoc}\nexport function evaluateScene(): void; export function transformToCss() {}`);
-  assert.equal(issues.filter(issue => issue.rule === 'canonical-presence').length, 2);
+  assert.equal(issues.filter(issue => issue.rule === 'canonical-presence').length, 6);
 });
 test('absent owner fails even if declarations are elsewhere', () => {
   const { 'src/core/scene.ts': scene, ...rest } = valid;

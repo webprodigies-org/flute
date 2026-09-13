@@ -1,6 +1,6 @@
 import { Component, createContext, useContext, useEffect, useLayoutEffect, useMemo, useId, useRef, useState, useSyncExternalStore, type CSSProperties, type ReactNode } from 'react';
-import { evaluateScene, cameraToCss, transformToCss, validateScene, type CameraInput, type EvaluatedNode, type FocusInput, type Measurements, type SceneIssue, type TransformInput } from '../core';
-import { evaluateMotion, type MotionInput } from '../core/motion';
+import { RESOURCES, cameraToCss, transformToCss, type CameraInput, type EvaluatedNode, type FocusInput, type Measurements, type SceneIssue, type TransformInput } from '../core';
+import { type MotionInput } from '../core/motion';
 import { FocusFilter } from './FocusFilter';
 import { createRegistry, type Registry } from './registry';
 
@@ -32,14 +32,14 @@ export function Scene({ children, camera, focus, motion, timeMs=0, className, st
   useLayout(() => { registry.refresh(); });
   const result = useMemo(() => {
     const bindings = Array.from(registry.entries.values());
-    const state=motion ? evaluateMotion(motion,timeMs) : {surfaces:{},camera:{},focus:{},issues:[]};
+    const state=motion ? RESOURCES['evaluate-motion'](motion,timeMs) : {surfaces:{},camera:{},focus:{},issues:[]};
     const input = { camera:{...camera,...state.camera}, focus:{...focus,...state.focus}, nodes: bindings.map(binding => ({ id: binding.id, parentId: binding.parent ? registry.entries.get(binding.parent)?.id : undefined, transform: {...binding.transform,...Object.fromEntries(Object.entries(state.surfaces[binding.id] ?? {}).filter(([key])=>key!=='opacity'))} })) };
-    const validated = validateScene(input);
+    const validated = RESOURCES['validate-definition'](input);
     const measurements: Measurements = Object.fromEntries(bindings.flatMap(binding => {
       const measurement = registry.measurements.get(binding.token);
       return measurement ? [[binding.id, measurement] as const] : [];
     }));
-    const evaluation = evaluateScene(input, measurements);
+    const evaluation = RESOURCES['evaluate-spatial'](input, measurements);
     const ids=new Set(bindings.map(b=>b.id));
     evaluation.issues.push(...state.issues,...Object.keys(state.surfaces).filter(id=>!ids.has(id)).map(id=>({path:'motion.'+id,message:'Motion target is not registered: '+id})));
     if(!Number.isFinite(timeMs))evaluation.issues.push({path:'timeMs',message:'Scene time must be finite.'});

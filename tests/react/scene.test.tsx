@@ -168,3 +168,21 @@ describe('live React spatial adapter', () => {
     expect(screen.getByRole('alert').textContent).toContain('inside a Flute Scene');
   });
 });
+
+it('applies deterministic camera, focus and surface tracks without replacing live UI; recovers missing targets',()=>{
+ const motion={durationMs:1000,tracks:[
+  {target:{kind:'surface' as const,id:'a'},property:'x' as const,keyframes:[{timeMs:0,value:0},{timeMs:1000,value:100}]},
+  {target:{kind:'surface' as const,id:'a'},property:'opacity' as const,keyframes:[{timeMs:0,value:0},{timeMs:1000,value:1}]},
+  {target:{kind:'camera' as const},property:'x' as const,keyframes:[{timeMs:0,value:0},{timeMs:1000,value:40}]},
+  {target:{kind:'focus' as const},property:'radius' as const,keyframes:[{timeMs:0,value:10},{timeMs:1000,value:100}]},
+ ]};
+ const app=(timeMs:number,show=true)=><Scene motion={motion} timeMs={timeMs}>{show&&<Surface id="a"><input defaultValue="existing"/></Surface>}</Scene>;
+ const view=render(app(0));const input=screen.getByRole('textbox');view.rerender(app(500));
+ expect(screen.getByRole('textbox')).toBe(input);
+ expect(node('a').style.transform).toContain('translate3d(50px');
+ expect(document.querySelector<HTMLElement>('[data-flute-stage]')!.style.transform).toContain('translate3d(-20px');
+ expect(node('a').querySelector<HTMLElement>('[data-flute-content]')!.style.opacity).toBe('0.5');
+ expect(node('a').style.opacity).toBe('1');
+ view.rerender(app(500,false));expect(screen.getByRole('alert').textContent).toContain('Motion target is not registered: a');
+ view.rerender(app(500));expect(screen.queryByRole('alert')).toBeNull();
+});
