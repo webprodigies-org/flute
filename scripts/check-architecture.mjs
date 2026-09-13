@@ -12,6 +12,8 @@ import { fileURLToPath } from 'node:url';
  * New external dependencies require an explicit layer decision here and a fixture.
  */
 const owners = new Map([
+  ['executeProjectCommand', 'src/project/commands.ts'],
+  ['InitProjectSchema', 'src/core/project.ts'],
   ['SceneSchema', 'src/core/scene.ts'], ['TransformSchema', 'src/core/scene.ts'],
   ['focusForSurface','src/core/spatial.ts'], ['sampleFocus','src/core/spatial.ts'], ['focusMask','src/core/spatial.ts'], ['cameraToCss','src/core/spatial.ts'],
   ['MotionSchema','src/core/motion.ts'], ['evaluateMotion','src/core/motion.ts'],
@@ -21,6 +23,12 @@ const layers = {
   core: { local: ['core'], external: ['zod'] },
   runtime: { local: ['core', 'runtime'], external: ['zod'] },
   react: { local: ['core', 'runtime', 'react'], external: ['react', 'react-dom', 'react-error-boundary', 'zod'] },
+  preview: { local: ['core', 'react', 'preview'], external: ['react', 'react-dom'] },
+  commands: { local: ['core', 'commands', 'projectAdapter', 'projectErrors', 'services'], external: ['zod'] },
+  projectAdapter: { local: ['core', 'projectAdapter', 'projectErrors'], external: ['typescript', 'zod'] },
+  projectErrors: { local: ['projectErrors'], external: [] },
+  services: { local: ['core', 'services', 'projectErrors'], external: ['zod', 'typescript'] },
+  cli: { local: ['core', 'commands', 'cli'], external: [] },
 };
 const nodeModules = new Set(builtinModules.map(name => name.replace(/^node:/, '')));
 const nodeGlobals = new Set(['process', 'Buffer', 'global', '__dirname', '__filename', 'module', 'exports', 'setImmediate', 'clearImmediate', 'Deno', 'Bun']);
@@ -36,7 +44,14 @@ for (const statement of domLibrary.statements) {
 }
 const normalize = name => path.posix.normalize(name.replaceAll('\\', '/').replace(/^\.\//, ''));
 const sourcePattern = /\.(?:[cm]?[jt]sx?)$/;
-const layerOf = name => /^src\/(core|runtime|react)\//.exec(name)?.[1];
+const layerOf = name => {
+  if (/^src\/project\/errors(?:\.[cm]?[jt]s)?$/.test(name)) return 'projectErrors';
+  if (/^src\/project\/commands(?:\.[cm]?[jt]s)?$/.test(name)) return 'commands';
+  if (/^src\/project\/services(?:\.[cm]?[jt]s$|\/|$)/.test(name)) return 'services';
+  if (name.startsWith('src/project/')) return 'projectAdapter';
+  return /^src\/(core|runtime|react|preview|cli)(?:\/|$)/.exec(name)?.[1];
+};
+const browserLayers = new Set(['react', 'preview']);
 const packageOf = name => name.startsWith('@') ? name.split('/').slice(0, 2).join('/') : name.split('/')[0];
 
 /** Returns actionable diagnostics; fixtures and the CLI use exactly the same rules. */
@@ -83,8 +98,9 @@ export function checkArchitecture(input, { compilerOptions = {} } = {}) {
       const resolved = ts.resolveModuleName(specifier, absoluteName, options, host).resolvedModule?.resolvedFileName;
       const relative = specifier.startsWith('.') ? path.posix.normalize(path.posix.join(path.posix.dirname(name), specifier)) : undefined;
       const target = resolved?.startsWith(`${root}/`) ? resolved.slice(root.length + 1) : relative;
+      const builtin = nodeModules.has(specifier.replace(/^node:/, ''));
       const allowed = target ? layers[layer].local.includes(layerOf(target))
-        : !specifier.startsWith('node:') && !nodeModules.has(specifier) && layers[layer].external.includes(packageOf(specifier));
+        : (layer === 'services' && builtin) || (!specifier.startsWith('node:') && !builtin && layers[layer].external.includes(packageOf(specifier)));
       if (!allowed) add(file, expression, 'module-boundary', `${layer} cannot depend on ${specifier}; consume its allowed canonical owners instead.`);
     }
 
@@ -136,7 +152,7 @@ export function checkArchitecture(input, { compilerOptions = {} } = {}) {
       else if (ts.isImportTypeNode(node) && ts.isLiteralTypeNode(node.argument)) dependency(node.argument.literal);
       else if (ts.isCallExpression(node) && (node.expression.kind === ts.SyntaxKind.ImportKeyword || (ts.isIdentifier(node.expression) && node.expression.text === 'require' && !isLocal(node.expression)))) dependency(node.arguments[0]);
 
-      if (layer && layer !== 'react' && (ts.isJsxElement(node) || ts.isJsxSelfClosingElement(node) || ts.isJsxFragment(node))) {
+      if (layer && !browserLayers.has(layer) && (ts.isJsxElement(node) || ts.isJsxSelfClosingElement(node) || ts.isJsxFragment(node))) {
         add(file, node, 'module-boundary', `${layer} cannot introduce an implicit JSX renderer dependency.`);
       }
 
@@ -146,17 +162,20 @@ export function checkArchitecture(input, { compilerOptions = {} } = {}) {
         const propertyName = (ts.isPropertyAccessExpression(parent) && parent.name === node)
           || ((ts.isPropertyAssignment(parent) || ts.isMethodDeclaration(parent) || ts.isPropertyDeclaration(parent)) && parent.name === node)
           || ts.isImportSpecifier(parent) || ts.isExportSpecifier(parent);
-        const forbidden = nodeGlobals.has(node.text) || (layer !== 'react' && domGlobals.has(node.text));
+        const forbidden = layer !== 'services' && (
+          (nodeGlobals.has(node.text) && !(layer === 'cli' && node.text === 'process'))
+          || (!browserLayers.has(layer) && domGlobals.has(node.text) && !(layer === 'commands' && node.text === 'URL'))
+        );
         if (!propertyName && forbidden) add(file, node, 'runtime-global', `${layer} cannot read host runtime global ${node.text}.`);
         if (!propertyName && node.text === 'require' && !(ts.isCallExpression(parent) && parent.expression === node)) {
           add(file, node, 'module-boundary', 'Use a direct require with a static module target; aliases cannot be checked.');
         }
-        if (layer === 'react' && !propertyName && node.text === 'globalThis' && !((ts.isPropertyAccessExpression(parent) || ts.isElementAccessExpression(parent)) && parent.expression === node)) {
+        if (browserLayers.has(layer) && !propertyName && node.text === 'globalThis' && !((ts.isPropertyAccessExpression(parent) || ts.isElementAccessExpression(parent)) && parent.expression === node)) {
           add(file, node, 'runtime-global', 'Use a static globalThis property; global aliases and destructuring can conceal Node access.');
         }
       }
       // globalThis.process and globalThis['Buffer'] are Node access even in the React adapter.
-      if (layer === 'react' && (ts.isPropertyAccessExpression(node) || ts.isElementAccessExpression(node)) && ts.isIdentifier(node.expression) && node.expression.text === 'globalThis' && !isLocal(node.expression)) {
+      if (browserLayers.has(layer) && (ts.isPropertyAccessExpression(node) || ts.isElementAccessExpression(node)) && ts.isIdentifier(node.expression) && node.expression.text === 'globalThis' && !isLocal(node.expression)) {
         const key = ts.isPropertyAccessExpression(node) ? node.name.text : node.argumentExpression && ts.isStringLiteral(node.argumentExpression) ? node.argumentExpression.text : undefined;
         if (!key || nodeGlobals.has(key)) add(file, node, 'runtime-global', 'React cannot read Node globals or computed globalThis members.');
       }

@@ -19,6 +19,8 @@ const spatialDoc = `/** SOURCE OF TRUTH: evaluateScene, transformToCss, focusFor
  * WHERE: consumed by React adapter.
  */`;
 const valid = {
+  'src/core/project.ts': `/** SOURCE OF TRUTH: InitProjectSchema.\n * WHAT: validate project command inputs.\n * WHY: keep adapters using contracts.\n * WHERE: consumed by trusted commands.\n */\nimport { z } from 'zod'; export const InitProjectSchema=z.strictObject({});`,
+  'src/project/commands.ts': `/** SOURCE OF TRUTH: executeProjectCommand.\n * WHAT: execute validated project commands.\n * WHY: protect scoped project state.\n * WHERE: invoked through CLI adapters.\n */\nexport async function executeProjectCommand(){return {};}`, 
   'src/core/scene.ts': `${sceneDoc}\nimport { z } from 'zod';\nexport const TransformSchema = z.strictObject({ x: z.number() });\nexport const SceneSchema = z.strictObject({ transform: TransformSchema }).superRefine(() => {});`,
   'src/core/spatial.ts': `${spatialDoc}\nimport { SceneSchema } from './scene';\nexport function evaluateScene(input: unknown) { return SceneSchema.parse(input); }\nexport const transformToCss = () => 'none'; export const focusForSurface=()=>0; export const sampleFocus=()=>0; export const focusMask=()=>''; export const cameraToCss=()=>'';`,
   'src/core/motion.ts': '/** SOURCE OF TRUTH: MotionSchema, evaluateMotion.\n * WHAT: validate motion and time.\n * WHY: prevent multiple competing clocks.\n * WHERE: consumed by React adapters.\n */\nimport { z } from \'zod\'; export const MotionSchema=z.strictObject({}); export function evaluateMotion(){return 0;}',
@@ -192,3 +194,59 @@ test('documentation rejects symlink files and symlink directory',()=>docsFixture
 }));
 
 test('runtime rejects the React error adapter', () => rejects('src/runtime/bad.ts', `import 'react-error-boundary';`));
+
+for (const [file, target] of [
+  ['src/cli/bypass.ts','../project/services'],
+  ['src/cli/bypass.ts','../project/adapter'],
+  ['src/project/adapter.ts','./services'],
+  ['src/project/commands.ts','node:fs/promises'],
+  ['src/preview/bypass.ts','../project/commands'],
+  ['src/react/bypass.ts','../project/services'],
+  ['src/preview/bypass.ts','node:fs'],
+]) test(`project boundary rejects ${file} → ${target}`,()=>rejects(file,`import x from '${target}';`));
+for (const file of ['src/preview/unsafe.ts','src/project/adapter.ts','src/project/commands.ts'])
+ test(`project boundary rejects direct fetch in ${file}`,()=>{
+  // Preview can use browser APIs, but trusted project effects stay out of commands/adapter.
+  if(!file.includes('preview')) rejects(file,'fetch("http://localhost");','runtime-global');
+  else rejects(file,'process.cwd();','runtime-global');
+ });
+test('CLI cannot launder a filesystem service through a project barrel',()=>{
+ const issues=checkArchitecture({...valid,'src/cli/entry.ts':`import { read } from '../project/barrel';`,'src/project/barrel.ts':`export { read } from './services';`,'src/project/services.ts':'export const read=()=>0;'});
+ assert.ok(issues.some(i=>i.rule==='module-boundary'&&i.file==='src/project/barrel.ts'));
+});
+test('project service effects and pure adapters have explicit allowed layers',()=>{
+ const issues=checkArchitecture({...valid,
+ 'src/project/services.ts':`import { readFile } from 'node:fs/promises'; import { spawn } from 'node:child_process'; const root=process.cwd(); fetch('http://127.0.0.1');`,
+ 'src/project/adapter.ts':`import ts from 'typescript'; import { InitProjectSchema } from '../core/project';`,
+ 'src/preview/index.tsx':`import {Scene} from '../react'; import {useState} from 'react'; const x=<Scene/>;`,
+ 'src/cli/main.ts':`import {executeProjectCommand} from '../project/commands'; executeProjectCommand(); process.cwd();`,
+ });
+ assert.deepEqual(issues,[]);
+});
+
+for (const expression of [
+  `export * from '../project/services';`,
+  `const service = import('../project/services');`,
+  `const service = require('../project/services');`,
+  `type Service = import('../project/services').Service;`,
+]) test('CLI rejects service bypass form '+expression,()=>rejects('src/cli/bypass.ts',expression));
+test('CLI service alias cannot bypass project operations',()=>{
+  const issues=checkArchitecture({...valid,
+    'src/cli/entry.ts':`import { read } from '@services';`,
+    'src/project/services.ts':`export const read=()=>0;`,
+  },{compilerOptions:{baseUrl:'.',paths:{'@services':['src/project/services.ts']}}});
+  assert.ok(issues.some(i=>i.file==='src/cli/entry.ts'&&i.rule==='module-boundary'));
+});
+test('renamed project-command declaration cannot replace canonical owner',()=>{
+  const issues=checkArchitecture({...valid,'src/project/commands.ts':'export async function otherCommand() { return {}; }'});
+  assert.ok(issues.some(i=>i.rule==='canonical-presence'&&i.message.includes('executeProjectCommand')));
+});
+
+test('shared project errors cannot become an effect bypass',()=>rejects('src/project/errors.ts',`import {readFile} from 'node:fs/promises';`));
+test('services may share pure diagnostics without importing project policy',()=>{
+ const issues=checkArchitecture({...valid,
+ 'src/project/errors.ts':`export const fault = (message:string) => new Error(message);`,
+ 'src/project/services.ts':`import {fault} from './errors'; import {readFile} from 'node:fs/promises';`,
+ });
+ assert.deepEqual(issues,[]);
+});

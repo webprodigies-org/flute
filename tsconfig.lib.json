@@ -13,7 +13,10 @@
     ]
   },
   "include": [
-    "src"
+    "src/index.ts",
+    "src/core",
+    "src/react",
+    "src/preview"
   ],
   "exclude": [
     "demo",

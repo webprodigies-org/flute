@@ -8,9 +8,9 @@ Install in an existing project, compose real UI with Scene/Surface/Motion, and w
 
 ## Delivered and remaining scope
 
-Delivered: React wrappers, progressive focus, camera and layer motion, explicit-time playback, and the local Storage demonstration with live provider/API-backed cards.
+Delivered: React wrappers, progressive focus, camera and layer motion, explicit-time playback, the local Storage demonstration with live provider/API-backed cards, and a local CLI/Vite adapter that installs and opens a development-only whole-app scene preview.
 
-Remaining planned MVP slices: installation/CLI, integrated preview refinement, editable saved recipes and coding-agent conventions. Morphite's matrix owns their order and acceptance criteria.
+Remaining planned MVP slices: integrated preview refinement, editable saved recipes and coding-agent conventions. Morphite's matrix owns their order and acceptance criteria.
 
 Product login, collaboration, hosted AI infrastructure and image/video export are outside the current MVP. Hosted studio, identity and commercial capabilities are future planning only. Existing app authentication/data remain the host application's responsibility.
 
