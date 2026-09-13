@@ -126,3 +126,7 @@ export async function localPackageSource(root: string, source: string): Promise<
   if (!stat.isFile() || stat.isSymbolicLink()) throw fault("denied-path", "Package source must be a regular local tarball.");
   return realpath(filename);
 }
+
+export function pause(milliseconds: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, milliseconds));
+}

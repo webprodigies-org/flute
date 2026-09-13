@@ -24,9 +24,10 @@ const layers = {
   runtime: { local: ['core', 'runtime'], external: ['zod'] },
   react: { local: ['core', 'runtime', 'react'], external: ['react', 'react-dom', 'react-error-boundary', 'zod'] },
   preview: { local: ['core', 'react', 'preview'], external: ['react', 'react-dom'] },
-  commands: { local: ['core', 'commands', 'projectAdapter', 'services'], external: ['zod'] },
-  projectAdapter: { local: ['core', 'projectAdapter'], external: ['typescript', 'zod'] },
-  services: { local: ['core', 'services'], external: ['zod', 'typescript'] },
+  commands: { local: ['core', 'commands', 'projectAdapter', 'projectErrors', 'services'], external: ['zod'] },
+  projectAdapter: { local: ['core', 'projectAdapter', 'projectErrors'], external: ['typescript', 'zod'] },
+  projectErrors: { local: ['projectErrors'], external: [] },
+  services: { local: ['core', 'services', 'projectErrors'], external: ['zod', 'typescript'] },
   cli: { local: ['core', 'commands', 'cli'], external: [] },
 };
 const nodeModules = new Set(builtinModules.map(name => name.replace(/^node:/, '')));
@@ -44,6 +45,7 @@ for (const statement of domLibrary.statements) {
 const normalize = name => path.posix.normalize(name.replaceAll('\\', '/').replace(/^\.\//, ''));
 const sourcePattern = /\.(?:[cm]?[jt]sx?)$/;
 const layerOf = name => {
+  if (/^src\/project\/errors(?:\.[cm]?[jt]s)?$/.test(name)) return 'projectErrors';
   if (/^src\/project\/commands(?:\.[cm]?[jt]s)?$/.test(name)) return 'commands';
   if (/^src\/project\/services(?:\.[cm]?[jt]s$|\/|$)/.test(name)) return 'services';
   if (name.startsWith('src/project/')) return 'projectAdapter';

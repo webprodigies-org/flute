@@ -70,7 +70,7 @@ async function installationValid(root: string, requireToolkit = true) {
   }
   const toolkit = await packageAt(root, "node_modules/@flute/scene/package.json");
   if (!toolkit) {
-    if (requireToolkit) throw fault("missing-installation", "Flute is not installed. Run init with --package-source pointing to a local Flute tarball.");
+    if (requireToolkit) throw fault("missing-installation", "Flute is not installed. Run init with --package pointing to a local Flute tarball.");
     return false;
   }
   if (toolkit.name !== "@flute/scene" || !(pkg?.dependencies?.["@flute/scene"] || pkg?.devDependencies?.["@flute/scene"]))
@@ -85,7 +85,7 @@ async function installationValid(root: string, requireToolkit = true) {
   return true;
 }
 async function sourceForInstall(root: string, source: string | undefined) {
-  if (!source) throw fault("package-unavailable", "Flute is not published yet. Supply --package-source with a local Flute .tgz package, or install @flute/scene first.");
+  if (!source) throw fault("package-unavailable", "Flute is not published yet. Supply --package with a local Flute .tgz package, or install @flute/scene first.");
   if (!source.endsWith(".tgz") || source.startsWith("-") || source.includes("://"))
     throw fault("invalid-input", "Package source must be an explicit local .tgz file.");
   return services.localPackageSource(root, source);
@@ -159,16 +159,24 @@ async function load(root: string) {
 }
 async function openPreview(root: string, input: z.output<typeof RESOURCES["open-preview"]>) {
   const project = await load(root);
-  try {
-    const html = await services.fetchText(input.url);
-    const entry = services.relativeTarget(htmlEntry(html, true));
-    if (entry !== project.entry) throw fault("wrong-dev-server", "The dev server belongs to another entry.");
-    const transformed = await services.fetchText(new URL("/" + entry, input.url).href);
-    if (!transformed.includes(project.projectId) || !transformed.includes("@flute") || !transformed.includes("ProjectPreview"))
-      throw fault("wrong-dev-server", "Dev server does not contain this project's preview identity.");
-  } catch {
-    throw fault("missing-dev-server", "No matching Vite dev server at " + input.url + ". Run npm run dev in this project, then retry with its loopback URL. Flute will not start another server or change its port.");
+  // Atomic entry edits and npm changes can briefly leave Vite serving its old module.
+  // Retry identity checks within a fixed budget; never accept a different project.
+  let matched = false;
+  for (let attempt = 0; attempt < 5; attempt++) {
+    try {
+      const html = await services.fetchText(input.url);
+      const entry = services.relativeTarget(htmlEntry(html, true));
+      if (entry !== project.entry) throw fault("wrong-dev-server", "The dev server belongs to another entry.");
+      const transformed = await services.fetchText(new URL("/" + entry, input.url).href);
+      if (!transformed.includes(project.projectId) || !transformed.includes("@flute") || !transformed.includes("ProjectPreview"))
+        throw fault("wrong-dev-server", "Dev server does not contain this project's preview identity.");
+      matched = true;
+      break;
+    } catch {
+      if (attempt < 4) await services.pause(150);
+    }
   }
+  if (!matched) throw fault("missing-dev-server", "No matching Vite dev server at " + input.url + ". Run npm run dev in this project, then retry with its loopback URL. Flute will not start another server or change its port.");
   const url = new URL("/?flute-preview=1", input.url).href;
   if (input.launch) await services.openBrowser(root, url);
   return { success: true as const, data: { project, url } };

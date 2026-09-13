@@ -33,9 +33,9 @@ export function htmlEntry(html: string, devServer = false): string {
     const sources = attributes.filter(item => item[1].toLowerCase() === "src");
     if (types.length === 1 && types[0][3] === "module") {
       if (devServer && sources.length === 1 && sources[0][3] === "/@vite/client") continue;
-      if (devServer && !sources.length && /import RefreshRuntime from [\'"]\/@react-refresh[\'"]/.test(tag[0])) continue;
+      if (devServer && !sources.length && /import\s+(?:RefreshRuntime|\{\s*injectIntoGlobalHook\s*\})\s+from\s+[\'"]\/@react-refresh[\'"]/.test(tag[0])) continue;
       if (sources.length !== 1) unsupported("Use one external TSX or JSX module in index.html.");
-      entries.push(sources[0][3]);
+      entries.push(devServer ? sources[0][3].replace(/\?t=\d+$/, "") : sources[0][3]);
     }
   }
   if (entries.length !== 1 || !/^\/?[\w./-]+\.(tsx|jsx)$/.test(entries[0]))

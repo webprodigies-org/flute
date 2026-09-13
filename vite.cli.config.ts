@@ -9,7 +9,6 @@ export default defineConfig({
     lib: { entry: "src/cli/main.ts", formats: ["es"], fileName: () => "flute.js" },
     rollupOptions: {
       external: id => id.startsWith("node:") || builtinModules.includes(id) || ["zod", "typescript"].includes(id),
-      output: { banner: "#!/usr/bin/env node" },
     },
   },
 });

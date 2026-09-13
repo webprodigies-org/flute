@@ -6,7 +6,7 @@ import { createServer, type Server } from "node:http";
 import { executeProjectCommand } from "../../src/project/commands";
 import { ProjectResultSchema, type ProjectResult } from "../../src/core/project";
 import * as services from "../../src/project/services";
-import { inspectEntry } from "../../src/project/vite";
+import { htmlEntry, inspectEntry } from "../../src/project/vite";
 
 const roots: string[] = [];
 const servers: Server[] = [];
@@ -83,6 +83,23 @@ afterEach(async () => {
 });
 
 describe("trusted project commands", () => {
+  it("recognizes current React refresh injection and Vite timestamped entry", () => {
+    const html = '<script type="module">import { injectIntoGlobalHook } from "/@react-refresh"; injectIntoGlobalHook(window);</script><script type="module" src="/@vite/client"></script><script type="module" src="/src/main.tsx?t=1789330250359"></script>';
+    expect(htmlEntry(html, true)).toBe("src/main.tsx");
+    expect(() => htmlEntry(html)).toThrow();
+    expect(() => htmlEntry(html.replace("?t=1789330250359", "?other=1"), true)).toThrow();
+  });
+  it("waits for an edited entry to reach the existing dev server", async () => {
+    const root = await fixture();
+    const project = success(await run(root)).project!;
+    let entryRequests = 0;
+    const url = await server(route => ({text: route === "/"
+      ? '<script type="module" src="/src/main.tsx"></script>'
+      : ++entryRequests < 3 ? 'old entry' : '@flute ProjectPreview ' + project.projectId}));
+    expect(success(await run(root,"open-preview",{url,launch:false})).url).toContain("flute-preview=1");
+    expect(entryRequests).toBe(3);
+  });
+
   it("rejects unknown operations and malformed input before any filesystem effect", async () => {
     const scope = vi.spyOn(services, "canonicalRoot");
     for (const operation of [null, {}, "__proto__", "toString", "evaluate-motion"])

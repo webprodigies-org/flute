@@ -241,3 +241,12 @@ test('renamed project-command declaration cannot replace canonical owner',()=>{
   const issues=checkArchitecture({...valid,'src/project/commands.ts':'export async function otherCommand() { return {}; }'});
   assert.ok(issues.some(i=>i.rule==='canonical-presence'&&i.message.includes('executeProjectCommand')));
 });
+
+test('shared project errors cannot become an effect bypass',()=>rejects('src/project/errors.ts',`import {readFile} from 'node:fs/promises';`));
+test('services may share pure diagnostics without importing project policy',()=>{
+ const issues=checkArchitecture({...valid,
+ 'src/project/errors.ts':`export const fault = (message:string) => new Error(message);`,
+ 'src/project/services.ts':`import {fault} from './errors'; import {readFile} from 'node:fs/promises';`,
+ });
+ assert.deepEqual(issues,[]);
+});

@@ -53,7 +53,14 @@ try {
   const server=spawn(process.execPath,['node_modules/vite/bin/vite.js','--host','127.0.0.1','--port',String(chosen),'--strictPort'],{cwd:host,stdio:'ignore'});processes.push(server);
   await waitFor(origin,server);
   const parentCli=path.join(root,'dist/cli/flute.js');
-  const initialized=JSON.parse(await ok(process.execPath,[parentCli,'init','--project',host,'--package',tarball,'--url',origin,'--no-open','--json']));
+  const initResult=await run(process.execPath,[parentCli,'init','--project',host,'--package',tarball,'--url',origin,'--no-open','--json']);
+  if(initResult.code!==0) {
+    await mkdir(path.join(root,'test-results'),{recursive:true});
+    await writeFile(path.join(root,'test-results/install-debug.txt'),
+      initResult.stderr+'\nHTML:\n'+await (await fetch(origin)).text()+'\nENTRY:\n'+await (await fetch(origin+'/src/main.tsx')).text());
+  }
+  assert.equal(initResult.code,0,initResult.stderr);
+  const initialized=JSON.parse(initResult.stdout);
   assert.equal(initialized.success,true);
   assert.equal(new URL(initialized.data.url).port,String(chosen));
   const entryAfter=await readFile(path.join(host,'src/main.tsx'),'utf8');
