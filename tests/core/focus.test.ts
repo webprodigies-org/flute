@@ -29,3 +29,11 @@ it('rejects degenerate accumulated scales before emitting unusable masks',()=>{
  const result=evaluateScene({nodes:[{id:'tiny',transform:{scale:1e-100}}]});
  expect(result.nodes).toEqual([]);expect(result.issues[0].message).toContain('numeric limits');
 });
+
+it('keeps registered operation identities bound to canonical implementations',async()=>{
+ const core=await import('../../src/core');
+ expect(core.RESOURCES['evaluate-spatial']).toBe(core.evaluateScene);
+ expect(core.RESOURCES['evaluate-motion']).toBe(core.evaluateMotion);
+ expect(core.RESOURCES['validate-definition']).toBe(core.validateScene);
+ expect(Object.isFrozen(core.RESOURCES)).toBe(true);
+});
