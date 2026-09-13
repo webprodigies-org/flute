@@ -5,7 +5,7 @@ export default defineConfig({
     emptyOutDir: false,
     lib: { entry: "src/index.ts", formats: ["es"], fileName: "index" },
     rollupOptions: {
-      external: ["react", "react-dom", "react/jsx-runtime", "zod"],
+      external: ["react", "react-dom", "react/jsx-runtime", "react-error-boundary", "zod"],
     },
     sourcemap: true,
   },

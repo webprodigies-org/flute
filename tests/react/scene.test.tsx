@@ -17,29 +17,27 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { evaluateScene, transformToCss } from "../../src/core";
 import { Motion, Scene, SceneErrorBoundary, Surface } from "../../src/react";
 
-class Observer {
-  static instances: Observer[] = [];
-  targets = new Set<Element>();
-  constructor(private callback: ResizeObserverCallback) {
-    Observer.instances.push(this);
-  }
-  observe = (element: Element) => {
-    this.targets.add(element);
+function createObserver(callback: ResizeObserverCallback) {
+  const targets = new Set<Element>();
+  const observer = {
+    targets,
+    observe: (element: Element) => { targets.add(element); },
+    unobserve: (element: Element) => { targets.delete(element); },
+    disconnect: () => { targets.clear(); },
+    flush: () => { callback([], observer as unknown as ResizeObserver); },
   };
-  unobserve = (element: Element) => {
-    this.targets.delete(element);
-  };
-  disconnect = () => {
-    this.targets.clear();
-  };
-  flush() {
-    this.callback([], this as unknown as ResizeObserver);
-  }
+  return observer;
+}
+let observerInstances: ReturnType<typeof createObserver>[] = [];
+function Observer(callback: ResizeObserverCallback) {
+  const observer = createObserver(callback);
+  observerInstances.push(observer);
+  return observer;
 }
 const node = (id: string) =>
   document.querySelector<HTMLDivElement>(`[data-flute-id="${id}"]`)!;
 beforeEach(() => {
-  Observer.instances = [];
+  observerInstances = [];
   vi.stubGlobal("ResizeObserver", Observer);
   vi.spyOn(HTMLElement.prototype, "offsetWidth", "get").mockImplementation(
     function (this: HTMLElement) {
@@ -242,10 +240,10 @@ describe("live React spatial adapter", () => {
     const before = Number(node("a").dataset.fluteDepth);
     node("a").style.width = "200px";
     act(() => {
-      Observer.instances.forEach((observer) => observer.flush());
+      observerInstances.forEach((observer) => observer.flush());
     });
     expect(Number(node("a").dataset.fluteDepth)).toBeCloseTo(before - 50);
-    const observers = Observer.instances;
+    const observers = observerInstances;
     view.unmount();
     expect(observers.every((observer) => observer.targets.size === 0)).toBe(
       true,
@@ -374,7 +372,7 @@ describe("live React spatial adapter", () => {
       value: 0,
     });
     act(() => {
-      Observer.instances.forEach((observer) => observer.flush());
+      observerInstances.forEach((observer) => observer.flush());
     });
     expect(screen.getByRole("alert").textContent).toContain(
       "no measurable area",
@@ -384,7 +382,7 @@ describe("live React spatial adapter", () => {
       value: 200,
     });
     act(() => {
-      Observer.instances.forEach((observer) => observer.flush());
+      observerInstances.forEach((observer) => observer.flush());
     });
     expect(screen.queryByRole("alert")).toBeNull();
     view.unmount();
@@ -421,6 +419,38 @@ describe("live React spatial adapter", () => {
       </SceneErrorBoundary>,
     );
     expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it.each(["failed", null, undefined])("recovers a non-Error thrown value: %s", (failure) => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    let broken = true;
+    function Host() {
+      if (broken) throw failure;
+      return <span>Restored host</span>;
+    }
+    const view = render(<SceneErrorBoundary resetKey={0}><Host /></SceneErrorBoundary>);
+    expect(screen.getByRole("alert").textContent).toContain(String(failure));
+    broken = false;
+    fireEvent.click(screen.getByRole("button", { name: "Retry scene" }));
+    expect(screen.getByText("Restored host")).toBeTruthy();
+    broken = true;
+    view.rerender(<SceneErrorBoundary resetKey={0}><Host /></SceneErrorBoundary>);
+    broken = false;
+    view.rerender(<SceneErrorBoundary resetKey={1}><Host /></SceneErrorBoundary>);
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("keeps healthy host state and DOM when resetKey changes", () => {
+    function Host() {
+      const [count, setCount] = useState(0);
+      return <button onClick={() => setCount(count + 1)}>Count {count}</button>;
+    }
+    const view = render(<SceneErrorBoundary resetKey={0}><Host /></SceneErrorBoundary>);
+    const button = screen.getByRole("button");
+    fireEvent.click(button);
+    view.rerender(<SceneErrorBoundary resetKey={1}><Host /></SceneErrorBoundary>);
+    expect(screen.getByRole("button")).toBe(button);
+    expect(button.textContent).toBe("Count 1");
   });
 
   it("makes out-of-scene usage actionable", () => {

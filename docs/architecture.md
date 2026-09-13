@@ -4,7 +4,7 @@ Morphite Board owns scope and build order. Slice ad6d2430-a222-5b8f-a296-e24724f
 
 Scene schemas live in src/core/scene.ts (version 2). Spatial evaluation, coordinate conventions and focus-mask generation live in src/core/spatial.ts. MotionSchema/evaluateMotion own explicit-time tracks in src/core/motion.ts. RESOURCES binds the current operation identities; React consumes it without copying their policy. See README for public usage and limitations.
 
-Scene accepts camera, focus, motion, timeMs, children, style/className and onDiagnostics. Surface/Motion accept stable id, transform, children and optional content. useSceneTime exposes the same explicit time for opt-in component adapters. SceneErrorBoundary provides retry and resetKey recovery.
+Scene accepts camera, focus, motion, timeMs, children, style/className and onDiagnostics. Surface/Motion accept stable id, transform, children and optional content. useSceneTime exposes the same explicit time for opt-in component adapters. SceneErrorBoundary provides retry and resetKey recovery through react-error-boundary, an external dependency confined to the React adapter.
 
 Registration is Scene-scoped with mount tokens and ResizeObserver cleanup. Measurements are untransformed border-box centers relative to the nearest registered parent or scene center. The renderer preserves provider context, DOM identity and interaction during prop/time changes. Visual leaves receive the progressive filter/opacity; spatial groups retain preserve-3d. Invalid input and removed motion targets recover without rebuilding the host subtree.
 
