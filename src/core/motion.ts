@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { SceneIssue } from "./scene";
+import { TransformSchema, CameraSchema, FocusSchema, type SceneIssue } from "./scene";
 
 /** SOURCE OF TRUTH: MotionSchema, evaluateMotion, explicit scene time.
  * WHAT: typed motion tracks, target/property validation and deterministic interpolation.
@@ -8,22 +8,10 @@ import type { SceneIssue } from "./scene";
  * React/runtime adapters resolve registered surfaces and consume these partial overrides.
  */
 const finite = z.number().finite();
-const spatialProperties = {
-  x: finite, y: finite, z: finite,
-  rotateX: finite, rotateY: finite, rotateZ: finite,
-};
-const SurfaceMotionSchema = z.strictObject({
-  ...spatialProperties,
-  scale: finite.positive().max(100),
-  opacity: finite.min(0).max(1),
-});
-const CameraMotionSchema = z.strictObject(spatialProperties);
-const FocusMotionSchema = z.strictObject({
-  x: finite, y: finite, z: finite,
-  radius: finite.nonnegative(),
-  falloff: finite.positive(),
-  maxBlur: finite.min(0).max(32),
-});
+// Domain bounds derive from the scene owner. Motion adds only animation policy.
+const SurfaceMotionSchema = TransformSchema.extend({opacity:finite.min(0).max(1)});
+const CameraMotionSchema = CameraSchema.pick({x:true,y:true,z:true,rotateX:true,rotateY:true,rotateZ:true});
+const FocusMotionSchema = FocusSchema;
 export const MotionKeyframeSchema = z.strictObject({
   timeMs: finite.nonnegative(),
   value: finite,

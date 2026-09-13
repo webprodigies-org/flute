@@ -25,3 +25,7 @@ it('constructs complementary radial masks with normalized weights',()=>{
 it.each([{focus:{x:Infinity}},{focus:{radius:-1}},{focus:{falloff:0}},{camera:{z:NaN}},{focus:{targetId:'old'}}])('rejects invalid or obsolete spatial configuration',input=>{
  expect(validateScene({...input,nodes:[]}).success).toBe(false);
 });
+it('rejects degenerate accumulated scales before emitting unusable masks',()=>{
+ const result=evaluateScene({nodes:[{id:'tiny',transform:{scale:1e-100}}]});
+ expect(result.nodes).toEqual([]);expect(result.issues[0].message).toContain('numeric limits');
+});
