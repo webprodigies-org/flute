@@ -1,5 +1,5 @@
+import { ErrorBoundary, type FallbackProps } from "react-error-boundary";
 import {
-  Component,
   createContext,
   useContext,
   useEffect,
@@ -326,31 +326,29 @@ export type SceneErrorBoundaryProps = {
   children?: ReactNode;
   resetKey?: unknown;
 };
-type ErrorState = { error: Error | null };
-export class SceneErrorBoundary extends Component<
-  SceneErrorBoundaryProps,
-  ErrorState
-> {
-  state: ErrorState = { error: null };
-  static getDerivedStateFromError(error: unknown): ErrorState {
-    return { error: error instanceof Error ? error : new Error(String(error)) };
-  }
-  componentDidUpdate(previous: SceneErrorBoundaryProps) {
-    if (!Object.is(previous.resetKey, this.props.resetKey) && this.state.error)
-      this.setState({ error: null });
-  }
-  render() {
-    return this.state.error ? (
-      <div role="alert">
-        <strong>Unable to render the Flute scene.</strong>
-        <p>{this.state.error.message}</p>
-        <p>Correct the component or scene configuration, then retry.</p>
-        <button type="button" onClick={() => this.setState({ error: null })}>
-          Retry scene
-        </button>
-      </div>
-    ) : (
-      this.props.children
-    );
-  }
+/** SOURCE OF TRUTH: scene render recovery.
+ * WHAT: SceneErrorBoundary owns the scene fallback and resetKey adapter.
+ * WHY: preserve a consistent recovery action for failed host components.
+ * WHERE: react-error-boundary catches render failures; callers keep their existing API.
+ */
+export function SceneErrorBoundary({ children, resetKey }: SceneErrorBoundaryProps) {
+  return (
+    <ErrorBoundary FallbackComponent={SceneErrorFallback} resetKeys={[resetKey]}>
+      {children}
+    </ErrorBoundary>
+  );
+}
+
+function SceneErrorFallback({ error, resetErrorBoundary }: FallbackProps) {
+  const message = error instanceof Error ? error.message : String(error);
+  return (
+    <div role="alert">
+      <strong>Unable to render the Flute scene.</strong>
+      <p>{message}</p>
+      <p>Correct the component or scene configuration, then retry.</p>
+      <button type="button" onClick={resetErrorBoundary}>
+        Retry scene
+      </button>
+    </div>
+  );
 }

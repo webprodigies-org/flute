@@ -20,7 +20,7 @@ const owners = new Map([
 const layers = {
   core: { local: ['core'], external: ['zod'] },
   runtime: { local: ['core', 'runtime'], external: ['zod'] },
-  react: { local: ['core', 'runtime', 'react'], external: ['react', 'react-dom', 'zod'] },
+  react: { local: ['core', 'runtime', 'react'], external: ['react', 'react-dom', 'react-error-boundary', 'zod'] },
 };
 const nodeModules = new Set(builtinModules.map(name => name.replace(/^node:/, '')));
 const nodeGlobals = new Set(['process', 'Buffer', 'global', '__dirname', '__filename', 'module', 'exports', 'setImmediate', 'clearImmediate', 'Deno', 'Bun']);

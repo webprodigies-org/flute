@@ -32,7 +32,7 @@ const rejects = (file, text, rule = 'module-boundary', options) => {
 
 test('allowed canonical declarations, barrels, imports and browser adapter', () => {
   assert.deepEqual(checkArchitecture({ ...valid,
-    'src/react/index.tsx': `import React from 'react'; import { evaluateScene } from '../core'; export { SceneSchema } from '../core'; const x = document.createElement('div'); new ResizeObserver(() => {}); evaluateScene({});`,
+    'src/react/index.tsx': `import React from 'react'; import { ErrorBoundary } from 'react-error-boundary'; import { evaluateScene } from '../core'; export { SceneSchema } from '../core'; const x = document.createElement('div'); new ResizeObserver(() => {}); evaluateScene({});`,
     'src/runtime/index.ts': `export * from '../core';`,
   }), []);
 });
@@ -42,7 +42,7 @@ for (const layer of ['core', 'runtime', 'react']) {
     test(`${layer} rejects ${target}`, () => rejects(`src/${layer}/bad.ts`, `import thing from '${target}';`));
   }
 }
-for (const target of ['react', 'react/jsx-runtime', 'react-dom/client', '../react', '../runtime']) {
+for (const target of ['react', 'react/jsx-runtime', 'react-dom/client', 'react-error-boundary', '../react', '../runtime']) {
   test(`core rejects ${target}`, () => rejects('src/core/bad.ts', `import '${target}';`));
 }
 for (const form of [
@@ -190,3 +190,5 @@ test('documentation rejects symlink files and symlink directory',()=>docsFixture
  rmSync(path.join(root,'docs'),{recursive:true});mkdirSync(path.join(root,'other'));symlinkSync('other',path.join(root,'docs'));
  assert.ok(checkDocumentation(root).some(issue=>issue.file==='docs'));
 }));
+
+test('runtime rejects the React error adapter', () => rejects('src/runtime/bad.ts', `import 'react-error-boundary';`));
