@@ -219,14 +219,14 @@ describe("live React spatial adapter", () => {
       node("group")
         .querySelector("[data-flute-content]")
         ?.getAttribute("style"),
-    ).toContain("url(#flute-focus-");
+    ).toContain("blur(10px)");
     expect(node("child").closest("[data-flute-content]")).toBeNull();
     expect(node("implicit-group").style.filter).toBe("none");
     expect(node("motion").parentElement?.style.filter).toBe("none");
     expect(
       node("leaf").querySelector<HTMLElement>("[data-flute-content]")?.style
         .filter,
-    ).toMatch(/^url\(#flute-focus-/);
+    ).toBe("blur(10px)");
   });
 
   it("updates local geometry on ResizeObserver and releases measurements on unmount", () => {

@@ -6,12 +6,17 @@ Wrap existing React UI in perspective surfaces, then animate the camera, surface
 
 ```sh
 npm ci --legacy-peer-deps
+npm run setup:dashboard
 npm run dev
 ```
 
 Use Morphite's managed **app** service when working there. Otherwise Vite uses APP_PORT / PORT / 5173. Node 24 and npm 11 are the tested environment.
 
-The Storage study demonstrates floating folders, camera movement and progressive focus. Play or seek the scene; compare fixed focus against traveling focus and adjust focus position/width. The dashboard cards use the included `/api/dashboard` fixture through their existing React provider, not a production database. `?fixture=baseline` renders the cards without Flute wrappers.
+The default app is the official shadcn `dashboard-01` block in `examples/dashboard-lab`. Open `/?scene=sidebar` and press Play for the tilted sidebar close-up. Fifteen real menu rows protrude and settle while the camera travels down their local axis. `/` is the ordinary dashboard; `/?flute-preview=1` is the basic whole-app development preview. These are different demonstrations. The authored sidebar shot is example code, not automatic CLI choreography.
+
+`npm run setup:dashboard` builds and packs Flute, installs that actual tarball into the example, and runs canonical CLI init/validation. Run it again after changing the library; restart the dev server so Vite reloads the installed package. Edit `src/components/dashboard.tsx` inside the example for shared UI and `src/scene/sidebar-recipe.ts` for the shot. See the example README for the short map.
+
+The previous study remains available with `npm run dev:storage`. The Storage study demonstrates floating folders, camera movement and progressive focus. Play or seek the scene; compare fixed focus against traveling focus and adjust focus position/width. The dashboard cards use the included `/api/dashboard` fixture through their existing React provider, not a production database. `?fixture=baseline` renders the cards without Flute wrappers.
 
 ## Install into a supported project
 
@@ -34,7 +39,7 @@ Initialization installs the toolkit and wraps the existing root render expressio
 
 The ordinary app URL keeps the original application view. The preview entry explicitly receives the host's `import.meta.env.DEV`, so a production build cannot activate the preview with a query string. This first preview shows the whole live app on a tilted surface with progressive focus. Source editing uses the host's existing Vite refresh; dedicated refinement controls and saved recipes remain subsequent slices.
 
-Missing or wrong-port dev servers report an actionable error; start the original host server and retry `open`. Custom roots, custom/dynamic Vite plugins or configuration, unsupported entry patterns and package managers need an explicit adapter instead of replacing the app. Setup metadata stays in `.flute/`; host `.env` files are not copied. Review generated source changes normally.
+Missing or wrong-port dev servers report an actionable error; start the original host server and retry `open`. The supported configuration includes the standard React plugin, optional zero-argument Tailwind Vite plugin and shadcn’s exact `@` → `./src` alias. React/react-dom must be installed at 19.2.x (pin the version; a caret can install a later minor). Custom roots, other custom/dynamic Vite plugins or configuration, unsupported entry patterns and package managers need an explicit adapter instead of replacing the app. Setup metadata stays in `.flute/`; host `.env` files are not copied. Review generated source changes normally.
 
 ## Compose
 

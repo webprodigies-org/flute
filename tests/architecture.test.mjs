@@ -13,7 +13,7 @@ const sceneDoc = `/** SOURCE OF TRUTH: SceneSchema, TransformSchema.
  * WHY: keep all consumers consistent.
  * WHERE: consumed by spatial evaluator.
  */`;
-const spatialDoc = `/** SOURCE OF TRUTH: evaluateScene, transformToCss, focusForSurface, sampleFocus, focusMask, cameraToCss.
+const spatialDoc = `/** SOURCE OF TRUTH: evaluateScene, transformToCss, focusForSurface, sampleFocus, focusMask, cameraToCss, uniformFocusBlur.
  * WHAT: evaluate transforms and focus.
  * WHY: prevent divergent renderer math.
  * WHERE: consumed by React adapter.
@@ -22,7 +22,7 @@ const valid = {
   'src/core/project.ts': `/** SOURCE OF TRUTH: InitProjectSchema.\n * WHAT: validate project command inputs.\n * WHY: keep adapters using contracts.\n * WHERE: consumed by trusted commands.\n */\nimport { z } from 'zod'; export const InitProjectSchema=z.strictObject({});`,
   'src/project/commands.ts': `/** SOURCE OF TRUTH: executeProjectCommand.\n * WHAT: execute validated project commands.\n * WHY: protect scoped project state.\n * WHERE: invoked through CLI adapters.\n */\nexport async function executeProjectCommand(){return {};}`, 
   'src/core/scene.ts': `${sceneDoc}\nimport { z } from 'zod';\nexport const TransformSchema = z.strictObject({ x: z.number() });\nexport const SceneSchema = z.strictObject({ transform: TransformSchema }).superRefine(() => {});`,
-  'src/core/spatial.ts': `${spatialDoc}\nimport { SceneSchema } from './scene';\nexport function evaluateScene(input: unknown) { return SceneSchema.parse(input); }\nexport const transformToCss = () => 'none'; export const focusForSurface=()=>0; export const sampleFocus=()=>0; export const focusMask=()=>''; export const cameraToCss=()=>'';`,
+  'src/core/spatial.ts': `${spatialDoc}\nimport { SceneSchema } from './scene';\nexport function evaluateScene(input: unknown) { return SceneSchema.parse(input); }\nexport const transformToCss = () => 'none'; export const focusForSurface=()=>0; export const sampleFocus=()=>0; export const focusMask=()=>''; export const cameraToCss=()=>''; export const uniformFocusBlur=()=>0;`,
   'src/core/motion.ts': '/** SOURCE OF TRUTH: MotionSchema, evaluateMotion.\n * WHAT: validate motion and time.\n * WHY: prevent multiple competing clocks.\n * WHERE: consumed by React adapters.\n */\nimport { z } from \'zod\'; export const MotionSchema=z.strictObject({}); export function evaluateMotion(){return 0;}',
   'src/core/index.ts': `export * from './scene'; export { evaluateScene, transformToCss } from './spatial';`,
 };
@@ -113,7 +113,7 @@ for (const text of [
 });
 test('empty function or signature cannot satisfy evaluator presence', () => {
   const issues = fixture('src/core/spatial.ts', `${spatialDoc}\nexport function evaluateScene(): void; export function transformToCss() {}`);
-  assert.equal(issues.filter(issue => issue.rule === 'canonical-presence').length, 6);
+  assert.equal(issues.filter(issue => issue.rule === 'canonical-presence').length, 7);
 });
 test('absent owner fails even if declarations are elsewhere', () => {
   const { 'src/core/scene.ts': scene, ...rest } = valid;
@@ -250,3 +250,5 @@ test('services may share pure diagnostics without importing project policy',()=>
  });
  assert.deepEqual(issues,[]);
 });
+
+test("uniform blur classification cannot move into a renderer", () => rejects("src/react/copied.ts", "export function uniformFocusBlur() { return 0; }", "canonical-owner"));

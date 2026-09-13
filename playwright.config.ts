@@ -2,7 +2,7 @@ import { defineConfig, devices } from "@playwright/test";
 const baseURL =
   process.env.FLUTE_TEST_URL ??
   "http://127.0.0.1:" +
-    String(process.env.APP_PORT ?? process.env.PORT ?? 5173);
+    String(process.env.FLUTE_TEST_PORT ?? 4173);
 export default defineConfig({
   testDir: "./tests/browser",
   fullyParallel: false,
@@ -14,9 +14,9 @@ export default defineConfig({
   webServer: process.env.FLUTE_TEST_URL
     ? undefined
     : {
-        command: "npm run preview",
+        command: `npm run preview -- --port ${process.env.FLUTE_TEST_PORT ?? 4173} --strictPort`,
         url: baseURL,
-        reuseExistingServer: !process.env.CI,
+        reuseExistingServer: false,
         timeout: 30000,
       },
   projects: [

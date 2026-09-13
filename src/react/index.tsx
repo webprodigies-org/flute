@@ -16,6 +16,7 @@ import {
   RESOURCES,
   cameraToCss,
   transformToCss,
+  uniformFocusBlur,
   type CameraInput,
   type EvaluatedNode,
   type FocusInput,
@@ -264,14 +265,16 @@ export function Surface({
     node.height > 0 &&
     node.focus.maxBlur > 0 &&
     (content !== undefined || !grouped);
+  const uniformBlur = filtering ? uniformFocusBlur(node.focus, node.width, node.height) : 0;
   const leafStyle: CSSProperties = {
     pointerEvents: style?.pointerEvents ?? "auto",
     opacity: context.opacities.get(id) ?? 1,
-    filter: filtering ? `url(#${filterId})` : "none",
+    filter: !filtering || uniformBlur === 0 ? "none"
+      : uniformBlur !== undefined ? `blur(${uniformBlur}px)` : `url(#${filterId})`,
   };
   return (
     <ParentContext.Provider value={token}>
-      {filtering && <FocusFilter id={filterId} node={node} />}
+      {filtering && uniformBlur === undefined && <FocusFilter id={filterId} node={node} />}
       <div
         ref={element}
         className={className}

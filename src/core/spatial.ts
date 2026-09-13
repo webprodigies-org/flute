@@ -9,7 +9,7 @@ import {
   type SceneDefinition,
 } from "./scene";
 
-/** SOURCE OF TRUTH: evaluateScene, transformToCss, cameraToCss, focusForSurface, sampleFocus, focusMask.
+/** SOURCE OF TRUTH: evaluateScene, transformToCss, cameraToCss, focusForSurface, sampleFocus, focusMask, uniformFocusBlur.
  * WHAT: camera-space transforms and progressive spatial focus for every renderer consumer.
  * WHY: one mathematical definition keeps DOM preview and future output adapters consistent.
  * WHERE: React registration provides untransformed layout measurements; no DOM or transport is imported here.
@@ -205,7 +205,7 @@ export function evaluateScene(
   return { nodes, focusDepth, issues };
 }
 
-/** SOURCE OF TRUTH: FocusField, focusForSurface, sampleFocus, focusMask.
+/** SOURCE OF TRUTH: FocusField, focusForSurface, sampleFocus, focusMask, uniformFocusBlur.
  * WHAT: a camera-space xyz focus point sampled continuously across a live plane.
  * WHY: one distance law drives masks and tests; an element center cannot describe
  * progressive sharpness. Camera-attached focus stays still as scene content moves.
@@ -247,6 +247,23 @@ export function sampleFocus(f: FocusField, x: number, y: number): number {
   );
   const t = Math.max(0, Math.min(1, (distance - f.radius) / f.falloff));
   return f.maxBlur * t * t * (3 - 2 * t);
+}
+/** Uniform field fast path. A whole visual leaf outside the transition needs one
+ * Gaussian, and a wholly sharp leaf needs none. Include the filter's support area
+ * so a nearby gradient cannot be incorrectly discarded at the leaf's edges.
+ * The progressive distance law remains sampleFocus; this only classifies bounds.
+ */
+export function uniformFocusBlur(f: FocusField, width: number, height: number): number | undefined {
+  if (f.maxBlur === 0) return 0;
+  const pad = 3 * f.maxBlur / f.scale;
+  const halfWidth = width / 2 + pad, halfHeight = height / 2 + pad;
+  const nearestX = Math.max(-halfWidth, Math.min(halfWidth, f.x));
+  const nearestY = Math.max(-halfHeight, Math.min(halfHeight, f.y));
+  if (sampleFocus(f, nearestX, nearestY) === f.maxBlur) return f.maxBlur / f.scale;
+  const farthestX = f.x >= 0 ? -halfWidth : halfWidth;
+  const farthestY = f.y >= 0 ? -halfHeight : halfHeight;
+  if (sampleFocus(f, farthestX, farthestY) === 0) return 0;
+  return undefined;
 }
 export const FOCUS_BANDS = 6;
 // Adjacent Gaussian levels blend with weights summing to one. The spatial field
