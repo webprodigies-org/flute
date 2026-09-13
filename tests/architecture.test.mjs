@@ -13,14 +13,15 @@ const sceneDoc = `/** SOURCE OF TRUTH: SceneSchema, TransformSchema.
  * WHY: keep all consumers consistent.
  * WHERE: consumed by spatial evaluator.
  */`;
-const spatialDoc = `/** SOURCE OF TRUTH: evaluateScene, transformToCss.
+const spatialDoc = `/** SOURCE OF TRUTH: evaluateScene, transformToCss, focusForSurface, sampleFocus, focusMask, cameraToCss.
  * WHAT: evaluate transforms and focus.
  * WHY: prevent divergent renderer math.
  * WHERE: consumed by React adapter.
  */`;
 const valid = {
   'src/core/scene.ts': `${sceneDoc}\nimport { z } from 'zod';\nexport const TransformSchema = z.strictObject({ x: z.number() });\nexport const SceneSchema = z.strictObject({ transform: TransformSchema }).superRefine(() => {});`,
-  'src/core/spatial.ts': `${spatialDoc}\nimport { SceneSchema } from './scene';\nexport function evaluateScene(input: unknown) { return SceneSchema.parse(input); }\nexport const transformToCss = () => 'none';`,
+  'src/core/spatial.ts': `${spatialDoc}\nimport { SceneSchema } from './scene';\nexport function evaluateScene(input: unknown) { return SceneSchema.parse(input); }\nexport const transformToCss = () => 'none'; export const focusForSurface=()=>0; export const sampleFocus=()=>0; export const focusMask=()=>''; export const cameraToCss=()=>'';`,
+  'src/core/motion.ts': '/** SOURCE OF TRUTH: MotionSchema, evaluateMotion.\n * WHAT: validate motion and time.\n * WHY: prevent multiple competing clocks.\n * WHERE: consumed by React adapters.\n */\nexport const MotionSchema={}; export function evaluateMotion(){}',
   'src/core/index.ts': `export * from './scene'; export { evaluateScene, transformToCss } from './spatial';`,
 };
 const fixture = (file, text, options) => checkArchitecture({ ...valid, [file]: text }, options);
@@ -143,3 +144,5 @@ test('CLI succeeds for allowed source, fails for violations and missing source',
     assert.match(denied.stderr, /src\/core\/bad\.ts:1:\d+ \[module-boundary\]/);
   } finally { rmSync(directory, { recursive: true, force: true }); }
 });
+
+for(const symbol of ['sampleFocus','focusMask','focusForSurface','cameraToCss','evaluateMotion','MotionSchema'])test('rejects duplicate '+symbol+' owner',()=>rejects('src/react/duplicate.ts',`export const ${symbol}=()=>0;`,'canonical-owner'));

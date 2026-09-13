@@ -7,7 +7,7 @@ import {
   CameraSchema, type CameraInput, type SceneDefinition,
 } from "./scene";
 
-/** SOURCE OF TRUTH: evaluateScene, transformToCss.
+/** SOURCE OF TRUTH: evaluateScene, transformToCss, cameraToCss, focusForSurface, sampleFocus, focusMask.
  * WHAT: camera-space transforms and progressive spatial focus for every renderer consumer.
  * WHY: one mathematical definition keeps DOM preview and future output adapters consistent.
  * WHERE: React registration provides untransformed layout measurements; no DOM or transport is imported here.
@@ -134,6 +134,11 @@ export function evaluateScene(
     if (!getWorld(node.id).every(Number.isFinite)) {
       return { nodes: [], focusDepth: 0, issues: [{ path: node.id, message: "World transform exceeds numeric limits: reduce nested scale or position." }] };
     }
+  }
+  for (const node of scene.nodes) {
+    const field=focusForSurface(getWorld(node.id),scene.focus);
+    if (!Object.values(field).every(Number.isFinite) || field.scale < 1e-8 || !Number.isFinite((field.radius+field.falloff)/field.scale))
+      return {nodes:[],focusDepth:0,issues:[{path:node.id,message:'Focal geometry exceeds numeric limits: reduce scale, position or focus radius.'}]};
   }
   const focusDepth = scene.focus.z;
   const nodes = scene.nodes.map((node) => {
