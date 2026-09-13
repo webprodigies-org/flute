@@ -1,11 +1,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync, symlinkSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { checkArchitecture, checkProject } from '../scripts/check-architecture.mjs';
+import { checkArchitecture, checkProject, checkDocumentation } from '../scripts/check-architecture.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const sceneDoc = `/** SOURCE OF TRUTH: SceneSchema, TransformSchema.
@@ -136,8 +136,17 @@ test('CLI succeeds for allowed source, fails for violations and missing source',
       mkdirSync(path.dirname(path.join(directory, name)), { recursive: true });
       writeFileSync(path.join(directory, name), text);
     }
+    mkdirSync(path.join(directory,'docs'));
+    writeFileSync(path.join(directory,'docs/architecture.md'),'# Architecture');
+    writeFileSync(path.join(directory,'docs/product.md'),'# Product');
     const allowed = run();
     assert.equal(allowed.status, 0, allowed.stderr);
+    writeFileSync(path.join(directory,'docs/rogue.md'),'untracked extra document');
+    const badDocs=run();
+    assert.equal(badDocs.status,1);
+    assert.match(badDocs.stderr,/documentation-boundary/);
+    rmSync(path.join(directory,'docs/rogue.md'));
+    assert.equal(run().status,0);
     writeFileSync(path.join(directory, 'src/core/bad.ts'), `export * from 'node:fs';`);
     const denied = run();
     assert.equal(denied.status, 1);
@@ -146,3 +155,38 @@ test('CLI succeeds for allowed source, fails for violations and missing source',
 });
 
 for(const symbol of ['sampleFocus','focusMask','focusForSurface','cameraToCss','evaluateMotion','MotionSchema'])test('rejects duplicate '+symbol+' owner',()=>rejects('src/react/duplicate.ts',`export const ${symbol}=()=>0;`,'canonical-owner'));
+
+function docsFixture(run) {
+  const directory=mkdtempSync(path.join(tmpdir(),'flute-docs-'));
+  try {
+    mkdirSync(path.join(directory,'docs'));
+    for(const name of ['architecture.md','product.md'])writeFileSync(path.join(directory,'docs',name),'# Canonical');
+    run(directory);
+  } finally {rmSync(directory,{recursive:true,force:true});}
+}
+test('documentation accepts exactly the two canonical regular files',()=>docsFixture(root=>assert.deepEqual(checkDocumentation(root),[])));
+for(const name of ['random.md','image.png','.hidden'])test('documentation rejects extra '+name,()=>docsFixture(root=>{
+ writeFileSync(path.join(root,'docs',name),'extra');
+ assert.ok(checkDocumentation(root).some(issue=>issue.file==='docs/'+name));
+}));
+test('documentation rejects incorrectly cased canonical filenames',()=>docsFixture(root=>{
+ rmSync(path.join(root,'docs/architecture.md'));
+ writeFileSync(path.join(root,'docs/Architecture.md'),'incorrect casing');
+ const issues=checkDocumentation(root);
+ assert.ok(issues.some(issue=>issue.file==='docs/Architecture.md'));
+ assert.ok(issues.some(issue=>issue.file==='docs/architecture.md'));
+}));
+test('documentation rejects nested directories even with allowed basenames',()=>docsFixture(root=>{
+ mkdirSync(path.join(root,'docs/nested'));writeFileSync(path.join(root,'docs/nested/architecture.md'),'extra');
+ assert.ok(checkDocumentation(root).some(issue=>issue.file==='docs/nested'));
+}));
+test('documentation requires both files and its directory',()=>docsFixture(root=>{
+ rmSync(path.join(root,'docs/product.md'));assert.ok(checkDocumentation(root).some(issue=>issue.file==='docs/product.md'));
+ rmSync(path.join(root,'docs'),{recursive:true});assert.ok(checkDocumentation(root).some(issue=>issue.file==='docs'));
+}));
+test('documentation rejects symlink files and symlink directory',()=>docsFixture(root=>{
+ rmSync(path.join(root,'docs/product.md'));symlinkSync('architecture.md',path.join(root,'docs/product.md'));
+ assert.ok(checkDocumentation(root).some(issue=>issue.file==='docs/product.md'));
+ rmSync(path.join(root,'docs'),{recursive:true});mkdirSync(path.join(root,'other'));symlinkSync('other',path.join(root,'docs'));
+ assert.ok(checkDocumentation(root).some(issue=>issue.file==='docs'));
+}));
