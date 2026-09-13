@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-/** SOURCE OF TRUTH: project command contracts.
+/** SOURCE OF TRUTH: InitProjectSchema, project command contracts.
  * WHAT: inputs and results exchanged by local project adapters and trusted commands.
  * WHY: adapters share runtime validation without importing filesystem or process code.
  * WHERE: RESOURCES binds input schemas; project/commands executes them; cli presents results.
@@ -11,12 +11,10 @@ export const InitProjectSchema = z.strictObject({
 export const LoadProjectSchema = z.strictObject({});
 export const ValidateProjectSchema = z.strictObject({});
 export const OpenPreviewSchema = z.strictObject({
-  url: z.url().superRefine((value, ctx) => {
-    const url = new URL(value);
-    if (url.protocol !== "http:" || !["localhost", "127.0.0.1", "[::1]"].includes(url.hostname)
-      || url.username || url.password || url.pathname !== "/" || url.search || url.hash)
-      ctx.addIssue({code:"custom",message:"Use an HTTP loopback dev-server origin, for example http://127.0.0.1:5173."});
-  }),
+  url: z.url().regex(
+    /^http:\/\/(?:localhost|127\.0\.0\.1|\[::1\])(?::[0-9]+)?\/?$/,
+    "Use an HTTP loopback dev-server origin, for example http://127.0.0.1:5173.",
+  ),
   launch: z.boolean().default(true),
 });
 export const ProjectStateSchema = z.strictObject({

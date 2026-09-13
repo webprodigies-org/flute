@@ -25,6 +25,8 @@
     "tests",
     "vite.config.ts",
     "playwright.config.ts",
-    "playwright.performance.config.ts"
+    "playwright.performance.config.ts",
+    "vite.lib.config.ts",
+    "vite.cli.config.ts"
   ]
 }
