@@ -1,0 +1,21 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "outDir": "dist/library/types",
+    "rootDir": "src",
+    "types": [
+      "react",
+      "react-dom"
+    ]
+  },
+  "include": [
+    "src"
+  ],
+  "exclude": [
+    "demo",
+    "tests"
+  ]
+}
