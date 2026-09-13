@@ -1,2 +1,2 @@
-export * from './scene';
-export * from './spatial';
+export * from "./scene";
+export * from "./spatial";

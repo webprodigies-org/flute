@@ -5,6 +5,7 @@ Board slice ad6d2430-a222-5b8f-a296-e24724f4a81d owns delivery. This file record
 Core owner: src/core/scene.ts and spatial.ts. The React adapter consumes validateScene/evaluateScene/transformToCss. Types derive from Zod. Component instances and host API data never enter SceneDefinition.
 
 React public interface to implement in src/react/index.tsx:
+
 - Scene: children, camera?: CameraInput, focus?: FocusInput, className?, style?, onDiagnostics?: (issues: SceneIssue[]) => void.
 - Surface: id: string, transform?: TransformInput, children, className?, style?, content?: ReactNode.
 - Motion: same as Surface, positioning only in slice one (no timeline).

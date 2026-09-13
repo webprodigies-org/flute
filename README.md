@@ -18,17 +18,21 @@ Try the three focal targets, tilt and depth controls. Select **Last month**, ins
 ## Use the wrappers
 
 ```tsx
-import { Scene, Surface, Motion } from '@flute/scene';
+import { Scene, Surface, Motion } from "@flute/scene";
 
 <YourExistingApplicationProviders>
-  <Scene camera={{ perspective: 1400, rotateY: -15 }}
-         focus={{ targetId: 'revenue', range: 24, falloff: 55, maxBlur: 8 }}>
-    <Surface id="revenue"><YourRevenueChart /></Surface>
+  <Scene
+    camera={{ perspective: 1400, rotateY: -15 }}
+    focus={{ targetId: "revenue", range: 24, falloff: 55, maxBlur: 8 }}
+  >
+    <Surface id="revenue">
+      <YourRevenueChart />
+    </Surface>
     <Motion id="customers" transform={{ x: 20, z: 160 }}>
       <YourCustomersCard />
     </Motion>
   </Scene>
-</YourExistingApplicationProviders>
+</YourExistingApplicationProviders>;
 ```
 
 Use your actual components and their existing APIs. Flute does not load application data, copy components, authenticate users, or turn a second component mount into the same instance. Adding/removing wrappers around an already mounted tree can remount it; keep the composition stable while adjusting props. Motion currently shares Surface's positioning behavior; timeline animation belongs to the next slice.
@@ -45,19 +49,19 @@ Use your actual components and their existing APIs. Flute does not load applicat
 
 ## Architecture
 
-| Canonical owner | Responsibility |
-| --- | --- |
-| src/core/scene.ts | Zod scene schemas, defaults, derived types and validation |
-| src/core/spatial.ts | Transform composition, world depth and focal blur |
-| src/react/ | Scoped registration, DOM measurement, wrappers and errors |
-| demo/ | Host API/provider/components and first-slice test controls |
-| scripts/check-architecture.mjs | Executable import and named-owner boundaries |
+| Canonical owner                | Responsibility                                             |
+| ------------------------------ | ---------------------------------------------------------- |
+| src/core/scene.ts              | Zod scene schemas, defaults, derived types and validation  |
+| src/core/spatial.ts            | Transform composition, world depth and focal blur          |
+| src/react/                     | Scoped registration, DOM measurement, wrappers and errors  |
+| demo/                          | Host API/provider/components and first-slice test controls |
+| scripts/check-architecture.mjs | Executable import and named-owner boundaries               |
 
 Inline SOURCE OF TRUTH comments identify WHAT, WHY and WHERE. Runtime code contains no database, filesystem, subscription or account policy. CLI/hosted command owners remain future slice work. Scene data never contains React instances, API credentials or database content.
 
 ## Verify and build
 
-Start the managed app service (or `npm run dev`) before browser verification.
+Browser checks start an isolated production preview automatically, using the allocated port. A running development preview can also be used via FLUTE_TEST_URL.
 
 ```sh
 npm run verify:surface
