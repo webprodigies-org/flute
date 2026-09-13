@@ -45,19 +45,30 @@ export function htmlEntry(html: string, devServer = false): string {
 export function inspectConfig(source: string, filename: string) {
   const file = parse(source, filename);
   const imports = new Map<string, string>();
+  const reactPlugins = ["@vitejs/plugin-react", "@vitejs/plugin-react-swc"];
+  const bind = (local: string, imported: string) => {
+    if (local === "__dirname" || imports.has(local)) unsupported("Ambiguous Vite config import binding.");
+    imports.set(local, imported);
+  };
   let config: ts.Expression | undefined;
   for (const statement of file.statements) {
     if (ts.isImportDeclaration(statement) && ts.isStringLiteral(statement.moduleSpecifier)) {
       const name = statement.moduleSpecifier.text;
-      if (!["vite", "@vitejs/plugin-react", "@vitejs/plugin-react-swc"].includes(name))
+      if (!["vite", ...reactPlugins, "@tailwindcss/vite", "path", "node:path"].includes(name))
         unsupported("Custom Vite config imports require manual adaptation.");
       const clause = statement.importClause;
-      if (clause?.name) imports.set(clause.name.text, name);
-      if (clause?.namedBindings && ts.isNamedImports(clause.namedBindings))
+      if (!clause || clause.isTypeOnly || statement.attributes) unsupported("Unsupported Vite config import.");
+      if (name === "vite") {
+        if (clause.name || !clause.namedBindings || !ts.isNamedImports(clause.namedBindings)
+          || clause.namedBindings.elements.length !== 1) unsupported("Import defineConfig by name from Vite.");
         for (const binding of clause.namedBindings.elements) {
-          if ((binding.propertyName ?? binding.name).text !== "defineConfig") unsupported("Unsupported Vite config import.");
-          imports.set(binding.name.text, name + ":defineConfig");
+          if (binding.isTypeOnly || (binding.propertyName ?? binding.name).text !== "defineConfig") unsupported("Unsupported Vite config import.");
+          bind(binding.name.text, "vite:defineConfig");
         }
+      } else {
+        if (!clause.name || clause.namedBindings) unsupported("Use default imports for supported Vite plugins and path.");
+        bind(clause.name.text, name);
+      }
     } else if (ts.isExportAssignment(statement) && !statement.isExportEquals && !config) config = statement.expression;
     else unsupported("Use a static Vite defineConfig object; dynamic config requires manual adaptation.");
   }
@@ -77,12 +88,37 @@ export function inspectConfig(source: string, filename: string) {
         || !(key === "base" ? ["/"] : [".", "./"]).includes(property.initializer.text))
         unsupported("Only a single project root with Vite base '/' is supported.");
     } else if (key === "plugins") {
-      if (!ts.isArrayLiteralExpression(property.initializer) || property.initializer.elements.length !== 1)
-        unsupported("Only the standard Vite React plugin is supported automatically.");
-      const plugin = property.initializer.elements[0];
-      if (!ts.isCallExpression(plugin) || !ts.isIdentifier(plugin.expression) || plugin.arguments.length
-        || !["@vitejs/plugin-react", "@vitejs/plugin-react-swc"].includes(imports.get(plugin.expression.text) ?? ""))
-        unsupported("Custom Vite plugins/options require manual adaptation.");
+      if (!ts.isArrayLiteralExpression(property.initializer)) unsupported("Use a literal Vite plugin array.");
+      const plugins = new Set<string>();
+      for (const plugin of property.initializer.elements) {
+        if (!ts.isCallExpression(plugin) || !ts.isIdentifier(plugin.expression) || plugin.arguments.length)
+          unsupported("Custom Vite plugins/options require manual adaptation.");
+        const imported = imports.get(plugin.expression.text) ?? "";
+        const kind = reactPlugins.includes(imported) ? "react" : imported;
+        if (!["react", "@tailwindcss/vite"].includes(kind) || plugins.has(kind))
+          unsupported("Use one React plugin and optionally one Tailwind CSS plugin.");
+        plugins.add(kind);
+      }
+      if (!plugins.has("react")) unsupported("Use one standard Vite React plugin.");
+    } else if (key === "resolve") {
+      // SOURCE OF TRUTH: static shadcn Vite alias recognition. Accept only the
+      // project src recipe, without importing path or evaluating configuration.
+      const onlyProperty = (value: ts.Expression, name: string): ts.Expression => {
+        if (!ts.isObjectLiteralExpression(value) || value.properties.length !== 1)
+          unsupported("Only the static shadcn '@' alias to project src is supported.");
+        const item = value.properties[0];
+        if (!ts.isPropertyAssignment(item) || !(ts.isIdentifier(item.name) || ts.isStringLiteral(item.name))
+          || item.name.text !== name) unsupported("Only the static shadcn '@' alias to project src is supported.");
+        return item.initializer;
+      };
+      const target = onlyProperty(onlyProperty(property.initializer, "alias"), "@");
+      if (!ts.isCallExpression(target) || !ts.isPropertyAccessExpression(target.expression)
+        || !ts.isIdentifier(target.expression.expression) || target.expression.name.text !== "resolve"
+        || !["path", "node:path"].includes(imports.get(target.expression.expression.text) ?? "")
+        || target.arguments.length !== 2 || !ts.isIdentifier(target.arguments[0])
+        || target.arguments[0].text !== "__dirname" || !ts.isStringLiteral(target.arguments[1])
+        || target.arguments[1].text !== "./src")
+        unsupported("Use '@': path.resolve(__dirname, './src') with a default path import.");
     } else if (key === "server" || key === "preview") {
       // Literal server options do not alter source identity; middleware/proxy hooks are not accepted.
       if (!ts.isObjectLiteralExpression(property.initializer)) unsupported("Use literal Vite server options.");
