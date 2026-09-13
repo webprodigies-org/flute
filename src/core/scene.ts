@@ -82,7 +82,6 @@ export const SceneSchema = z
         parent = nodes.get(parent)?.parentId;
       }
     }
-
   });
 export type SceneDefinition = z.output<typeof SceneSchema>;
 export type SceneInput = z.input<typeof SceneSchema>;

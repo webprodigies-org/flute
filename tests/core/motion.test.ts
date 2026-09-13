@@ -1,11 +1,25 @@
 import { describe, expect, it } from "vitest";
-import { evaluateMotion, MotionSchema, MotionTrackSchema, type MotionInput } from "../../src/core/motion";
+import {
+  evaluateMotion,
+  MotionSchema,
+  MotionTrackSchema,
+  type MotionInput,
+} from "../../src/core/motion";
 
 const surface = { kind: "surface", id: "panel" } as const;
 function track(target: unknown = surface, property = "x", from = 0, to = 100) {
-  return { target, property, keyframes: [{ timeMs: 100, value: from }, { timeMs: 900, value: to }] };
+  return {
+    target,
+    property,
+    keyframes: [
+      { timeMs: 100, value: from },
+      { timeMs: 900, value: to },
+    ],
+  };
 }
-function motion(tracks: unknown[] = [track()]) { return { durationMs: 1000, tracks }; }
+function motion(tracks: unknown[] = [track()]) {
+  return { durationMs: 1000, tracks };
+}
 function expectInvalid(input: unknown, time = 500) {
   const state = evaluateMotion(input, time);
   expect(state.issues.length).toBeGreaterThan(0);
@@ -17,32 +31,69 @@ function expectInvalid(input: unknown, time = 500) {
 
 describe("explicit scene time motion", () => {
   it("interpolates every surface property, preserving partial overrides and independent IDs", () => {
-    const tracks = ["x", "y", "z", "rotateX", "rotateY", "rotateZ"].map(property => track(surface, property));
-    tracks.push(track(surface, "scale", 1, 3), track(surface, "opacity", 0, 1),
-      track({ kind: "surface", id: "other" }, "x", -20, 20));
+    const tracks = ["x", "y", "z", "rotateX", "rotateY", "rotateZ"].map(
+      (property) => track(surface, property),
+    );
+    tracks.push(
+      track(surface, "scale", 1, 3),
+      track(surface, "opacity", 0, 1),
+      track({ kind: "surface", id: "other" }, "x", -20, 20),
+    );
     expect(evaluateMotion(motion(tracks), 500)).toEqual({
-      surfaces: { panel: { x: 50, y: 50, z: 50, rotateX: 50, rotateY: 50, rotateZ: 50, scale: 2, opacity: 0.5 }, other: { x: 0 } },
-      camera: {}, focus: {}, issues: [],
+      surfaces: {
+        panel: {
+          x: 50,
+          y: 50,
+          z: 50,
+          rotateX: 50,
+          rotateY: 50,
+          rotateZ: 50,
+          scale: 2,
+          opacity: 0.5,
+        },
+        other: { x: 0 },
+      },
+      camera: {},
+      focus: {},
+      issues: [],
     });
   });
 
   it("evaluates camera and spatial focus position/width independently", () => {
-    const tracks = ["x", "y", "z", "rotateX", "rotateY", "rotateZ"].map(property =>
-      track({ kind: "camera" }, property, -100, 100));
-    tracks.push(...["x", "y", "z"].map(property => track({ kind: "focus" }, property, 50, 150)),
-      track({ kind: "focus" }, "radius", 0, 40), track({ kind: "focus" }, "falloff", 10, 50),
-      track({ kind: "focus" }, "maxBlur", 0, 32));
-    expect(evaluateMotion(motion(tracks), 500)).toEqual({ surfaces: {},
+    const tracks = ["x", "y", "z", "rotateX", "rotateY", "rotateZ"].map(
+      (property) => track({ kind: "camera" }, property, -100, 100),
+    );
+    tracks.push(
+      ...["x", "y", "z"].map((property) =>
+        track({ kind: "focus" }, property, 50, 150),
+      ),
+      track({ kind: "focus" }, "radius", 0, 40),
+      track({ kind: "focus" }, "falloff", 10, 50),
+      track({ kind: "focus" }, "maxBlur", 0, 32),
+    );
+    expect(evaluateMotion(motion(tracks), 500)).toEqual({
+      surfaces: {},
       camera: { x: 0, y: 0, z: 0, rotateX: 0, rotateY: 0, rotateZ: 0 },
-      focus: { x: 100, y: 100, z: 100, radius: 20, falloff: 30, maxBlur: 16 }, issues: [],
+      focus: { x: 100, y: 100, z: 100, radius: 20, falloff: 30, maxBlur: 16 },
+      issues: [],
     });
   });
 
   it("uses outgoing smoothstep easing and a separate linear next segment", () => {
-    const input: MotionInput = { durationMs: 2000, tracks: [{ target: surface, property: "x", keyframes: [
-      { timeMs: 0, value: 0, easing: "easeInOut" },
-      { timeMs: 1000, value: 100, easing: "linear" }, { timeMs: 2000, value: 200 },
-    ] }] };
+    const input: MotionInput = {
+      durationMs: 2000,
+      tracks: [
+        {
+          target: surface,
+          property: "x",
+          keyframes: [
+            { timeMs: 0, value: 0, easing: "easeInOut" },
+            { timeMs: 1000, value: 100, easing: "linear" },
+            { timeMs: 2000, value: 200 },
+          ],
+        },
+      ],
+    };
     expect(evaluateMotion(input, 250).surfaces.panel.x).toBe(15.625);
     expect(evaluateMotion(input, 500).surfaces.panel.x).toBe(50);
     expect(evaluateMotion(input, 750).surfaces.panel.x).toBe(84.375);
@@ -50,16 +101,38 @@ describe("explicit scene time motion", () => {
     expect(evaluateMotion(input, 1250).surfaces.panel.x).toBe(125);
   });
 
-  it.each([[-100, 0], [0, 0], [50, 0], [100, 0], [900, 100], [950, 100], [1000, 100], [2000, 100]])(
-    "clamps scene time and holds endpoints at %s ms", (time, value) => {
-      expect(evaluateMotion(motion(), time).surfaces.panel).toEqual({ x: value });
-    },
-  );
+  it.each([
+    [-100, 0],
+    [0, 0],
+    [50, 0],
+    [100, 0],
+    [900, 100],
+    [950, 100],
+    [1000, 100],
+    [2000, 100],
+  ])("clamps scene time and holds endpoints at %s ms", (time, value) => {
+    expect(evaluateMotion(motion(), time).surfaces.panel).toEqual({ x: value });
+  });
 
   it("supports empty tracks, static keyframes and zero duration", () => {
-    expect(evaluateMotion({ durationMs: 0, tracks: [] }, 20)).toEqual({ surfaces: {}, camera: {}, focus: {}, issues: [] });
-    const input = { durationMs: 0, tracks: [{ target: surface, property: "x", keyframes: [{ timeMs: 0, value: 12 }] }] };
-    for (const time of [-10, 0, 10]) expect(evaluateMotion(input, time).surfaces.panel.x).toBe(12);
+    expect(evaluateMotion({ durationMs: 0, tracks: [] }, 20)).toEqual({
+      surfaces: {},
+      camera: {},
+      focus: {},
+      issues: [],
+    });
+    const input = {
+      durationMs: 0,
+      tracks: [
+        {
+          target: surface,
+          property: "x",
+          keyframes: [{ timeMs: 0, value: 12 }],
+        },
+      ],
+    };
+    for (const time of [-10, 0, 10])
+      expect(evaluateMotion(input, time).surfaces.panel.x).toBe(12);
   });
 
   it("is deterministic across scrubbing, leaves frozen input intact, and returns fresh state", () => {
@@ -84,7 +157,13 @@ describe("explicit scene time motion", () => {
   });
 
   it("handles prototype-like surface IDs as ordinary scoped data", () => {
-    const state = evaluateMotion(motion([track({ kind: "surface", id: "__proto__" }), track({ kind: "surface", id: "constructor" })]), 500);
+    const state = evaluateMotion(
+      motion([
+        track({ kind: "surface", id: "__proto__" }),
+        track({ kind: "surface", id: "constructor" }),
+      ]),
+      500,
+    );
     expect(Object.hasOwn(state.surfaces, "__proto__")).toBe(true);
     expect(state.surfaces.__proto__).toEqual({ x: 50 });
     expect(state.surfaces.constructor).toEqual({ x: 50 });
@@ -93,76 +172,142 @@ describe("explicit scene time motion", () => {
   });
 
   it("interpolates opposite finite extremes without overflowing", () => {
-    const input = motion([track(surface, "x", -Number.MAX_VALUE, Number.MAX_VALUE)]);
+    const input = motion([
+      track(surface, "x", -Number.MAX_VALUE, Number.MAX_VALUE),
+    ]);
     expect(evaluateMotion(input, 500).surfaces.panel.x).toBe(0);
-    expect(Number.isFinite(evaluateMotion(input, 700).surfaces.panel.x)).toBe(true);
+    expect(Number.isFinite(evaluateMotion(input, 700).surfaces.panel.x)).toBe(
+      true,
+    );
   });
 
   it("preserves strictly positive bounds even for the smallest finite value", () => {
-    const state = evaluateMotion(motion([
-      track(surface, "scale", Number.MIN_VALUE, Number.MIN_VALUE),
-      track({ kind: "focus" }, "falloff", Number.MIN_VALUE, Number.MIN_VALUE),
-    ]), 500);
+    const state = evaluateMotion(
+      motion([
+        track(surface, "scale", Number.MIN_VALUE, Number.MIN_VALUE),
+        track({ kind: "focus" }, "falloff", Number.MIN_VALUE, Number.MIN_VALUE),
+      ]),
+      500,
+    );
     expect(state.surfaces.panel.scale).toBe(Number.MIN_VALUE);
     expect(state.focus.falloff).toBe(Number.MIN_VALUE);
   });
 });
 
 describe("motion validation boundary", () => {
-  it.each([NaN, Infinity, -Infinity, "500", null, undefined])("rejects invalid explicit time %s", time => {
-    expect(evaluateMotion(motion(), time as number)).toEqual({
-      surfaces: {}, camera: {}, focus: {},
-      issues: [{ path: "timeMs", message: "Scene time must be a finite number." }],
-    });
-  });
+  it.each([NaN, Infinity, -Infinity, "500", null, undefined])(
+    "rejects invalid explicit time %s",
+    (time) => {
+      expect(evaluateMotion(motion(), time as number)).toEqual({
+        surfaces: {},
+        camera: {},
+        focus: {},
+        issues: [
+          { path: "timeMs", message: "Scene time must be a finite number." },
+        ],
+      });
+    },
+  );
 
-  it.each([null, {}, { durationMs: -1, tracks: [] }, { durationMs: Infinity, tracks: [] },
-    { durationMs: NaN, tracks: [] }, { durationMs: "1000", tracks: [] },
-    { durationMs: 1000, tracks: [], extra: true }])("rejects malformed config %#", input => {
+  it.each([
+    null,
+    {},
+    { durationMs: -1, tracks: [] },
+    { durationMs: Infinity, tracks: [] },
+    { durationMs: NaN, tracks: [] },
+    { durationMs: "1000", tracks: [] },
+    { durationMs: 1000, tracks: [], extra: true },
+  ])("rejects malformed config %#", (input) => {
     expectInvalid(input);
   });
 
   it.each([
-    [surface, "scale", 0], [surface, "scale", -1], [surface, "scale", 101],
-    [surface, "opacity", -0.01], [surface, "opacity", 1.01],
-    [{ kind: "focus" }, "radius", -1], [{ kind: "focus" }, "falloff", 0],
-    [{ kind: "focus" }, "falloff", -1], [{ kind: "focus" }, "maxBlur", -1],
-    [{ kind: "focus" }, "maxBlur", 33], [surface, "x", NaN],
-    [{ kind: "camera" }, "z", Infinity], [{ kind: "focus" }, "x", -Infinity],
-  ])("rejects invalid values %# in schema and operation", (target, property, value) => {
-    const invalid = track(target, property as string, value as number, value as number);
-    expect(MotionTrackSchema.safeParse(invalid).success).toBe(false);
-    expectInvalid(motion([track(), invalid]));
-  });
+    [surface, "scale", 0],
+    [surface, "scale", -1],
+    [surface, "scale", 101],
+    [surface, "opacity", -0.01],
+    [surface, "opacity", 1.01],
+    [{ kind: "focus" }, "radius", -1],
+    [{ kind: "focus" }, "falloff", 0],
+    [{ kind: "focus" }, "falloff", -1],
+    [{ kind: "focus" }, "maxBlur", -1],
+    [{ kind: "focus" }, "maxBlur", 33],
+    [surface, "x", NaN],
+    [{ kind: "camera" }, "z", Infinity],
+    [{ kind: "focus" }, "x", -Infinity],
+  ])(
+    "rejects invalid values %# in schema and operation",
+    (target, property, value) => {
+      const invalid = track(
+        target,
+        property as string,
+        value as number,
+        value as number,
+      );
+      expect(MotionTrackSchema.safeParse(invalid).success).toBe(false);
+      expectInvalid(motion([track(), invalid]));
+    },
+  );
 
   it.each([
-    [{ kind: "camera" }, "opacity"], [{ kind: "camera" }, "radius"],
-    [{ kind: "focus" }, "rotateX"], [{ kind: "focus" }, "depth"],
-    [surface, "radius"], [surface, "unknown"], [{ kind: "surface", id: "" }, "x"],
-    [{ kind: "element", id: "panel" }, "x"], [{ kind: "focus", id: "panel" }, "x"],
+    [{ kind: "camera" }, "opacity"],
+    [{ kind: "camera" }, "radius"],
+    [{ kind: "focus" }, "rotateX"],
+    [{ kind: "focus" }, "depth"],
+    [surface, "radius"],
+    [surface, "unknown"],
+    [{ kind: "surface", id: "" }, "x"],
+    [{ kind: "element", id: "panel" }, "x"],
+    [{ kind: "focus", id: "panel" }, "x"],
   ])("rejects incompatible target/property %#", (target, property) => {
     expectInvalid(motion([track(target, property as string)]));
   });
 
-  it.each([
-    [], [{ timeMs: -1, value: 0 }], [{ timeMs: Infinity, value: 0 }],
-    [{ timeMs: 1001, value: 0 }], [{ timeMs: 0, value: 0, easing: "bounce" }],
-    [{ timeMs: 0, value: 0 }, { timeMs: 0, value: 1 }],
-    [{ timeMs: 500, value: 0 }, { timeMs: 100, value: 1 }],
-    [{ timeMs: 0, value: 0, unknown: true }],
-  ].map(keyframes => ({ keyframes })))("rejects invalid keyframe sequences %#", ({ keyframes }) => {
+  it.each(
+    [
+      [],
+      [{ timeMs: -1, value: 0 }],
+      [{ timeMs: Infinity, value: 0 }],
+      [{ timeMs: 1001, value: 0 }],
+      [{ timeMs: 0, value: 0, easing: "bounce" }],
+      [
+        { timeMs: 0, value: 0 },
+        { timeMs: 0, value: 1 },
+      ],
+      [
+        { timeMs: 500, value: 0 },
+        { timeMs: 100, value: 1 },
+      ],
+      [{ timeMs: 0, value: 0, unknown: true }],
+    ].map((keyframes) => ({ keyframes })),
+  )("rejects invalid keyframe sequences %#", ({ keyframes }) => {
     expectInvalid(motion([{ target: surface, property: "x", keyframes }]));
   });
 
-  it.each([surface, { kind: "camera" }, { kind: "focus" }])("rejects duplicate target/property tracks %#", target => {
-    const duplicate = track(target);
-    expectInvalid(motion([duplicate, duplicate]));
-    expect(MotionSchema.safeParse(motion([duplicate, duplicate])).success).toBe(false);
-  });
+  it.each([surface, { kind: "camera" }, { kind: "focus" }])(
+    "rejects duplicate target/property tracks %#",
+    (target) => {
+      const duplicate = track(target);
+      expectInvalid(motion([duplicate, duplicate]));
+      expect(
+        MotionSchema.safeParse(motion([duplicate, duplicate])).success,
+      ).toBe(false);
+    },
+  );
 
   it("reports actionable validation paths and can recover on the next evaluation", () => {
-    const issues = expectInvalid(motion([{ target: surface, property: "scale", keyframes: [{ timeMs: 0, value: 0 }] }]));
-    expect(issues.some(issue => issue.path === "tracks.0.keyframes.0.value")).toBe(true);
+    const issues = expectInvalid(
+      motion([
+        {
+          target: surface,
+          property: "scale",
+          keyframes: [{ timeMs: 0, value: 0 }],
+        },
+      ]),
+    );
+    expect(
+      issues.some((issue) => issue.path === "tracks.0.keyframes.0.value"),
+    ).toBe(true);
     expect(evaluateMotion(motion(), 500).issues).toEqual([]);
   });
 });

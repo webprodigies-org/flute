@@ -7,7 +7,10 @@ import { useDashboard } from "./data";
  * WHERE: App.tsx supplies scene progress; DashboardProvider remains the data owner.
  */
 export function RevenueCard({ progress = 1 }: { progress?: number }) {
-  const reveal = Math.min(1, Math.max(0, Number.isFinite(progress) ? progress : 1));
+  const reveal = Math.min(
+    1,
+    Math.max(0, Number.isFinite(progress) ? progress : 1),
+  );
   const { data, period, setPeriod } = useDashboard();
   const [selected, setSelected] = useState<number | null>(null);
   const points = data?.points ?? [];
@@ -61,10 +64,17 @@ export function RevenueCard({ progress = 1 }: { progress?: number }) {
             />
           ))}
           {points.map((value, index) => (
-            <rect key={index} data-testid="revenue-bar"
+            <rect
+              key={index}
+              data-testid="revenue-bar"
               x={(index * 348) / Math.max(1, points.length - 1)}
-              y={150 - value * reveal} width="10" height={value * reveal}
-              rx="3" fill="#b79ade" fillOpacity=".3" />
+              y={150 - value * reveal}
+              width="10"
+              height={value * reveal}
+              rx="3"
+              fill="#b79ade"
+              fillOpacity=".3"
+            />
           ))}
           <path d={path + " L 360 150 L 0 150 Z"} fill="url(#chart-fill)" />
           <path

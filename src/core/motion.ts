@@ -1,5 +1,10 @@
 import { z } from "zod";
-import { TransformSchema, CameraSchema, FocusSchema, type SceneIssue } from "./scene";
+import {
+  TransformSchema,
+  CameraSchema,
+  FocusSchema,
+  type SceneIssue,
+} from "./scene";
 
 /** SOURCE OF TRUTH: MotionSchema, evaluateMotion, explicit scene time.
  * WHAT: typed motion tracks, target/property validation and deterministic interpolation.
@@ -9,8 +14,17 @@ import { TransformSchema, CameraSchema, FocusSchema, type SceneIssue } from "./s
  */
 const finite = z.number().finite();
 // Domain bounds derive from the scene owner. Motion adds only animation policy.
-const SurfaceMotionSchema = TransformSchema.extend({opacity:finite.min(0).max(1)});
-const CameraMotionSchema = CameraSchema.pick({x:true,y:true,z:true,rotateX:true,rotateY:true,rotateZ:true});
+const SurfaceMotionSchema = TransformSchema.extend({
+  opacity: finite.min(0).max(1),
+});
+const CameraMotionSchema = CameraSchema.pick({
+  x: true,
+  y: true,
+  z: true,
+  rotateX: true,
+  rotateY: true,
+  rotateZ: true,
+});
 const FocusMotionSchema = FocusSchema;
 export const MotionKeyframeSchema = z.strictObject({
   timeMs: finite.nonnegative(),
@@ -19,56 +33,84 @@ export const MotionKeyframeSchema = z.strictObject({
   easing: z.enum(["linear", "easeInOut"]).optional(),
 });
 const keyframes = z.array(MotionKeyframeSchema).min(1);
-export const MotionTrackSchema = z.union([
-  z.strictObject({
-    target: z.strictObject({ kind: z.literal("surface"), id: z.string().min(1) }),
-    property: SurfaceMotionSchema.keyof(), keyframes,
-  }),
-  z.strictObject({
-    target: z.strictObject({ kind: z.literal("camera") }),
-    property: CameraMotionSchema.keyof(), keyframes,
-  }),
-  z.strictObject({
-    target: z.strictObject({ kind: z.literal("focus") }),
-    property: FocusMotionSchema.keyof(), keyframes,
-  }),
-]).superRefine((track, ctx) => {
-  const properties = track.target.kind === "surface" ? SurfaceMotionSchema
-    : track.target.kind === "camera" ? CameraMotionSchema : FocusMotionSchema;
-  for (const [index, frame] of track.keyframes.entries()) {
-    const value = properties.partial().safeParse({ [track.property]: frame.value });
-    if (!value.success) {
-      for (const issue of value.error.issues) ctx.addIssue({
-        code: "custom", path: ["keyframes", index, "value"], message: issue.message,
-      });
+export const MotionTrackSchema = z
+  .union([
+    z.strictObject({
+      target: z.strictObject({
+        kind: z.literal("surface"),
+        id: z.string().min(1),
+      }),
+      property: SurfaceMotionSchema.keyof(),
+      keyframes,
+    }),
+    z.strictObject({
+      target: z.strictObject({ kind: z.literal("camera") }),
+      property: CameraMotionSchema.keyof(),
+      keyframes,
+    }),
+    z.strictObject({
+      target: z.strictObject({ kind: z.literal("focus") }),
+      property: FocusMotionSchema.keyof(),
+      keyframes,
+    }),
+  ])
+  .superRefine((track, ctx) => {
+    const properties =
+      track.target.kind === "surface"
+        ? SurfaceMotionSchema
+        : track.target.kind === "camera"
+          ? CameraMotionSchema
+          : FocusMotionSchema;
+    for (const [index, frame] of track.keyframes.entries()) {
+      const value = properties
+        .partial()
+        .safeParse({ [track.property]: frame.value });
+      if (!value.success) {
+        for (const issue of value.error.issues)
+          ctx.addIssue({
+            code: "custom",
+            path: ["keyframes", index, "value"],
+            message: issue.message,
+          });
+      }
+      if (index > 0 && frame.timeMs <= track.keyframes[index - 1].timeMs)
+        ctx.addIssue({
+          code: "custom",
+          path: ["keyframes", index, "timeMs"],
+          message: "Keyframe times must be strictly increasing and distinct.",
+        });
     }
-    if (index > 0 && frame.timeMs <= track.keyframes[index - 1].timeMs) ctx.addIssue({
-      code: "custom", path: ["keyframes", index, "timeMs"],
-      message: "Keyframe times must be strictly increasing and distinct.",
-    });
-  }
-});
-export const MotionSchema = z.strictObject({
-  durationMs: finite.nonnegative(),
-  tracks: z.array(MotionTrackSchema),
-}).superRefine((motion, ctx) => {
-  const seen = new Set<string>();
-  for (const [index, track] of motion.tracks.entries()) {
-    const key = JSON.stringify([track.target.kind,
-      track.target.kind === "surface" ? track.target.id : null, track.property]);
-    if (seen.has(key)) ctx.addIssue({
-      code: "custom", path: ["tracks", index],
-      message: "Duplicate target/property track.",
-    });
-    seen.add(key);
-    for (const [frameIndex, frame] of track.keyframes.entries()) {
-      if (frame.timeMs > motion.durationMs) ctx.addIssue({
-        code: "custom", path: ["tracks", index, "keyframes", frameIndex, "timeMs"],
-        message: "Keyframe time exceeds scene duration.",
-      });
+  });
+export const MotionSchema = z
+  .strictObject({
+    durationMs: finite.nonnegative(),
+    tracks: z.array(MotionTrackSchema),
+  })
+  .superRefine((motion, ctx) => {
+    const seen = new Set<string>();
+    for (const [index, track] of motion.tracks.entries()) {
+      const key = JSON.stringify([
+        track.target.kind,
+        track.target.kind === "surface" ? track.target.id : null,
+        track.property,
+      ]);
+      if (seen.has(key))
+        ctx.addIssue({
+          code: "custom",
+          path: ["tracks", index],
+          message: "Duplicate target/property track.",
+        });
+      seen.add(key);
+      for (const [frameIndex, frame] of track.keyframes.entries()) {
+        if (frame.timeMs > motion.durationMs)
+          ctx.addIssue({
+            code: "custom",
+            path: ["tracks", index, "keyframes", frameIndex, "timeMs"],
+            message: "Keyframe time exceeds scene duration.",
+          });
+      }
     }
-  }
-});
+  });
 export type MotionInput = z.input<typeof MotionSchema>;
 export type MotionDefinition = z.output<typeof MotionSchema>;
 export type MotionTrack = z.output<typeof MotionTrackSchema>;
@@ -87,11 +129,16 @@ function interpolate(frames: MotionTrack["keyframes"], timeMs: number): number {
     if (timeMs === end.timeMs) return end.value;
     const start = frames[index - 1];
     const progress = (timeMs - start.timeMs) / (end.timeMs - start.timeMs);
-    const weight = start.easing === "easeInOut"
-      ? progress * progress * (3 - 2 * progress) : progress;
+    const weight =
+      start.easing === "easeInOut"
+        ? progress * progress * (3 - 2 * progress)
+        : progress;
     // Same-sign deltas preserve positive subnormals; convex weights avoid overflow
     // when opposite finite extremes make (end.value - start.value) infinite.
-    if ((start.value >= 0 && end.value >= 0) || (start.value <= 0 && end.value <= 0)) {
+    if (
+      (start.value >= 0 && end.value >= 0) ||
+      (start.value <= 0 && end.value <= 0)
+    ) {
       return start.value + (end.value - start.value) * weight;
     }
     return (1 - weight) * start.value + weight * end.value;
@@ -104,14 +151,25 @@ function interpolate(frames: MotionTrack["keyframes"], timeMs: number): number {
  * numerically in degrees (so authored multi-turn rotations retain their intent).
  */
 export function evaluateMotion(input: unknown, timeMs: number): MotionState {
-  const result: MotionState = { surfaces: {}, camera: {}, focus: {}, issues: [] };
+  const result: MotionState = {
+    surfaces: {},
+    camera: {},
+    focus: {},
+    issues: [],
+  };
   const parsed = MotionSchema.safeParse(input);
-  if (!parsed.success) result.issues.push(...parsed.error.issues.map(issue => ({
-    path: issue.path.join("."), message: issue.message,
-  })));
-  if (!Number.isFinite(timeMs)) result.issues.push({
-    path: "timeMs", message: "Scene time must be a finite number.",
-  });
+  if (!parsed.success)
+    result.issues.push(
+      ...parsed.error.issues.map((issue) => ({
+        path: issue.path.join("."),
+        message: issue.message,
+      })),
+    );
+  if (!Number.isFinite(timeMs))
+    result.issues.push({
+      path: "timeMs",
+      message: "Scene time must be a finite number.",
+    });
   if (!parsed.success || result.issues.length) return result;
   const time = Math.min(parsed.data.durationMs, Math.max(0, timeMs));
   for (const track of parsed.data.tracks) {
@@ -119,10 +177,14 @@ export function evaluateMotion(input: unknown, timeMs: number): MotionState {
     if (track.target.kind === "surface") {
       const id = track.target.id;
       // Own data properties support arbitrary IDs without reading/writing Object.prototype.
-      const prior = Object.hasOwn(result.surfaces, id) ? result.surfaces[id] : {};
+      const prior = Object.hasOwn(result.surfaces, id)
+        ? result.surfaces[id]
+        : {};
       Object.defineProperty(result.surfaces, id, {
         value: { ...prior, [track.property]: value },
-        enumerable: true, configurable: true, writable: true,
+        enumerable: true,
+        configurable: true,
+        writable: true,
       });
     } else if (track.target.kind === "camera") {
       result.camera = { ...result.camera, [track.property]: value };

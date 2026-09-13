@@ -94,8 +94,12 @@ describe("spatial evaluation", () => {
 });
 
 it("reports composed numeric overflow without leaking NaN into render output", () => {
-  const nodes = Array.from({length: 170}, (_, index) => ({id: "n" + index, ...(index ? {parentId: "n" + (index - 1)} : {}), transform: {scale: 100}}));
-  const result = evaluateScene({nodes});
+  const nodes = Array.from({ length: 170 }, (_, index) => ({
+    id: "n" + index,
+    ...(index ? { parentId: "n" + (index - 1) } : {}),
+    transform: { scale: 100 },
+  }));
+  const result = evaluateScene({ nodes });
   expect(result.nodes).toEqual([]);
   expect(result.issues[0].message).toContain("numeric limits");
   expect(result.focusDepth).toBe(0);
