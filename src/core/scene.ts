@@ -26,21 +26,25 @@ export const NodeSchema = z.strictObject({
   transform: TransformSchema.prefault({}),
 });
 export const CameraSchema = z.strictObject({
+  x: finite.default(0),
+  y: finite.default(0),
+  z: finite.default(0),
   perspective: finite.min(100).max(10000).default(1400),
   rotateX: finite.default(0),
   rotateY: finite.default(0),
   rotateZ: finite.default(0),
 });
 export const FocusSchema = z.strictObject({
-  targetId: id.optional(),
-  depth: finite.default(0),
-  range: finite.nonnegative().default(24),
-  falloff: finite.positive().default(55),
+  x: finite.default(0),
+  y: finite.default(0),
+  z: finite.default(0),
+  radius: finite.nonnegative().default(100),
+  falloff: finite.positive().default(180),
   maxBlur: finite.min(0).max(32).default(10),
 });
 export const SceneSchema = z
   .strictObject({
-    version: z.literal(1).default(1),
+    version: z.literal(2).default(2),
     camera: CameraSchema.prefault({}),
     focus: FocusSchema.prefault({}),
     nodes: z.array(NodeSchema).max(1000),
@@ -78,12 +82,6 @@ export const SceneSchema = z
         parent = nodes.get(parent)?.parentId;
       }
     }
-    if (scene.focus.targetId && !nodes.has(scene.focus.targetId))
-      ctx.addIssue({
-        code: "custom",
-        path: ["focus", "targetId"],
-        message: "Focus target is not registered: " + scene.focus.targetId,
-      });
   });
 export type SceneDefinition = z.output<typeof SceneSchema>;
 export type SceneInput = z.input<typeof SceneSchema>;

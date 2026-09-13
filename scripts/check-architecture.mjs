@@ -13,6 +13,8 @@ import { fileURLToPath } from 'node:url';
  */
 const owners = new Map([
   ['SceneSchema', 'src/core/scene.ts'], ['TransformSchema', 'src/core/scene.ts'],
+  ['focusForSurface','src/core/spatial.ts'], ['sampleFocus','src/core/spatial.ts'], ['focusMask','src/core/spatial.ts'], ['cameraToCss','src/core/spatial.ts'],
+  ['MotionSchema','src/core/motion.ts'], ['evaluateMotion','src/core/motion.ts'],
   ['evaluateScene', 'src/core/spatial.ts'], ['transformToCss', 'src/core/spatial.ts'],
 ]);
 const layers = {

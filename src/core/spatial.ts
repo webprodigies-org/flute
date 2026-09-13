@@ -4,10 +4,13 @@ import {
   type Transform,
   type TransformInput,
   type SceneIssue,
+  CameraSchema,
+  type CameraInput,
+  type SceneDefinition,
 } from "./scene";
 
-/** SOURCE OF TRUTH: evaluateScene, transformToCss.
- * WHAT: world transforms and bounded depth blur for every renderer consumer.
+/** SOURCE OF TRUTH: evaluateScene, transformToCss, cameraToCss, focusForSurface, sampleFocus, focusMask.
+ * WHAT: camera-space transforms and progressive spatial focus for every renderer consumer.
  * WHY: one mathematical definition keeps DOM preview and future output adapters consistent.
  * WHERE: React registration provides untransformed layout measurements; no DOM or transport is imported here.
  */
@@ -24,6 +27,7 @@ export type EvaluatedNode = {
   world: Matrix;
   worldPosition: { x: number; y: number; z: number };
   blur: number;
+  focus: FocusField;
   width: number;
   height: number;
 };
@@ -42,7 +46,7 @@ export function multiply(a: Matrix, b: Matrix): Matrix {
     );
   });
 }
-function matrixFor(t: Transform): Matrix {
+export function matrixFor(t: Transform): Matrix {
   const rad = Math.PI / 180;
   const [sx, cx, sy, cy, sz, cz] = [
     Math.sin(t.rotateX * rad),
@@ -95,6 +99,9 @@ export function evaluateScene(
     TransformSchema.parse(
       scene.camera
         ? {
+            x: -scene.camera.x,
+            y: -scene.camera.y,
+            z: -scene.camera.z,
             rotateX: scene.camera.rotateX,
             rotateY: scene.camera.rotateY,
             rotateZ: scene.camera.rotateZ,
@@ -129,12 +136,39 @@ export function evaluateScene(
   };
   for (const node of scene.nodes) {
     if (!getWorld(node.id).every(Number.isFinite)) {
-      return { nodes: [], focusDepth: 0, issues: [{ path: node.id, message: "World transform exceeds numeric limits: reduce nested scale or position." }] };
+      return {
+        nodes: [],
+        focusDepth: 0,
+        issues: [
+          {
+            path: node.id,
+            message:
+              "World transform exceeds numeric limits: reduce nested scale or position.",
+          },
+        ],
+      };
     }
   }
-  const focusDepth = scene.focus.targetId
-    ? getWorld(scene.focus.targetId)[11]
-    : scene.focus.depth;
+  for (const node of scene.nodes) {
+    const field = focusForSurface(getWorld(node.id), scene.focus);
+    if (
+      !Object.values(field).every(Number.isFinite) ||
+      field.scale < 1e-8 ||
+      !Number.isFinite((field.radius + field.falloff) / field.scale)
+    )
+      return {
+        nodes: [],
+        focusDepth: 0,
+        issues: [
+          {
+            path: node.id,
+            message:
+              "Focal geometry exceeds numeric limits: reduce scale, position or focus radius.",
+          },
+        ],
+      };
+  }
+  const focusDepth = scene.focus.z;
   const nodes = scene.nodes.map((node) => {
     const world = getWorld(node.id),
       z = world[11];
@@ -162,14 +196,89 @@ export function evaluateScene(
       id: node.id,
       world,
       worldPosition: { x: world[3], y: world[7], z },
-      blur: Math.min(
-        scene.focus.maxBlur,
-        Math.max(0, Math.abs(z - focusDepth) - scene.focus.range) /
-          scene.focus.falloff,
-      ),
+      focus: focusForSurface(world, scene.focus),
+      blur: sampleFocus(focusForSurface(world, scene.focus), 0, 0),
       width: m?.width ?? 0,
       height: m?.height ?? 0,
     };
   });
   return { nodes, focusDepth, issues };
+}
+
+/** SOURCE OF TRUTH: FocusField, focusForSurface, sampleFocus, focusMask.
+ * WHAT: a camera-space xyz focus point sampled continuously across a live plane.
+ * WHY: one distance law drives masks and tests; an element center cannot describe
+ * progressive sharpness. Camera-attached focus stays still as scene content moves.
+ * WHERE: react/FocusFilter presents these masks on SourceGraphic without UI clones.
+ * Units are scene pixels, origin is the scene center; positive z faces the viewer.
+ */
+export type FocusField = {
+  x: number;
+  y: number;
+  perpendicular: number;
+  scale: number;
+  radius: number;
+  falloff: number;
+  maxBlur: number;
+};
+export function focusForSurface(
+  m: Matrix,
+  f: SceneDefinition["focus"],
+): FocusField {
+  const scale = Math.hypot(m[0], m[4], m[8]);
+  const dx = f.x - m[3],
+    dy = f.y - m[7],
+    dz = f.z - m[11];
+  return {
+    x: (dx * m[0] + dy * m[4] + dz * m[8]) / (scale * scale),
+    y: (dx * m[1] + dy * m[5] + dz * m[9]) / (scale * scale),
+    perpendicular: Math.abs((dx * m[2] + dy * m[6] + dz * m[10]) / scale),
+    scale,
+    radius: f.radius,
+    falloff: f.falloff,
+    maxBlur: f.maxBlur,
+  };
+}
+export function sampleFocus(f: FocusField, x: number, y: number): number {
+  const distance = Math.hypot(
+    (x - f.x) * f.scale,
+    (y - f.y) * f.scale,
+    f.perpendicular,
+  );
+  const t = Math.max(0, Math.min(1, (distance - f.radius) / f.falloff));
+  return f.maxBlur * t * t * (3 - 2 * t);
+}
+export const FOCUS_BANDS = 6;
+// Adjacent Gaussian levels blend with weights summing to one. The spatial field
+// is continuous; the finite Gaussian basis is an approximation, not optical DOF.
+export function focusMask(
+  f: FocusField,
+  width: number,
+  height: number,
+  band: number,
+): string {
+  const extent = Math.max(1, (f.radius + f.falloff) / f.scale);
+  const stops = Array.from({ length: 65 }, (_, i) => {
+    const t = i / 64;
+    const b =
+      f.maxBlur === 0
+        ? 0
+        : (sampleFocus(f, f.x + t * extent, f.y) / f.maxBlur) * FOCUS_BANDS;
+    const weight = Math.max(0, 1 - Math.abs(b - band));
+    return `<stop offset="${t}" stop-color="white" stop-opacity="${weight}"/>`;
+  }).join("");
+  const pad = (3 * f.maxBlur) / f.scale;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width + 2 * pad}" height="${height + 2 * pad}" viewBox="${-pad} ${-pad} ${width + 2 * pad} ${height + 2 * pad}"><defs><radialGradient id="g" gradientUnits="userSpaceOnUse" cx="${f.x + width / 2}" cy="${f.y + height / 2}" r="${extent}">${stops}</radialGradient></defs><rect x="${-pad}" y="${-pad}" width="${width + 2 * pad}" height="${height + 2 * pad}" fill="url(#g)"/></svg>`;
+  return "data:image/svg+xml," + encodeURIComponent(svg);
+}
+export function cameraToCss(input: CameraInput = {}): string {
+  const c = CameraSchema.parse(input);
+  return transformToCss({
+    x: -c.x,
+    y: -c.y,
+    z: -c.z,
+    rotateX: c.rotateX,
+    rotateY: c.rotateY,
+    rotateZ: c.rotateZ,
+  });
 }

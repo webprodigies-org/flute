@@ -1,7 +1,16 @@
 import { useState } from "react";
 import { useDashboard } from "./data";
 
-export function RevenueCard() {
+/** SOURCE OF TRUTH KEYWORDS: RevenueCard progress.
+ * WHAT: opt-in chart reveal from explicit progress; ordinary host rendering is full.
+ * WHY: the same provider-backed chart can participate in a scene without cloning.
+ * WHERE: App.tsx supplies scene progress; DashboardProvider remains the data owner.
+ */
+export function RevenueCard({ progress = 1 }: { progress?: number }) {
+  const reveal = Math.min(
+    1,
+    Math.max(0, Number.isFinite(progress) ? progress : 1),
+  );
   const { data, period, setPeriod } = useDashboard();
   const [selected, setSelected] = useState<number | null>(null);
   const points = data?.points ?? [];
@@ -52,6 +61,19 @@ export function RevenueCard() {
               y2={y}
               stroke="#efeff2"
               strokeDasharray="3 5"
+            />
+          ))}
+          {points.map((value, index) => (
+            <rect
+              key={index}
+              data-testid="revenue-bar"
+              x={(index * 348) / Math.max(1, points.length - 1)}
+              y={150 - value * reveal}
+              width="10"
+              height={value * reveal}
+              rx="3"
+              fill="#b79ade"
+              fillOpacity=".3"
             />
           ))}
           <path d={path + " L 360 150 L 0 150 Z"} fill="url(#chart-fill)" />

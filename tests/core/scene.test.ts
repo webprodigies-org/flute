@@ -6,7 +6,7 @@ describe("versioned scene contract", () => {
     const result = validateScene({ nodes: [{ id: "chart" }] });
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.data.version).toBe(1);
+      expect(result.data.version).toBe(2);
       expect(result.data.nodes[0].transform.scale).toBe(1);
       expect(validateScene(JSON.parse(JSON.stringify(result.data)))).toEqual(
         result,
@@ -14,7 +14,7 @@ describe("versioned scene contract", () => {
     }
   });
   it.each([
-    { version: 2, nodes: [] },
+    { version: 1, nodes: [] },
     { nodes: [{ id: "a" }, { id: "a" }] },
     { nodes: [{ id: "a", parentId: "b" }] },
     {
@@ -42,12 +42,12 @@ describe("spatial evaluation", () => {
     }));
     const center = evaluateScene({
       nodes,
-      focus: { targetId: "n1", range: 0, falloff: 50, maxBlur: 3 },
+      focus: { z: 0, radius: 0, falloff: 50, maxBlur: 3 },
     });
     expect(center.nodes.map((n) => n.blur)).toEqual([3, 0, 3]);
     const near = evaluateScene({
       nodes,
-      focus: { targetId: "n2", range: 0, falloff: 50, maxBlur: 3 },
+      focus: { z: 200, radius: 0, falloff: 50, maxBlur: 3 },
     });
     expect(near.nodes.map((n) => n.blur)).toEqual([3, 3, 0]);
   });
@@ -65,10 +65,10 @@ describe("spatial evaluation", () => {
     expect(child.worldPosition.x).toBeCloseTo(20);
     expect(child.worldPosition.z).toBeCloseTo(70);
   });
-  it("includes the camera rotation when resolving a focal target", () => {
+  it("includes camera rotation against independent focus coordinates", () => {
     const result = evaluateScene({
       camera: { rotateY: 90 },
-      focus: { targetId: "a" },
+      focus: { z: -100 },
       nodes: [{ id: "a", transform: { x: 100 } }],
     });
     expect(result.focusDepth).toBeCloseTo(-100);
@@ -94,8 +94,12 @@ describe("spatial evaluation", () => {
 });
 
 it("reports composed numeric overflow without leaking NaN into render output", () => {
-  const nodes = Array.from({length: 170}, (_, index) => ({id: "n" + index, ...(index ? {parentId: "n" + (index - 1)} : {}), transform: {scale: 100}}));
-  const result = evaluateScene({nodes});
+  const nodes = Array.from({ length: 170 }, (_, index) => ({
+    id: "n" + index,
+    ...(index ? { parentId: "n" + (index - 1) } : {}),
+    transform: { scale: 100 },
+  }));
+  const result = evaluateScene({ nodes });
   expect(result.nodes).toEqual([]);
   expect(result.issues[0].message).toContain("numeric limits");
   expect(result.focusDepth).toBe(0);

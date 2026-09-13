@@ -1,26 +1,15 @@
-# Slice one integration contract
+# Spatial and motion integration contract
 
-Board slice ad6d2430-a222-5b8f-a296-e24724f4a81d owns delivery. This file records the agreed implementation interface, not a replacement build plan.
+Morphite Board owns scope and build order. Slice ad6d2430-a222-5b8f-a296-e24724f4a81d established live surfaces. Slice 588fd521-ca29-51af-a3f0-db5733e87380 extends that owner with independent progressive focus, camera translation and deterministic motion. This document describes the implemented interface, not another build plan.
 
-Core owner: src/core/scene.ts and spatial.ts. The React adapter consumes validateScene/evaluateScene/transformToCss. Types derive from Zod. Component instances and host API data never enter SceneDefinition.
+Scene schemas live in src/core/scene.ts (version 2). Spatial evaluation, coordinate conventions and focus-mask generation live in src/core/spatial.ts. MotionSchema/evaluateMotion own explicit-time tracks in src/core/motion.ts. RESOURCES binds the current operation identities; React consumes it without copying their policy. See README for public usage and limitations.
 
-React public interface to implement in src/react/index.tsx:
+Scene accepts camera, focus, motion, timeMs, children, style/className and onDiagnostics. Surface/Motion accept stable id, transform, children and optional content. useSceneTime exposes the same explicit time for opt-in component adapters. SceneErrorBoundary provides retry and resetKey recovery.
 
-- Scene: children, camera?: CameraInput, focus?: FocusInput, className?, style?, onDiagnostics?: (issues: SceneIssue[]) => void.
-- Surface: id: string, transform?: TransformInput, children, className?, style?, content?: ReactNode.
-- Motion: same as Surface, positioning only in slice one (no timeline).
-- SceneErrorBoundary: children, optional resetKey; actionable error fallback with retry.
-- Surface/Motion wrappers remain mounted on transform/focus changes, preserving host providers and events.
-- data-flute-id on transform wrapper; data-flute-content on visual content leaf; data-flute-blur and data-flute-depth on wrapper for diagnostics/browser assertions.
-- CSS 3D group wrappers never carry filter/opacity that flatten descendants. Optional content is a separate visual leaf; nested Surface/Motion children form the spatial group. Document limitations for arbitrary intermediary host clipping/filters.
-- Natural measured dimensions through ResizeObserver; core receives local center offsets relative to nearest registered parent center (or scene center). Dimensions are untransformed, not getBoundingClientRect after 3D projection.
-- Invalid config, duplicate IDs and missing focus targets produce visible actionable errors and recover on correction. Registration is scoped per Scene and cleaned up under StrictMode/unmount.
-- Root scene uses perspective; stage camera rotation must exactly match core conventions. Do not copy blur or transform math into adapter.
-- DOM wrappers should be neutral by default and allow consumer styling. Demo will supply layout.
+Registration is Scene-scoped with mount tokens and ResizeObserver cleanup. Measurements are untransformed border-box centers relative to the nearest registered parent or scene center. The renderer preserves provider context, DOM identity and interaction during prop/time changes. Visual leaves receive the progressive filter/opacity; spatial groups retain preserve-3d. Invalid input and removed motion targets recover without rebuilding the host subtree.
 
-Coordinator owns demo/, index.html, root config, README, tests/browser, src/index.ts.
-React worker owns src/react/ and tests/react/.
-Architecture worker owns scripts/check-architecture.mjs and tests/architecture.test.mjs.
-Core files are a shared committed prerequisite. Propose core contract changes to coordinator before editing.
+Focus is independent camera-space xyz plus radius/falloff/maxBlur, never a component ID. It stays screen-locked under camera movement. One field computes distance across each planar surface, including perpendicular depth. SVG Gaussian basis masks approximate that field on the existing SourceGraphic; there are no copied React subtrees or UI screenshots. data-flute-blur is center-point telemetry only, not the filter for the whole element.
 
-Checks: npm run test:core; npm run test:react; npm run test:architecture; npm run verify:surface on integrated root.
+Camera x/y/z subtract from scene position. Existing stage rotations remain in canonical T*Rx*Ry*Rz order; this is not a physical camera pose API. Focus position, camera position and surfaces can be keyframed independently.
+
+Checks: npm run verify:motion. Pixel tests verify within-surface sharpness and fixed focus under movement; React checks verify state/registration recovery; architecture tests reject duplicate named owners and forbidden imports. Tests do not prove universal host CSS compatibility or physical optical accuracy.
