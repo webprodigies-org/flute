@@ -5,17 +5,16 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 127.0.0.1",
-    "build": "tsc --noEmit && vite build",
+    "build": "tsc --noEmit && vite build && npm run build:library",
     "typecheck": "tsc --noEmit",
     "test:core": "vitest run tests/core",
     "test:react": "vitest run tests/react",
     "test:architecture": "node --test tests/architecture.test.mjs",
     "test:browser": "playwright test",
-    "verify:surface": "npm run typecheck && npm run test:core && npm run test:react && npm run test:architecture && npm run build && npm run test:browser"
+    "verify:surface": "npm run typecheck && npm run test:core && npm run test:react && npm run test:architecture && npm run build && npm run test:browser",
+    "build:library": "vite build --config vite.lib.config.ts && tsc -p tsconfig.lib.json"
   },
   "dependencies": {
-    "react": "19.2.0",
-    "react-dom": "19.2.0",
     "zod": "4.3.6"
   },
   "devDependencies": {
@@ -29,6 +28,21 @@
     "jsdom": "27.4.0",
     "typescript": "5.9.3",
     "vite": "7.3.6",
-    "vitest": "4.1.11"
+    "vitest": "4.1.11",
+    "react": "19.2.0",
+    "react-dom": "19.2.0"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/library/types/index.d.ts",
+      "import": "./dist/library/index.js"
+    }
+  },
+  "files": [
+    "dist/library"
+  ],
+  "peerDependencies": {
+    "react": ">=19.2.0 <20",
+    "react-dom": ">=19.2.0 <20"
   }
 }
