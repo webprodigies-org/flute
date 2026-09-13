@@ -82,4 +82,4 @@ Runs types, core/React tests, architecture negative fixtures, demo/library build
 
 `npm run verify:motion` includes `npm run test:performance`: full hardware-accelerated Chromium at 1440×1100, both camera/focus recipes, a 300 ms warmup and six seconds of samples each. Required: average ≥55 FPS, p95 frame interval <20 ms, fewer than 2% intervals over33.4 ms, and zero image-href reconstruction during playback. Reports include GPU identity; software-only headless rendering cannot qualify this hardware budget. Install full Chromium with `npx playwright install chromium`.
 
-See [performance evidence](docs/performance.md) for the measured baseline and rendering decision. These measurements qualify the tested scene/device; they are not a guarantee for arbitrary host component complexity or every GPU.
+See [performance evidence](docs/architecture.md#progressive-focus-performance) for the measured baseline and rendering decision. These measurements qualify the tested scene/device; they are not a guarantee for arbitrary host component complexity or every GPU.

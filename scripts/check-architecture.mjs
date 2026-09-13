@@ -1,6 +1,6 @@
 import ts from 'typescript';
 import { builtinModules } from 'node:module';
-import { readFileSync, readdirSync } from 'node:fs';
+import { readFileSync, readdirSync, lstatSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -188,6 +188,38 @@ export function checkArchitecture(input, { compilerOptions = {} } = {}) {
   return issues;
 }
 
+/** SOURCE OF TRUTH: documentation allowlist.
+ * WHAT: docs contains exactly two regular files, architecture.md and product.md.
+ * WHY: prevent additional documents from creating competing or stale authorities.
+ * WHERE: checkProject, its CLI, build and architecture tests enforce this boundary.
+ */
+export const DOCUMENTATION_FILES = Object.freeze(['architecture.md', 'product.md']);
+export function checkDocumentation(directory) {
+  const issues = [];
+  const reject = (file, message) => issues.push({file, line:1, column:1, rule:'documentation-boundary', message});
+  const folder = path.join(directory, 'docs');
+  let stat;
+  try { stat = lstatSync(folder); } catch (error) {
+    if (error.code !== 'ENOENT') throw error;
+    reject('docs', 'Missing docs directory: require architecture.md and product.md.');
+    return issues;
+  }
+  if (!stat.isDirectory() || stat.isSymbolicLink()) {
+    reject('docs', 'docs must be a real directory, not a file or symbolic link.');
+    return issues;
+  }
+  const entries = readdirSync(folder, {withFileTypes:true});
+  for (const entry of entries) {
+    if (!DOCUMENTATION_FILES.includes(entry.name) || !entry.isFile())
+      reject('docs/'+entry.name, 'Only regular docs/architecture.md and docs/product.md are allowed. Move architecture requirements into architecture.md and product requirements into product.md; no extra files, directories or links.');
+  }
+  for (const name of DOCUMENTATION_FILES) {
+    if (!entries.some(entry => entry.name === name && entry.isFile()))
+      reject('docs/'+name, 'Required canonical documentation file is missing or is not a regular file.');
+  }
+  return issues;
+}
+
 export function checkProject(directory = process.cwd()) {
   const sources = {};
   function read(directoryName) {
@@ -208,7 +240,7 @@ export function checkProject(directory = process.cwd()) {
     compilerOptions = parsed.options;
     if (compilerOptions.baseUrl) compilerOptions.baseUrl = path.relative(directory, compilerOptions.baseUrl);
   }
-  return checkArchitecture(sources, { compilerOptions });
+  return [...checkArchitecture(sources, { compilerOptions }), ...checkDocumentation(directory)];
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
