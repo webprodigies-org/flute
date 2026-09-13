@@ -13,6 +13,29 @@ Use Morphite's managed **app** service when working there. Otherwise Vite uses A
 
 The Storage study demonstrates floating folders, camera movement and progressive focus. Play or seek the scene; compare fixed focus against traveling focus and adjust focus position/width. The dashboard cards use the included `/api/dashboard` fixture through their existing React provider, not a production database. `?fixture=baseline` renders the cards without Flute wrappers.
 
+## Install into a supported project
+
+The launch adapter targets standard, single-root Vite + React applications using npm and a root `index.html` with a `.tsx` or `.jsx` module entry. Unsupported configuration is reported before source edits. The package is local-only during the MVP; build and pack it first:
+
+```sh
+npm run build
+npm pack
+```
+
+Inside the host project, with its existing Vite dev server running, use the absolute tarball path:
+
+```sh
+npx --yes --package /absolute/path/flute-scene-0.1.0.tgz flute init \
+  --package /absolute/path/flute-scene-0.1.0.tgz \
+  --url http://127.0.0.1:5173
+```
+
+Initialization installs the toolkit and wraps the existing root render expression, preserving its providers and application components. Repeating initialization does not add another wrapper. `flute open --url http://127.0.0.1:5173` verifies the existing dev server and opens `?flute-preview=1`; it never starts a competing server or silently switches ports. Use `--no-open` to verify and print the URL. `flute load` reads setup state; `flute validate` checks the integration. After installation, these commands are available through `npx flute` in the host project.
+
+The ordinary app URL keeps the original application view. The preview entry explicitly receives the host's `import.meta.env.DEV`, so a production build cannot activate the preview with a query string. This first preview shows the whole live app on a tilted surface with progressive focus. Source editing uses the host's existing Vite refresh; dedicated refinement controls and saved recipes remain subsequent slices.
+
+Missing or wrong-port dev servers report an actionable error; start the original host server and retry `open`. Custom roots, unsupported entry patterns and package managers need an explicit adapter instead of replacing the app. Setup metadata stays in `.flute/`; host `.env` files are not copied. Review generated source changes normally.
+
 ## Compose
 
 ```tsx
@@ -64,10 +87,14 @@ Keep wrappers and child identity stable during edits. Adding/removing wrappers a
 | `src/core/motion.ts` | Validated tracks and deterministic time evaluation |
 | `src/core/resources.ts` | Canonical operation identities and bindings |
 | `src/react/` | Live registration, measurements, visual filters and diagnostics |
+| `src/preview/` | Development-only framing of the installed host application |
+| `src/project/commands.ts` | Trusted, validated project operations |
+| `src/project/services.ts` | Scoped filesystem, package install and browser effects |
+| `src/cli/` | Terminal arguments and result presentation |
 | `demo/` | Storage study and provider/API-backed host components |
 | `scripts/check-architecture.mjs` | Executable dependency and named-owner checks |
 
-Inline SOURCE OF TRUTH comments explain WHAT, WHY and WHERE. Scene metadata never contains React instances, secrets or host database content. CLI, AI-provider connections, saved recipes, hosted accounts and exports remain later work.
+Inline SOURCE OF TRUTH comments explain WHAT, WHY and WHERE. Scene metadata never contains React instances, secrets or host database content. The CLI uses canonical project commands. Coding-agent conventions, saved recipes, hosted accounts and exports remain later work; Flute does not authenticate to AI providers.
 
 ## Verify
 
@@ -83,3 +110,7 @@ Runs types, core/React tests, architecture negative fixtures, demo/library build
 `npm run verify:motion` includes `npm run test:performance`: full hardware-accelerated Chromium at 1440×1100, both camera/focus recipes, a 300 ms warmup and six seconds of samples each. Required: average ≥55 FPS, p95 frame interval <20 ms, fewer than 2% intervals over33.4 ms, and zero image-href reconstruction during playback. Reports include GPU identity; software-only headless rendering cannot qualify this hardware budget. Install full Chromium with `npx playwright install chromium`.
 
 See [performance evidence](docs/architecture.md#progressive-focus-performance) for the measured baseline and rendering decision. These measurements qualify the tested scene/device; they are not a guarantee for arbitrary host component complexity or every GPU.
+
+## Launch verification
+
+`npm run verify:launch` includes the existing renderer/performance suite, project command and preview tests, CLI tests, and an independently installed tarball fixture. The installed fixture starts its own Vite server on a free configured port, checks source/config preservation and repeated init, rejects missing/wrong servers, exercises a provider-backed live counter, and checks the normal route and production preview exclusion. It cleans up its temporary project and servers. npm cache must contain the fixture dependencies for its offline initial install.

@@ -1,6 +1,6 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 const DashboardContext = createContext(0);
-export function DashboardProvider({ children }) {
+export function DashboardProvider({ children }: { children: ReactNode }) {
   const [revenue, setRevenue] = useState(0);
   useEffect(() => {
     const controller = new AbortController();
