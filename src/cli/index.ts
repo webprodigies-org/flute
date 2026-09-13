@@ -1,3 +1,4 @@
+import { executeVideoExport } from "../export/commands";
 import { executeProjectCommand } from "../project/commands";
 import type { ProjectResult } from "../core/project";
 
@@ -15,6 +16,7 @@ flute init [--project DIR] [--package TARBALL] [--url ORIGIN] [--no-open]
 flute open [--project DIR] [--url ORIGIN] [--no-open]
 flute load [--project DIR]
 flute validate [--project DIR]
+flute export --url URL --output FILE [--fps 30|60|120] [--width N --height N] [--project DIR] [--json]
 
 init preserves the existing root/providers. Add --url to initialize and open in one command.
 open reuses your running dev server (APP_PORT / PORT / 5173); it never starts another server.
@@ -28,17 +30,17 @@ function output(result: ProjectResult, json: boolean): CliResult {
     : "Project command completed.");
   return { code: 0, stdout: (json ? JSON.stringify(result) : message) + "\n", stderr: "" };
 }
-export async function runCli(argv: string[], environment: Environment, execute: Execute = executeProjectCommand): Promise<CliResult> {
+export async function runCli(argv: string[], environment: Environment, execute: Execute = executeProjectCommand, exporter: typeof executeVideoExport = executeVideoExport): Promise<CliResult> {
   if (argv.length === 0 || (argv.length === 1 && ["--help", "-h", "help"].includes(argv[0])))
     return { code: 0, stdout: usage, stderr: "" };
   const [command, ...args] = argv;
   const aliases = { init: "init-project", open: "open-preview", load: "load-project", validate: "validate-project" } as const;
   const fail = (message: string): CliResult => ({ code: 2, stdout: "", stderr: message + "\n\n" + usage });
-  if (!Object.hasOwn(aliases, command)) return fail(`Unknown command: ${command}`);
+  if (command !== "export" && !Object.hasOwn(aliases, command)) return fail(`Unknown command: ${command}`);
   const flags = new Map<string, string | true>();
   for (let i = 0; i < args.length; i++) {
     const flag = args[i];
-    if (!["--project", "--package", "--url", "--no-open", "--json"].includes(flag)) return fail(`Unknown option: ${flag}`);
+    if (!(command === "export" ? ["--project", "--url", "--output", "--fps", "--width", "--height", "--json"] : ["--project", "--package", "--url", "--no-open", "--json"]).includes(flag)) return fail(`Unknown option: ${flag}`);
     if (flags.has(flag)) return fail(`Duplicate option: ${flag}`);
     if (["--no-open", "--json"].includes(flag)) flags.set(flag, true);
     else {
@@ -51,6 +53,16 @@ export async function runCli(argv: string[], environment: Environment, execute: 
   if (["load", "validate"].includes(command) && (flags.has("--url") || flags.has("--no-open"))) return fail("Preview options require init or open.");
   const context = { root: flags.get("--project") as string ?? environment.root };
   const json = flags.has("--json");
+  if (command === "export") {
+    if (!flags.has("--url") || !flags.has("--output")) return fail("export requires --url and --output.");
+    const input = { url: flags.get("--url"), output: flags.get("--output"),
+      ...Object.fromEntries(["fps", "width", "height"].filter(key => flags.has(`--${key}`)).map(key => [key, Number(flags.get(`--${key}`))])) };
+    try {
+      const result = await exporter(input, context);
+      if (!result.success) return { code: 1, stdout: "", stderr: (json ? JSON.stringify(result) : result.issues.map(i => `${i.code}: ${i.message}`).join("\n")) + "\n" };
+      return { code: 0, stdout: (json ? JSON.stringify(result) : `Exported ${result.data.output} (${result.data.frames} frames at ${result.data.fps} FPS).`) + "\n", stderr: "" };
+    } catch { return { code: 1, stdout: "", stderr: "Video export failed unexpectedly. Check the local scene server and retry.\n" }; }
+  }
   const input = command === "init" ? { ...(flags.has("--package") ? { packageSource: flags.get("--package") } : {}) }
     : command === "open" ? { url: flags.get("--url") ?? `http://127.0.0.1:${environment.port ?? "5173"}`, launch: !flags.has("--no-open") } : {};
   try {
