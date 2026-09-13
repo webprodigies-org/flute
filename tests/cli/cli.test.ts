@@ -45,3 +45,21 @@ describe("CLI adapter", () => {
     expect(r.code).toBe(1);expect(r.stderr).not.toContain("secret value");
   });
 });
+
+describe("video CLI", () => {
+  it("routes video options to the trusted exporter", async () => {
+    const execute = vi.fn();
+    const exporter = vi.fn().mockResolvedValue({success:true,data:{output:"clip.mp4",fps:120,frames:12,durationMs:100}});
+    const result = await runCli(["export","--url","http://localhost:1234/scene?capture=1","--output","clip.mp4","--fps","120","--width","640","--height","480","--json"],context,execute,exporter);
+    expect(exporter).toHaveBeenCalledWith({url:"http://localhost:1234/scene?capture=1",output:"clip.mp4",fps:120,width:640,height:480},context);
+    expect(execute).not.toHaveBeenCalled();
+    expect(JSON.parse(result.stdout).data.fps).toBe(120);
+  });
+  it("reports canonical export failures and rejects incomplete arguments", async () => {
+    const exporter = vi.fn().mockResolvedValue({success:false,issues:[{code:"missing-ffmpeg",message:"Install FFmpeg."}]});
+    expect((await runCli(["export","--url","http://localhost","--output","clip.mp4"],context,vi.fn(),exporter)).stderr).toContain("Install FFmpeg");
+    exporter.mockClear();
+    expect((await runCli(["export","--url","http://localhost"],context,vi.fn(),exporter)).code).toBe(2);
+    expect(exporter).not.toHaveBeenCalled();
+  });
+});

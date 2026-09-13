@@ -22,7 +22,7 @@ The CLI supplies a basic preview. The sidebar choreography is separately authore
 
 1. `src/main.tsx`: CLI-generated preview wrapper around the existing providers.
 2. `src/components/dashboard.tsx`: the one dashboard shared by both views. Its shadcn components and `src/app/dashboard/data.json` own UI/data.
-3. `src/scene/sidebar-layer.tsx`: row identities, entrance times and authored vertical anchors. Existing menu rows opt into Surface here.
+3. `src/scene/sidebar-layer.tsx`: row identities and authored vertical anchors. Existing menu rows opt into Surface here.
 4. `src/scene/sidebar-recipe.ts`: tilt, camera rail, independent focus and entrance keyframes. Flute performs the actual spatial math and interpolation.
 5. `src/scene/sidebar-scene.tsx`: playback clock, controls and scene composition.
 
@@ -39,3 +39,9 @@ npx --yes --package /absolute/path/to/flute/dist/packages/flute-scene-0.1.0.tgz 
 ```
 
 Use the tarball produced by `npm run setup:dashboard` and replace the port with your existing dev-server port. Init preserves the root/provider expression. It is safe to repeat; unsupported setups return a diagnostic. Flute is not published to npm yet.
+
+## Cinematic motion and video
+
+The shared motion contract defaults to half speed and soft cinematic easing. This shot lasts 22 seconds, with a continuous camera sweep, shrinking depth staircase and narrow focus. Cascade can be disabled; preview cadence can follow the display or simulate 30/60/120 FPS. The original dashboard theme and row styling are retained.
+
+Open **Export MP4** for the current CLI command or prepared downloads. From the Flute root, `npm run export:dashboard -- 60 30` builds fresh 60/30 FPS files in this example's `public/exports/` (requires FFmpeg and Playwright Chromium). Existing files are protected; choose a new output filename for another export. These generated artifacts are not committed. FPS changes do not change the 22-second duration. Rendering is deterministic frame capture rather than recording the screen in real time.

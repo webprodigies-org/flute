@@ -3,3 +3,5 @@ export * from "./spatial";
 export * from "./motion";
 export * from "./resources";
 export * from "./project";
+export * from "./choreography";
+export * from "./export";

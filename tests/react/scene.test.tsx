@@ -468,7 +468,7 @@ describe("live React spatial adapter", () => {
 
 it("applies deterministic camera, focus and surface tracks without replacing live UI; recovers missing targets", () => {
   const motion = {
-    durationMs: 1000,
+    durationMs: 1000, speed: 1,
     tracks: [
       {
         target: { kind: "surface" as const, id: "a" },

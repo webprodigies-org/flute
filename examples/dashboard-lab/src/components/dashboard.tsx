@@ -16,7 +16,7 @@ export function Dashboard() {
   return <SidebarProvider className={spatial ? "dashboard-layout" : undefined} style={{
     "--sidebar-width": "17rem", "--header-height": "3.5rem",
   } as CSSProperties}>
-    <AppSidebar variant="inset" collapsible={spatial ? "none" : "offcanvas"} />
+    <AppSidebar className={spatial ? "p-2" : undefined} variant="inset" collapsible={spatial ? "none" : "offcanvas"} />
     <DashboardBody spatial={spatial}><SidebarInset>
       <SiteHeader />
       <div className="flex flex-1 flex-col">

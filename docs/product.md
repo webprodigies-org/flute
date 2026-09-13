@@ -8,10 +8,12 @@ Install in an existing project, compose real UI with Scene/Surface/Motion, and w
 
 ## Delivered and remaining scope
 
-Delivered: React wrappers, progressive focus, camera and layer motion, explicit-time playback, the local Storage demonstration with live provider/API-backed cards, a separate official shadcn dashboard consumer with an authored sidebar camera/entrance shot, and a local CLI/Vite adapter that installs and opens a development-only whole-app scene preview.
+Delivered: React wrappers, progressive focus, camera and layer motion, explicit-time playback, the local Storage demonstration with live provider/API-backed cards, a separate official shadcn dashboard consumer with an authored sidebar camera/entrance shot, cinematic motion defaults (half speed, soft easing, optional linked depth cascade), local MP4 capture at 30/60/120 FPS, and a local CLI/Vite adapter that installs and opens a development-only whole-app scene preview.
 
 Remaining planned MVP slices: integrated preview refinement, editable saved recipes and coding-agent conventions. Morphite's matrix owns their order and acceptance criteria.
 
-Product login, collaboration, hosted AI infrastructure and image/video export are outside the current MVP. Hosted studio, identity and commercial capabilities are future planning only. Existing app authentication/data remain the host application's responsibility.
+Product login, collaboration, hosted AI infrastructure and still-image export are outside the current MVP. Hosted studio, identity and commercial capabilities are future planning only. Existing app authentication/data remain the host application's responsibility.
 
 See architecture.md for canonical technical ownership, boundaries and verification.
+
+The user explicitly expanded this iteration to include downloadable MP4 video. Export uses the same scene clock as live preview; it does not depend on real-time playback keeping up. Default export is 60 FPS, with 30 and 120 FPS options. Native preview cadence follows the display and is distinct from an encoded frame rate.

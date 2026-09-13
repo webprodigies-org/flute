@@ -6,7 +6,7 @@ import {
   type SceneIssue,
 } from "./scene";
 
-/** SOURCE OF TRUTH: MotionSchema, evaluateMotion, explicit scene time.
+/** SOURCE OF TRUTH: MotionSchema, evaluateMotion, motionDuration, motionTime, cinematicProgress, cinematicTimeAtProgress, sampleFrameTime, explicit scene time.
  * WHAT: typed motion tracks, target/property validation and deterministic interpolation.
  * WHY: all callers must evaluate the same frame without clocks or mutable playback state.
  * WHERE: core/motion.ts owns motion; core/scene.ts validates merged scene values;
@@ -29,8 +29,8 @@ const FocusMotionSchema = FocusSchema;
 export const MotionKeyframeSchema = z.strictObject({
   timeMs: finite.nonnegative(),
   value: finite,
-  // Easing applies from this keyframe to the next; omission means linear.
-  easing: z.enum(["linear", "easeInOut"]).optional(),
+  // Easing applies to the outgoing segment; cinematic has zero endpoint velocity and acceleration.
+  easing: z.enum(["linear", "easeInOut", "cinematic"]).default("cinematic"),
 });
 const keyframes = z.array(MotionKeyframeSchema).min(1);
 export const MotionTrackSchema = z
@@ -84,9 +84,12 @@ export const MotionTrackSchema = z
 export const MotionSchema = z
   .strictObject({
     durationMs: finite.nonnegative(),
+    speed: finite.min(0.05).max(4).default(0.5),
     tracks: z.array(MotionTrackSchema),
   })
   .superRefine((motion, ctx) => {
+    if (!Number.isFinite(motion.durationMs / motion.speed))
+      ctx.addIssue({code:"custom",path:["durationMs"],message:"Presentation duration must remain finite at the chosen speed."});
     const seen = new Set<string>();
     for (const [index, track] of motion.tracks.entries()) {
       const key = JSON.stringify([
@@ -130,8 +133,8 @@ function interpolate(frames: MotionTrack["keyframes"], timeMs: number): number {
     const start = frames[index - 1];
     const progress = (timeMs - start.timeMs) / (end.timeMs - start.timeMs);
     const weight =
-      start.easing === "easeInOut"
-        ? progress * progress * (3 - 2 * progress)
+      start.easing === "cinematic" ? cinematicProgress(progress)
+        : start.easing === "easeInOut" ? progress * progress * (3 - 2 * progress)
         : progress;
     // Same-sign deltas preserve positive subnormals; convex weights avoid overflow
     // when opposite finite extremes make (end.value - start.value) infinite.
@@ -171,7 +174,7 @@ export function evaluateMotion(input: unknown, timeMs: number): MotionState {
       message: "Scene time must be a finite number.",
     });
   if (!parsed.success || result.issues.length) return result;
-  const time = Math.min(parsed.data.durationMs, Math.max(0, timeMs));
+  const time = Math.min(parsed.data.durationMs, Math.max(0, timeMs) * parsed.data.speed);
   for (const track of parsed.data.tracks) {
     const value = interpolate(track.keyframes, time);
     if (track.target.kind === "surface") {
@@ -193,4 +196,42 @@ export function evaluateMotion(input: unknown, timeMs: number): MotionState {
     }
   }
   return result;
+}
+
+// Shared timeline conversion: callers supply elapsed presentation milliseconds.
+// Opt-in host animations use motionTime through useSceneTime, so charts and spatial
+// transforms stay synchronized. Exports sample the same elapsed clock as preview.
+export function motionDuration(input: unknown): number {
+  const parsed = MotionSchema.safeParse(input);
+  return parsed.success ? parsed.data.durationMs / parsed.data.speed : 0;
+}
+export function motionTime(input: unknown, elapsedMs: number): number {
+  const parsed = MotionSchema.safeParse(input);
+  return parsed.success && Number.isFinite(elapsedMs)
+    ? Math.min(parsed.data.durationMs, Math.max(0, elapsedMs) * parsed.data.speed) : 0;
+}
+export function cinematicProgress(progress: number): number {
+  const t = Math.max(0, Math.min(1, progress));
+  return t * t * t * (t * (t * 6 - 15) + 10);
+}
+// Inverse of the same monotonic easing law, for timing entrances along a camera rail.
+export function cinematicTimeAtProgress(progress: number): number {
+  if (progress <= 0) return 0;
+  if (progress >= 1) return 1;
+  let low = 0, high = 1;
+  for (let i = 0; i < 48; i++) {
+    const middle = (low + high) / 2;
+    if (cinematicProgress(middle) < progress) low = middle; else high = middle;
+  }
+  return (low + high) / 2;
+}
+
+/** Quantize presentation time only when a preview cadence is explicitly chosen.
+ * Export still samples its own exact frame times; speed and easing do not change.
+ */
+export function sampleFrameTime(elapsedMs:number, fps:number | "native" = "native"):number {
+  if(!Number.isFinite(elapsedMs)||elapsedMs<0) throw new Error("Frame time must be finite and nonnegative.");
+  if(fps==="native") return elapsedMs;
+  if(!Number.isFinite(fps)||fps<=0||fps>240)throw new Error("Frame rate must be between 0 and 240.");
+  return Math.floor(elapsedMs*fps/1000)*1000/fps;
 }

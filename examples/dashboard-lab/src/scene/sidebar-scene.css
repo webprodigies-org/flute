@@ -6,13 +6,12 @@ html, body, #root { margin: 0; min-height: 100%; }
 .study-header a { font-size: 12px; color: #a6aab4; }
 .shot-viewport { height: calc(100svh - 190px); min-height: 450px; overflow: hidden; position: relative; }
 .sidebar-shot { width: 100%; height: 100%; }
-.dashboard-layout { width: 1280px; height: 920px; min-height: 0 !important; background: #151619; border: 1px solid #333740; border-radius: 14px; }
-.dashboard-layout [data-slot=sidebar] { background: transparent; }
-.dashboard-layout [data-slot=sidebar-inset] { height: 904px; overflow: hidden; border: 1px solid #30343b; }
+.dashboard-layout { width: 1280px; height: 920px; min-height: 0 !important; background: var(--sidebar); color: var(--foreground); }
+.dashboard-layout [data-slot=sidebar-inset] { height: 904px; overflow: hidden; }
 .dashboard-layout, .dashboard-layout [data-slot^=sidebar]:not([data-slot=sidebar-inset]), .dashboard-layout .sidebar-layer { transform-style: preserve-3d; }
 .dashboard-layout [data-slot=sidebar-content] { overflow: visible; }
 .dashboard-layout [data-slot=sidebar-menu-item] { width: 100%; }
-.sidebar-layer [data-flute-content] > div { position: relative; background: #1d2026; border: 1px solid #343941; border-radius: 6px; }
+.sidebar-layer [data-flute-content] > div { position: relative; }
 .study-controls { position: relative; z-index: 2; min-height: 82px; display: flex; align-items: center; gap: 16px; padding: 18px 5vw; background: #08090b; }
 .study-controls button { cursor: pointer; border: 1px solid #353940; border-radius: 6px; padding: 8px 16px; font: inherit; font-size: 12px; }
 .study-controls button:first-child { background: #e7e9ef; color: #151619; min-width: 65px; }
@@ -20,3 +19,15 @@ html, body, #root { margin: 0; min-height: 100%; }
 .study-controls output { font: 11px ui-monospace, monospace; color: #929aab; min-width: 85px; }
 .study-caption { margin-left: auto; color: #7d8491; font-size: 11px; }
 @media(max-width:600px) { .study-header { padding: 22px; height: 110px; } .study-header h1 { font-size: 21px; } .study-header a { max-width: 80px; } .study-controls { gap: 9px; padding: 15px; flex-wrap: wrap; } .study-controls input { flex: 1; min-width: 90px; } .study-caption { width: 100%; margin: 0; } }
+
+.study-controls select { color: inherit; background: #151619; border: 1px solid #353940; border-radius: 6px; padding: 7px; font-size: 11px; }
+.study-controls label { font-size: 11px; display:flex; align-items:center; gap:5px; }
+.study-controls label input[type=checkbox] { width:14px; min-width:14px; }
+
+.export-panel { padding: 0 5vw 24px; font-size:12px; color:#9ea6b3; }
+.export-panel summary { cursor:pointer; padding:10px 0; color:#d4dae5; }
+.export-panel > div { display:flex; flex-wrap:wrap; align-items:center; gap:25px; margin:12px 0; }
+.export-panel select { background:#17191e; padding:6px; margin-left:12px; border-radius:5px; color:#e0e5ef; }
+.export-panel code { display:block; padding:12px; background:#15171b; color:#b7c6e1; overflow-wrap:anywhere; margin:12px 0; }
+.export-panel a, .export-panel button { color:#dfe6f5; cursor:pointer; text-decoration:underline; }
+.export-panel p { margin:10px 0; }

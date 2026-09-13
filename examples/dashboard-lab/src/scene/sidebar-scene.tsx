@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from "react"
-import { Scene, Surface, SceneErrorBoundary } from "@flute/scene"
+import { VideoExport } from "./video-export"
+import { useEffect, useMemo, useRef, useState } from "react"
+import { Scene, Surface, SceneErrorBoundary, useSceneCapture, sampleFrameTime, SUPPORTED_EXPORT_FPS, ExportFrameRateSchema } from "@flute/scene"
 import { Dashboard } from "@/components/dashboard"
 import { SpatialSidebar } from "./sidebar-layer"
-import { compactShot, desktopShot, dashboardTilt, durationMs } from "./sidebar-recipe"
+import { createSidebarShot, dashboardTilt, durationMs } from "./sidebar-recipe"
 import "./sidebar-scene.css"
 
 // Presentation clock only: canonical Scene evaluates every frame from explicit time.
@@ -10,7 +11,8 @@ import "./sidebar-scene.css"
 const dashboard = <SpatialSidebar value={true}><Dashboard /></SpatialSidebar>
 export function SidebarScene() {
   const [compact, setCompact] = useState(() => matchMedia("(max-width: 600px)").matches)
-  const shot = compact ? compactShot : desktopShot
+  const [cascade,setCascade] = useState(()=>new URLSearchParams(window.location.search).get("cascade")!=="0")
+  const shot = useMemo(()=>createSidebarShot(compact,cascade),[compact,cascade])
   useEffect(() => {
     const query = matchMedia("(max-width: 600px)")
     const update = () => setCompact(query.matches)
@@ -19,6 +21,7 @@ export function SidebarScene() {
   }, [])
   const [time, setTime] = useState(0)
   const [playing, setPlaying] = useState(false)
+  const [fps,setFps] = useState<number | "native">("native")
   const timeRef = useRef(time)
   timeRef.current = time
   useEffect(() => {
@@ -33,17 +36,18 @@ export function SidebarScene() {
     let frame = 0
     const tick = (now: number) => {
       const next = Math.min(durationMs, now - started)
-      setTime(next)
+      setTime(next === durationMs ? next : sampleFrameTime(next,fps))
       if (next < durationMs) frame = requestAnimationFrame(tick)
       else setPlaying(false)
     }
     frame = requestAnimationFrame(tick)
     return () => cancelAnimationFrame(frame)
-  }, [playing])
-  return <main className="sidebar-study dark">
+  }, [playing,fps])
+  useSceneCapture({durationMs,seek:(elapsedMs)=>{setPlaying(false);setTime(elapsedMs)}})
+  return <main className="sidebar-study">
     <header className="study-header"><div><span className="study-eyebrow">FLUTE / DASHBOARD 01</span>
       <h1>A sidebar, in depth.</h1></div><a href="/">Open dashboard ↗</a></header>
-    <div className="shot-viewport">
+    <div className="shot-viewport" data-flute-capture="scene">
       <SceneErrorBoundary resetKey="sidebar-shot">
         <Scene className="sidebar-shot" camera={shot.camera} focus={shot.focus} motion={shot.motion} timeMs={time}>
           <Surface id="dashboard-plane" transform={dashboardTilt} style={{ position: "absolute", width: 1280, height: 920, left: "50%", top: "50%", marginLeft: -640, marginTop: -460 }}>
@@ -56,8 +60,10 @@ export function SidebarScene() {
       <button onClick={() => { if (time >= durationMs) setTime(0); setPlaying(!playing) }} aria-label={playing ? "Pause" : "Play"}>{playing ? "Pause" : "Play"}</button>
       <button onClick={() => { setTime(0); setPlaying(false) }}>Reset</button>
       <input aria-label="Scene time" type="range" min="0" max={durationMs} step="10" value={time} onChange={e => { setPlaying(false); setTime(Number(e.target.value)) }} />
-      <output data-testid="scene-time">{(time / 1000).toFixed(1)} / 11s</output>
-      <span className="study-caption">One dashboard. Fifteen live layers.</span>
+      <output data-testid="scene-time">{(time / 1000).toFixed(1)} / {durationMs / 1000}s</output>
+      <label>Preview FPS<select aria-label="Preview FPS" value={fps} onChange={e=>{setPlaying(false);setFps(e.target.value==="native"?"native":ExportFrameRateSchema.parse(Number(e.target.value)))}}><option value="native">Native</option>{SUPPORTED_EXPORT_FPS.map(rate=><option key={rate} value={rate}>{rate}</option>)}</select></label>
+      <label><input type="checkbox" checked={cascade} onChange={e=>{setPlaying(false);setTime(0);setCascade(e.target.checked)}} />Cascade</label>
     </footer>
+    <VideoExport cascade={cascade} />
   </main>
 }
