@@ -15,7 +15,7 @@ const owners = new Map([
   ['executeProjectCommand', 'src/project/commands.ts'],
   ['InitProjectSchema', 'src/core/project.ts'],
   ['SceneSchema', 'src/core/scene.ts'], ['TransformSchema', 'src/core/scene.ts'],
-  ['focusForSurface','src/core/spatial.ts'], ['sampleFocus','src/core/spatial.ts'], ['focusMask','src/core/spatial.ts'], ['cameraToCss','src/core/spatial.ts'],
+  ['uniformFocusBlur','src/core/spatial.ts'], ['focusForSurface','src/core/spatial.ts'], ['sampleFocus','src/core/spatial.ts'], ['focusMask','src/core/spatial.ts'], ['cameraToCss','src/core/spatial.ts'],
   ['MotionSchema','src/core/motion.ts'], ['evaluateMotion','src/core/motion.ts'],
   ['evaluateScene', 'src/core/spatial.ts'], ['transformToCss', 'src/core/spatial.ts'],
 ]);

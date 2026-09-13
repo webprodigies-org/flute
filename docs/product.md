@@ -8,7 +8,7 @@ Install in an existing project, compose real UI with Scene/Surface/Motion, and w
 
 ## Delivered and remaining scope
 
-Delivered: React wrappers, progressive focus, camera and layer motion, explicit-time playback, the local Storage demonstration with live provider/API-backed cards, and a local CLI/Vite adapter that installs and opens a development-only whole-app scene preview.
+Delivered: React wrappers, progressive focus, camera and layer motion, explicit-time playback, the local Storage demonstration with live provider/API-backed cards, a separate official shadcn dashboard consumer with an authored sidebar camera/entrance shot, and a local CLI/Vite adapter that installs and opens a development-only whole-app scene preview.
 
 Remaining planned MVP slices: integrated preview refinement, editable saved recipes and coding-agent conventions. Morphite's matrix owns their order and acceptance criteria.
 

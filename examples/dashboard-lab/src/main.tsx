@@ -1,3 +1,5 @@
+import { TooltipProvider } from "@/components/ui/tooltip"
+import { ProjectPreview as FluteProjectPreview } from "@flute/scene/preview";
 import { StrictMode } from "react"
 import { createRoot } from "react-dom/client"
 
@@ -6,9 +8,9 @@ import App from "./App.tsx"
 import { ThemeProvider } from "@/components/theme-provider.tsx"
 
 createRoot(document.getElementById("root")!).render(
-  <StrictMode>
+  <FluteProjectPreview projectId="67896f80-65f2-4577-8a2b-f3e55fc8f5f1" enabled={import.meta.env.DEV}>{<StrictMode>
     <ThemeProvider>
-      <App />
+      <TooltipProvider><App /></TooltipProvider>
     </ThemeProvider>
-  </StrictMode>
+  </StrictMode>}</FluteProjectPreview>
 )

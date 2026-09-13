@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite --host 127.0.0.1",
+    "dev": "npm --prefix examples/dashboard-lab run dev --",
     "build": "npm run lint:architecture && tsc --noEmit && vite build && npm run build:library && npm run build:cli",
     "typecheck": "tsc --noEmit",
     "test:core": "vitest run tests/core",
@@ -20,7 +20,10 @@
     "build:cli": "vite build --config vite.cli.config.ts",
     "test:launch": "vitest run tests/project tests/preview tests/cli",
     "test:installed": "node scripts/check-installed.mjs",
-    "verify:launch": "npm run verify:motion && npm run test:launch && npm run test:installed"
+    "verify:launch": "npm run verify:motion && npm run test:launch && npm run test:installed",
+    "dev:storage": "vite --host 127.0.0.1",
+    "setup:dashboard": "node scripts/setup-dashboard.mjs",
+    "verify:dashboard": "npm run setup:dashboard && npm --prefix examples/dashboard-lab run build && node scripts/check-dashboard.mjs"
   },
   "dependencies": {
     "react-error-boundary": "6.1.5",

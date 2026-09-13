@@ -1,4 +1,5 @@
-import { useContext, type CSSProperties } from "react"
+import { Surface } from "@flute/scene"
+import { useContext, type ReactNode, type CSSProperties } from "react"
 import { AppSidebar } from "@/components/app-sidebar"
 import { ChartAreaInteractive } from "@/components/chart-area-interactive"
 import { DataTable } from "@/components/data-table"
@@ -16,7 +17,7 @@ export function Dashboard() {
     "--sidebar-width": "17rem", "--header-height": "3.5rem",
   } as CSSProperties}>
     <AppSidebar variant="inset" collapsible={spatial ? "none" : "offcanvas"} />
-    <SidebarInset>
+    <DashboardBody spatial={spatial}><SidebarInset>
       <SiteHeader />
       <div className="flex flex-1 flex-col">
         <div className="@container/main flex flex-1 flex-col gap-2">
@@ -27,6 +28,10 @@ export function Dashboard() {
           </div>
         </div>
       </div>
-    </SidebarInset>
+    </SidebarInset></DashboardBody>
   </SidebarProvider>
+}
+
+function DashboardBody({ spatial, children }: { spatial: boolean; children: ReactNode }) {
+  return spatial ? <Surface id="dashboard-content" style={{flex: 1, minWidth: 0}}>{children}</Surface> : children
 }

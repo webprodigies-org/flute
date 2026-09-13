@@ -2,13 +2,21 @@ import { useEffect, useRef, useState } from "react"
 import { Scene, Surface, SceneErrorBoundary } from "@flute/scene"
 import { Dashboard } from "@/components/dashboard"
 import { SpatialSidebar } from "./sidebar-layer"
-import { camera, dashboardTilt, durationMs, focus, sidebarMotion } from "./sidebar-recipe"
+import { compactShot, desktopShot, dashboardTilt, durationMs } from "./sidebar-recipe"
 import "./sidebar-scene.css"
 
 // Presentation clock only: canonical Scene evaluates every frame from explicit time.
 // The dashboard element stays stable; playback never clones or remounts live rows.
 const dashboard = <SpatialSidebar value={true}><Dashboard /></SpatialSidebar>
 export function SidebarScene() {
+  const [compact, setCompact] = useState(() => matchMedia("(max-width: 600px)").matches)
+  const shot = compact ? compactShot : desktopShot
+  useEffect(() => {
+    const query = matchMedia("(max-width: 600px)")
+    const update = () => setCompact(query.matches)
+    query.addEventListener("change", update)
+    return () => query.removeEventListener("change", update)
+  }, [])
   const [time, setTime] = useState(0)
   const [playing, setPlaying] = useState(false)
   const timeRef = useRef(time)
@@ -37,8 +45,8 @@ export function SidebarScene() {
       <h1>A sidebar, in depth.</h1></div><a href="/">Open dashboard ↗</a></header>
     <div className="shot-viewport">
       <SceneErrorBoundary resetKey="sidebar-shot">
-        <Scene className="sidebar-shot" camera={camera} focus={focus} motion={sidebarMotion} timeMs={time}>
-          <Surface id="dashboard" transform={dashboardTilt} style={{ position: "absolute", width: 1280, height: 920, left: "50%", top: "50%", marginLeft: -640, marginTop: -460 }}>
+        <Scene className="sidebar-shot" camera={shot.camera} focus={shot.focus} motion={shot.motion} timeMs={time}>
+          <Surface id="dashboard-plane" transform={dashboardTilt} style={{ position: "absolute", width: 1280, height: 920, left: "50%", top: "50%", marginLeft: -640, marginTop: -460 }}>
             {dashboard}
           </Surface>
         </Scene>

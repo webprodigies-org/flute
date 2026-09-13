@@ -7,26 +7,26 @@ import { sidebarSlots } from "./sidebar-layer"
 export const durationMs = 11000
 export const dashboardTilt = TransformSchema.parse({ rotateX: 12, rotateY: -38, rotateZ: -14 })
 const matrix = matrixFor(dashboardTilt)
-function rail(y: number) {
+function rail(y: number, compact: boolean) {
   const x = -504
   return {
-    x: matrix[0]! * x + matrix[1]! * y,
+    x: matrix[0]! * x + matrix[1]! * y - (compact ? 140 : 0),
     y: matrix[4]! * x + matrix[5]! * y + 90,
-    z: matrix[8]! * x + matrix[9]! * y - 620,
+    z: matrix[8]! * x + matrix[9]! * y - (compact ? 420 : 620),
   }
 }
-const start = rail(-350), end = rail(345)
-export const camera = { ...start, perspective: 1600 }
-export const focus = { x: 0, y: -90, z: 620, radius: 105, falloff: 260, maxBlur: 7 }
-export const sidebarMotion: MotionInput = {
+export function createSidebarShot(compact = false) {
+const start = rail(-485, compact), end = rail(425, compact)
+const camera = { ...start, perspective: 1600 }
+const focus = { x: compact ? 140 : 0, y: -90, z: compact ? 420 : 620, radius: 170, falloff: 260, maxBlur: 4.5 }
+const motion: MotionInput = {
   durationMs,
   tracks: [
     ...(["x", "y", "z"] as const).map(property => ({
       target: { kind: "camera" as const }, property,
       keyframes: [
         { timeMs: 0, value: start[property] },
-        { timeMs: 700, value: start[property], easing: "linear" as const },
-        { timeMs: 10200, value: end[property] },
+        ...Object.values(sidebarSlots).map(slot => ({ timeMs: slot.at + 450, value: rail(slot.y, compact)[property] })),
         { timeMs: durationMs, value: end[property] },
       ],
     })),
@@ -40,3 +40,8 @@ export const sidebarMotion: MotionInput = {
     })),
   ],
 }
+
+return { camera, focus, motion }
+}
+export const desktopShot = createSidebarShot()
+export const compactShot = createSidebarShot(true)
