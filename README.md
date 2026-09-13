@@ -34,7 +34,7 @@ Initialization installs the toolkit and wraps the existing root render expressio
 
 The ordinary app URL keeps the original application view. The preview entry explicitly receives the host's `import.meta.env.DEV`, so a production build cannot activate the preview with a query string. This first preview shows the whole live app on a tilted surface with progressive focus. Source editing uses the host's existing Vite refresh; dedicated refinement controls and saved recipes remain subsequent slices.
 
-Missing or wrong-port dev servers report an actionable error; start the original host server and retry `open`. Custom roots, unsupported entry patterns and package managers need an explicit adapter instead of replacing the app. Setup metadata stays in `.flute/`; host `.env` files are not copied. Review generated source changes normally.
+Missing or wrong-port dev servers report an actionable error; start the original host server and retry `open`. Custom roots, custom/dynamic Vite plugins or configuration, unsupported entry patterns and package managers need an explicit adapter instead of replacing the app. Setup metadata stays in `.flute/`; host `.env` files are not copied. Review generated source changes normally.
 
 ## Compose
 

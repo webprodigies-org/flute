@@ -223,3 +223,21 @@ test('project service effects and pure adapters have explicit allowed layers',()
  });
  assert.deepEqual(issues,[]);
 });
+
+for (const expression of [
+  `export * from '../project/services';`,
+  `const service = import('../project/services');`,
+  `const service = require('../project/services');`,
+  `type Service = import('../project/services').Service;`,
+]) test('CLI rejects service bypass form '+expression,()=>rejects('src/cli/bypass.ts',expression));
+test('CLI service alias cannot bypass project operations',()=>{
+  const issues=checkArchitecture({...valid,
+    'src/cli/entry.ts':`import { read } from '@services';`,
+    'src/project/services.ts':`export const read=()=>0;`,
+  },{compilerOptions:{baseUrl:'.',paths:{'@services':['src/project/services.ts']}}});
+  assert.ok(issues.some(i=>i.file==='src/cli/entry.ts'&&i.rule==='module-boundary'));
+});
+test('renamed project-command declaration cannot replace canonical owner',()=>{
+  const issues=checkArchitecture({...valid,'src/project/commands.ts':'export async function otherCommand() { return {}; }'});
+  assert.ok(issues.some(i=>i.rule==='canonical-presence'&&i.message.includes('executeProjectCommand')));
+});
