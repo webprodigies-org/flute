@@ -1,5 +1,6 @@
 import { Component, createContext, useContext, useEffect, useLayoutEffect, useMemo, useId, useRef, useState, useSyncExternalStore, type CSSProperties, type ReactNode } from 'react';
-import { evaluateScene, cameraToCss, transformToCss, validateScene, type CameraInput, type EvaluatedNode, type FocusInput, type Measurements, type SceneIssue, type TransformInput } from '../core';
+import { RESOURCES, cameraToCss, transformToCss, type CameraInput, type EvaluatedNode, type FocusInput, type Measurements, type SceneIssue, type TransformInput } from '../core';
+import { type MotionInput } from '../core/motion';
 import { FocusFilter } from './FocusFilter';
 import { createRegistry, type Registry } from './registry';
 
@@ -16,14 +17,14 @@ import { createRegistry, type Registry } from './registry';
  * and put clipping, opacity and decoration on content leaves. Layout styles belong
  * on wrappers. Arbitrary host layout shifts require resize or a React commit.
  */
-type SceneContextValue = { registry: Registry; nodes: Map<string, EvaluatedNode>; transforms: Map<string, TransformInput> };
+type SceneContextValue = { registry: Registry; nodes: Map<string, EvaluatedNode>; transforms: Map<string, TransformInput>; opacities: Map<string, number>; timeMs:number };
 const SceneContext = createContext<SceneContextValue | null>(null);
 const ParentContext = createContext<symbol | undefined>(undefined);
 const useLayout = typeof window === 'undefined' ? useEffect : useLayoutEffect;
-export type SceneProps = { children?: ReactNode; camera?: CameraInput; focus?: FocusInput; className?: string; style?: CSSProperties; onDiagnostics?: (issues: SceneIssue[]) => void };
+export type SceneProps = { motion?:MotionInput; timeMs?:number; children?: ReactNode; camera?: CameraInput; focus?: FocusInput; className?: string; style?: CSSProperties; onDiagnostics?: (issues: SceneIssue[]) => void };
 export type SurfaceProps = { id: string; transform?: TransformInput; children?: ReactNode; content?: ReactNode; className?: string; style?: CSSProperties };
 
-export function Scene({ children, camera, focus, className, style, onDiagnostics }: SceneProps) {
+export function Scene({ children, camera, focus, motion, timeMs=0, className, style, onDiagnostics }: SceneProps) {
   const [registry] = useState(createRegistry);
   const revision = useSyncExternalStore(registry.subscribe, registry.snapshot, registry.snapshot);
   const stage = useRef<HTMLDivElement>(null);
@@ -31,16 +32,20 @@ export function Scene({ children, camera, focus, className, style, onDiagnostics
   useLayout(() => { registry.refresh(); });
   const result = useMemo(() => {
     const bindings = Array.from(registry.entries.values());
-    const input = { camera, focus, nodes: bindings.map(binding => ({ id: binding.id, parentId: binding.parent ? registry.entries.get(binding.parent)?.id : undefined, transform: binding.transform })) };
-    const validated = validateScene(input);
+    const state=motion ? RESOURCES['evaluate-motion'](motion,timeMs) : {surfaces:{},camera:{},focus:{},issues:[]};
+    const input = { camera:{...camera,...state.camera}, focus:{...focus,...state.focus}, nodes: bindings.map(binding => ({ id: binding.id, parentId: binding.parent ? registry.entries.get(binding.parent)?.id : undefined, transform: {...binding.transform,...Object.fromEntries(Object.entries(state.surfaces[binding.id] ?? {}).filter(([key])=>key!=='opacity'))} })) };
+    const validated = RESOURCES['validate-definition'](input);
     const measurements: Measurements = Object.fromEntries(bindings.flatMap(binding => {
       const measurement = registry.measurements.get(binding.token);
       return measurement ? [[binding.id, measurement] as const] : [];
     }));
-    const evaluation = evaluateScene(input, measurements);
-    return { evaluation, validated };
-  }, [registry, revision, camera, focus]);
-  const context = useMemo(() => ({ registry, nodes: new Map(result.evaluation.nodes.map(node => [node.id, node])), transforms: new Map(result.validated.success ? result.validated.data.nodes.map(node => [node.id, node.transform]) : []) }), [registry, result]);
+    const evaluation = RESOURCES['evaluate-spatial'](input, measurements);
+    const ids=new Set(bindings.map(b=>b.id));
+    evaluation.issues.push(...state.issues,...Object.keys(state.surfaces).filter(id=>!ids.has(id)).map(id=>({path:'motion.'+id,message:'Motion target is not registered: '+id})));
+    if(!Number.isFinite(timeMs))evaluation.issues.push({path:'timeMs',message:'Scene time must be finite.'});
+    return { evaluation, validated, state };
+  }, [registry, revision, camera, focus, motion, timeMs]);
+  const context = useMemo(() => ({ registry, timeMs:Number.isFinite(timeMs)?timeMs:0, opacities:new Map(Object.entries(result.state.surfaces).map(([id,s])=>[id,s.opacity ?? 1])), nodes: new Map(result.evaluation.nodes.map(node => [node.id, node])), transforms: new Map(result.validated.success ? result.validated.data.nodes.map(node => [node.id, node.transform]) : []) }), [registry, result, timeMs]);
   // Callback identity can change when the host stores diagnostics in state. Only
   // issue changes notify it, including a single empty report after correction.
   const callback = useRef(onDiagnostics);
@@ -76,7 +81,7 @@ export function Surface({ id, transform, children, content, className, style }: 
   const grouped = Array.from(registry.entries.values()).some(binding => binding.parent === token);
   const blur = node?.blur ?? 0;
   const filtering = node && node.width > 0 && node.height > 0 && node.focus.maxBlur > 0;
-  const leafStyle: CSSProperties = { filter: filtering ? `url(#${filterId})` : 'none' };
+  const leafStyle: CSSProperties = { opacity:context.opacities.get(id) ?? 1, filter: filtering ? `url(#${filterId})` : 'none' };
   return <ParentContext.Provider value={token}>
     {filtering && <FocusFilter id={filterId} node={node}/> }
     <div ref={element} className={className} data-flute-id={id} data-flute-blur={blur} data-flute-depth={node?.worldPosition.z ?? 0} style={{ ...style, position: style?.position ?? 'relative', transform: transformToCss(transforms.get(id)), transformOrigin: '50% 50%', transformStyle: 'preserve-3d', filter: 'none', opacity: 1, overflow: 'visible' }}>
@@ -86,7 +91,9 @@ export function Surface({ id, transform, children, content, className, style }: 
   </ParentContext.Provider>;
 }
 
-/** Positioning only. Motion shares Surface registration and core evaluation. */
+/** Opt-in component adapters read the same explicit time used by spatial tracks. */
+export function useSceneTime():number {const context=useContext(SceneContext);if(!context)throw new Error('useSceneTime requires a Flute Scene.');return context.timeMs;}
+/** Motion shares Surface registration; Scene supplies canonical evaluated tracks. */
 export const Motion = Surface;
 
 export type SceneErrorBoundaryProps = { children?: ReactNode; resetKey?: unknown };

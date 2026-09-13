@@ -36,7 +36,7 @@ describe('live React spatial adapter', () => {
       useEffect(() => { mounts++; }, []);
       return <button onClick={() => setCount(value => value + 1)}>{data}: {count}</button>;
     }
-    const app = (focus: string, z: number) => <Host.Provider value="API result"><Scene focus={{ targetId: focus, range: 0, falloff: 50 }}><Surface id="back" transform={{ z }}><ExistingComponent /></Surface><Surface id="front" transform={{ z: 200 }}>Front</Surface></Scene></Host.Provider>;
+    const app = (focus: string, z: number) => <Host.Provider value="API result"><Scene focus={{ x:-300,y:-150,z:focus==='front'?200:-100, radius:0, falloff:50 }}><Surface id="back" transform={{ z }}><ExistingComponent /></Surface><Surface id="front" transform={{ z: 200 }}>Front</Surface></Scene></Host.Provider>;
     const view = render(app('back', -100));
     const button = screen.getByRole('button');
     fireEvent.click(button);
@@ -45,7 +45,7 @@ describe('live React spatial adapter', () => {
     expect(screen.getByRole('button')).toBe(button);
     expect(button.textContent).toBe('API result: 1');
     expect(mounts).toBe(1);
-    expect(node('back').dataset.fluteBlur).toBe('7');
+    expect(node('back').dataset.fluteBlur).toBe('10');
     expect(node('front').dataset.fluteBlur).toBe('0');
   });
 
@@ -68,13 +68,13 @@ describe('live React spatial adapter', () => {
 
   it('blurs plain leaves and optional content while preserving nested 3D groups', () => {
     function NestedHost() { return <Surface id="child" transform={{ z: 100 }}>Nested</Surface>; }
-    render(<Scene focus={{ depth: 0, range: 0, falloff: 50 }}><Surface id="group" transform={{ z: -100 }} content={<span>Backdrop</span>}><NestedHost /></Surface><Surface id="implicit-group" transform={{ z: 100 }}><Motion id="motion">Motion</Motion></Surface><Surface id="leaf" transform={{ z: 100 }}>Leaf</Surface></Scene>);
+    render(<Scene focus={{ z:0,radius:0,falloff:50 }}><Surface id="group" transform={{ z: -100 }} content={<span>Backdrop</span>}><NestedHost /></Surface><Surface id="implicit-group" transform={{ z: 100 }}><Motion id="motion">Motion</Motion></Surface><Surface id="leaf" transform={{ z: 100 }}>Leaf</Surface></Scene>);
     expect(node('group').style.filter).toBe('none');
-    expect(node('group').querySelector('[data-flute-content]')?.getAttribute('style')).toContain('blur(2px)');
+    expect(node('group').querySelector('[data-flute-content]')?.getAttribute('style')).toContain('url(#flute-focus-');
     expect(node('child').closest('[data-flute-content]')).toBeNull();
     expect(node('implicit-group').style.filter).toBe('none');
     expect(node('motion').parentElement?.style.filter).toBe('none');
-    expect(node('leaf').querySelector<HTMLElement>('[data-flute-content]')?.style.filter).toBe('blur(2px)');
+    expect(node('leaf').querySelector<HTMLElement>('[data-flute-content]')?.style.filter).toMatch(/^url\(#flute-focus-/);
   });
 
   it('updates local geometry on ResizeObserver and releases measurements on unmount', () => {
@@ -107,21 +107,18 @@ describe('live React spatial adapter', () => {
     expect(screen.getByRole('textbox')).toBe(input);
   });
 
-  it('reports removed focus targets and recovers when a corrected target mounts', () => {
-    const app = (show: boolean) => <Scene focus={{ targetId: 'target' }}><Surface id="a">A</Surface>{show && <Surface id="target">Target</Surface>}</Scene>;
-    const view = render(app(true));
-    expect(screen.queryByRole('alert')).toBeNull();
-    view.rerender(app(false));
-    expect(screen.getByRole('alert').textContent).toContain('Focus target is not registered: target');
-    view.rerender(app(true));
-    expect(screen.queryByRole('alert')).toBeNull();
+  it('reports invalid independent focus and recovers without replacing the host', () => {
+    const app = (radius:number) => <Scene focus={{radius}}><Surface id="a"><input defaultValue="kept"/></Surface></Scene>;
+    const view=render(app(100));const input=screen.getByRole('textbox');
+    view.rerender(app(-1));expect(screen.getByRole('alert').textContent).toContain('focus.radius');
+    view.rerender(app(100));expect(screen.queryByRole('alert')).toBeNull();expect(screen.getByRole('textbox')).toBe(input);
   });
 
   it('reports current diagnostics through an inline state callback without looping', () => {
     let calls = 0;
     function App({ target }: { target: string }) {
       const [count, setCount] = useState(-1);
-      return <><output>{count}</output><Scene focus={{ targetId: target }} onDiagnostics={issues => { calls++; setCount(issues.length); }}><Surface id="a">A</Surface></Scene></>;
+      return <><output>{count}</output><Scene focus={{ radius: target==='missing'?-1:100 }} onDiagnostics={issues => { calls++; setCount(issues.length); }}><Surface id="a">A</Surface></Scene></>;
     }
     const view = render(<App target="missing" />);
     expect(screen.getByRole('status').textContent).toBe('1');
@@ -170,4 +167,22 @@ describe('live React spatial adapter', () => {
     render(<SceneErrorBoundary><Surface id="outside">Outside</Surface></SceneErrorBoundary>);
     expect(screen.getByRole('alert').textContent).toContain('inside a Flute Scene');
   });
+});
+
+it('applies deterministic camera, focus and surface tracks without replacing live UI; recovers missing targets',()=>{
+ const motion={durationMs:1000,tracks:[
+  {target:{kind:'surface' as const,id:'a'},property:'x' as const,keyframes:[{timeMs:0,value:0},{timeMs:1000,value:100}]},
+  {target:{kind:'surface' as const,id:'a'},property:'opacity' as const,keyframes:[{timeMs:0,value:0},{timeMs:1000,value:1}]},
+  {target:{kind:'camera' as const},property:'x' as const,keyframes:[{timeMs:0,value:0},{timeMs:1000,value:40}]},
+  {target:{kind:'focus' as const},property:'radius' as const,keyframes:[{timeMs:0,value:10},{timeMs:1000,value:100}]},
+ ]};
+ const app=(timeMs:number,show=true)=><Scene motion={motion} timeMs={timeMs}>{show&&<Surface id="a"><input defaultValue="existing"/></Surface>}</Scene>;
+ const view=render(app(0));const input=screen.getByRole('textbox');view.rerender(app(500));
+ expect(screen.getByRole('textbox')).toBe(input);
+ expect(node('a').style.transform).toContain('translate3d(50px');
+ expect(document.querySelector<HTMLElement>('[data-flute-stage]')!.style.transform).toContain('translate3d(-20px');
+ expect(node('a').querySelector<HTMLElement>('[data-flute-content]')!.style.opacity).toBe('0.5');
+ expect(node('a').style.opacity).toBe('1');
+ view.rerender(app(500,false));expect(screen.getByRole('alert').textContent).toContain('Motion target is not registered: a');
+ view.rerender(app(500));expect(screen.queryByRole('alert')).toBeNull();
 });
