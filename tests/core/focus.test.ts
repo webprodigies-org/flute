@@ -38,14 +38,11 @@ it("keeps focus independent of surface identity and fixed under camera movement"
 });
 it("constructs complementary radial masks with normalized weights", () => {
   const n = evaluateScene({ nodes: [{ id: "a" }] }).nodes[0];
-  const weights = Array.from({ length: FOCUS_BANDS + 1 }, (_, i) =>
-    [
-      ...decodeURIComponent(focusMask(n.focus, 600, 300, i)).matchAll(
-        /stop-opacity="([^"]+)"/g,
-      ),
-    ].map((x) => Number(x[1])),
+  const weights = Array.from(
+    { length: FOCUS_BANDS + 1 },
+    (_, i) => focusMask(n.focus, 600, 300, i).stops,
   );
-  for (let i = 0; i < 65; i++)
+  for (let i = 0; i < weights[0].length; i++)
     expect(weights.reduce((sum, row) => sum + row[i], 0)).toBeCloseTo(1, 10);
 });
 it.each([

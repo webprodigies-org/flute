@@ -53,7 +53,7 @@ const recipe = {
 
 Tracks target a surface ID, camera or focus. Surface tracks support xyz, rotations, scale and opacity; camera tracks support xyz and rotations; focus tracks support xyz, radius, falloff and maximum blur. Easing belongs to the outgoing keyframe. Duplicate property tracks reject. Explicit time clamps to the duration and replays deterministically. `useSceneTime()` lets an opt-in component feed that same time into its supported animation API.
 
-Keep wrappers and child identity stable during edits. Adding/removing wrappers around already mounted UI can remount it. For spatial groups, put decoration in `content` and nested surfaces in `children`. Opacity/filters apply only to visual leaves; group fades require tracks on the actual visual surfaces. Host clipping, filters, portals, competing CSS transforms and unusual layout can require adaptation. This does not promise universal component compatibility. SVG filters also require the host CSP to permit their generated data-image masks.
+Keep wrappers and child identity stable during edits. Adding/removing wrappers around already mounted UI can remount it. For spatial groups, put decoration in `content` and nested surfaces in `children`. Opacity/filters apply only to visual leaves; group fades require tracks on the actual visual surfaces. Host clipping, filters, portals, competing CSS transforms and unusual layout can require adaptation. This does not promise universal component compatibility. The renderer reuses one static radial texture through native SVG transfer tables; it never rebuilds mask images during playback. Host CSP must permit the packaged mask asset (or data images when the library bundle inlines it).
 
 ## Code map
 
@@ -76,3 +76,10 @@ npm run verify:motion
 ```
 
 Runs types, core/React tests, architecture negative fixtures, demo/library builds and Chromium checks including actual pixel sharpness. Install the matching browser with `npx playwright install chromium` if needed. Browser tests start an isolated production preview; FLUTE_TEST_URL can target an existing development server. `npm run build` produces demo assets and the ESM library/types in `dist/library`. React stays a peer dependency. The package remains private during MVP development.
+
+
+## Performance qualification
+
+`npm run verify:motion` includes `npm run test:performance`: full hardware-accelerated Chromium at 1440×1100, both camera/focus recipes, a 300 ms warmup and six seconds of samples each. Required: average ≥55 FPS, p95 frame interval <20 ms, fewer than 2% intervals over33.4 ms, and zero image-href reconstruction during playback. Reports include GPU identity; software-only headless rendering cannot qualify this hardware budget. Install full Chromium with `npx playwright install chromium`.
+
+See [performance evidence](docs/performance.md) for the measured baseline and rendering decision. These measurements qualify the tested scene/device; they are not a guarantee for arbitrary host component complexity or every GPU.

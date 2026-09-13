@@ -76,11 +76,14 @@ test("deterministic seeking moves camera/layers, reveals chart, and independentl
     page.getByRole("button", { name: "Play", exact: true }),
   ).toBeVisible();
   await page.getByRole("button", { name: /Let focus wander/ }).click();
-  const beforeMask = await page.locator("feImage").first().getAttribute("href");
+  const beforeMask = await page
+    .locator("feFuncA")
+    .first()
+    .getAttribute("tableValues");
   await setRange(page, "Scene time", 4000);
-  expect(await page.locator("feImage").first().getAttribute("href")).not.toBe(
-    beforeMask,
-  );
+  expect(
+    await page.locator("feFuncA").first().getAttribute("tableValues"),
+  ).not.toBe(beforeMask);
   await expect(node(page, "composition")).toHaveCSS("filter", "none");
   await expect(node(page, "composition")).toHaveCSS(
     "transform-style",

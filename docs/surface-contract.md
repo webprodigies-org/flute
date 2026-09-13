@@ -13,3 +13,5 @@ Focus is independent camera-space xyz plus radius/falloff/maxBlur, never a compo
 Camera x/y/z subtract from scene position. Existing stage rotations remain in canonical T*Rx*Ry*Rz order; this is not a physical camera pose API. Focus position, camera position and surfaces can be keyframed independently.
 
 Checks: npm run verify:motion. Pixel tests verify within-surface sharpness and fixed focus under movement; React checks verify state/registration recovery; architecture tests reject duplicate named owners and forbidden imports. Tests do not prove universal host CSS compatibility or physical optical accuracy.
+
+Performance is part of completion: verify:motion includes hardware Chromium frame-budget checks for both demo recipes. The renderer uses a shared immutable radial texture and native alpha transfer tables; per-frame image document construction is forbidden. Unchanged registration does not repeat scene-wide measurement. See performance.md for measurement conditions.
