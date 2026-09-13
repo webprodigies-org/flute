@@ -1,5 +1,6 @@
-import { Component, createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, type CSSProperties, type ReactNode } from 'react';
-import { evaluateScene, transformToCss, validateScene, type CameraInput, type EvaluatedNode, type FocusInput, type Measurements, type SceneIssue, type TransformInput } from '../core';
+import { Component, createContext, useContext, useEffect, useLayoutEffect, useMemo, useId, useRef, useState, useSyncExternalStore, type CSSProperties, type ReactNode } from 'react';
+import { evaluateScene, cameraToCss, transformToCss, validateScene, type CameraInput, type EvaluatedNode, type FocusInput, type Measurements, type SceneIssue, type TransformInput } from '../core';
+import { FocusFilter } from './FocusFilter';
 import { createRegistry, type Registry } from './registry';
 
 /** SOURCE OF TRUTH: Scene / Surface / Motion live DOM adapter.
@@ -55,13 +56,14 @@ export function Scene({ children, camera, focus, className, style, onDiagnostics
   const validCamera = result.validated.success ? result.validated.data.camera : undefined;
   return <SceneContext.Provider value={context}><ParentContext.Provider value={undefined}>
     <div className={className} data-flute-scene="" style={{ ...style, position: style?.position ?? 'relative', perspective: validCamera?.perspective ?? 1400, perspectiveOrigin: '50% 50%', transformStyle: 'preserve-3d' }}>
-      <div ref={stage} data-flute-stage="" style={{ position: 'relative', width: '100%', height: '100%', transformStyle: 'preserve-3d', transformOrigin: '50% 50%', transform: transformToCss(validCamera ? { rotateX: validCamera.rotateX, rotateY: validCamera.rotateY, rotateZ: validCamera.rotateZ } : {}) }}>{children}</div>
+      <div ref={stage} data-flute-stage="" style={{ position: 'relative', width: '100%', height: '100%', transformStyle: 'preserve-3d', transformOrigin: '50% 50%', transform: cameraToCss(validCamera) }}>{children}</div>
     </div>
     {result.evaluation.issues.length > 0 && <div role="alert" data-flute-diagnostics=""><strong>Flute scene needs a correction.</strong><ul>{result.evaluation.issues.map((issue, index) => <li key={index}>{issue.path}: {issue.message}</li>)}</ul><p>Correct the scene props or registered IDs; the scene updates automatically.</p></div>}
   </ParentContext.Provider></SceneContext.Provider>;
 }
 
 export function Surface({ id, transform, children, content, className, style }: SurfaceProps) {
+  const filterId = 'flute-focus-'+useId().replace(/[^a-zA-Z0-9_-]/g,'');
   const context = useContext(SceneContext);
   const parent = useContext(ParentContext);
   const [token] = useState(() => Symbol('flute-binding'));
@@ -73,8 +75,10 @@ export function Surface({ id, transform, children, content, className, style }: 
   const node = nodes.get(id);
   const grouped = Array.from(registry.entries.values()).some(binding => binding.parent === token);
   const blur = node?.blur ?? 0;
-  const leafStyle: CSSProperties = { filter: blur > 0 ? `blur(${blur}px)` : 'none' };
+  const filtering = node && node.width > 0 && node.height > 0 && node.focus.maxBlur > 0;
+  const leafStyle: CSSProperties = { filter: filtering ? `url(#${filterId})` : 'none' };
   return <ParentContext.Provider value={token}>
+    {filtering && <FocusFilter id={filterId} node={node}/> }
     <div ref={element} className={className} data-flute-id={id} data-flute-blur={blur} data-flute-depth={node?.worldPosition.z ?? 0} style={{ ...style, position: style?.position ?? 'relative', transform: transformToCss(transforms.get(id)), transformOrigin: '50% 50%', transformStyle: 'preserve-3d', filter: 'none', opacity: 1, overflow: 'visible' }}>
       {content !== undefined && <div data-flute-content="" style={leafStyle}>{content}</div>}
       <div data-flute-content={content === undefined && !grouped ? '' : undefined} style={{ transformStyle: 'preserve-3d', ...(content === undefined && !grouped ? leafStyle : { filter: 'none' }) }}>{children}</div>
