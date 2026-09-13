@@ -1,8 +1,8 @@
-import { useEffect, useRef, useState } from "react"
-import { Scene, Surface, SceneErrorBoundary } from "@flute/scene"
+import { useEffect, useMemo, useRef, useState } from "react"
+import { Scene, Surface, SceneErrorBoundary, useSceneCapture } from "@flute/scene"
 import { Dashboard } from "@/components/dashboard"
 import { SpatialSidebar } from "./sidebar-layer"
-import { compactShot, desktopShot, dashboardTilt, durationMs } from "./sidebar-recipe"
+import { createSidebarShot, dashboardTilt, durationMs } from "./sidebar-recipe"
 import "./sidebar-scene.css"
 
 // Presentation clock only: canonical Scene evaluates every frame from explicit time.
@@ -10,7 +10,8 @@ import "./sidebar-scene.css"
 const dashboard = <SpatialSidebar value={true}><Dashboard /></SpatialSidebar>
 export function SidebarScene() {
   const [compact, setCompact] = useState(() => matchMedia("(max-width: 600px)").matches)
-  const shot = compact ? compactShot : desktopShot
+  const [cascade,setCascade] = useState(true)
+  const shot = useMemo(()=>createSidebarShot(compact,cascade),[compact,cascade])
   useEffect(() => {
     const query = matchMedia("(max-width: 600px)")
     const update = () => setCompact(query.matches)
@@ -40,10 +41,11 @@ export function SidebarScene() {
     frame = requestAnimationFrame(tick)
     return () => cancelAnimationFrame(frame)
   }, [playing])
-  return <main className="sidebar-study dark">
+  useSceneCapture({durationMs,seek:(elapsedMs)=>{setPlaying(false);setTime(elapsedMs)}})
+  return <main className="sidebar-study">
     <header className="study-header"><div><span className="study-eyebrow">FLUTE / DASHBOARD 01</span>
       <h1>A sidebar, in depth.</h1></div><a href="/">Open dashboard ↗</a></header>
-    <div className="shot-viewport">
+    <div className="shot-viewport" data-flute-capture="scene">
       <SceneErrorBoundary resetKey="sidebar-shot">
         <Scene className="sidebar-shot" camera={shot.camera} focus={shot.focus} motion={shot.motion} timeMs={time}>
           <Surface id="dashboard-plane" transform={dashboardTilt} style={{ position: "absolute", width: 1280, height: 920, left: "50%", top: "50%", marginLeft: -640, marginTop: -460 }}>
@@ -56,8 +58,8 @@ export function SidebarScene() {
       <button onClick={() => { if (time >= durationMs) setTime(0); setPlaying(!playing) }} aria-label={playing ? "Pause" : "Play"}>{playing ? "Pause" : "Play"}</button>
       <button onClick={() => { setTime(0); setPlaying(false) }}>Reset</button>
       <input aria-label="Scene time" type="range" min="0" max={durationMs} step="10" value={time} onChange={e => { setPlaying(false); setTime(Number(e.target.value)) }} />
-      <output data-testid="scene-time">{(time / 1000).toFixed(1)} / 11s</output>
-      <span className="study-caption">One dashboard. Fifteen live layers.</span>
+      <output data-testid="scene-time">{(time / 1000).toFixed(1)} / {durationMs / 1000}s</output>
+      <label><input type="checkbox" checked={cascade} onChange={e=>{setPlaying(false);setTime(0);setCascade(e.target.checked)}} />Cascade</label>
     </footer>
   </main>
 }

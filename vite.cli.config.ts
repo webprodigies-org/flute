@@ -8,7 +8,7 @@ export default defineConfig({
     minify: false,
     lib: { entry: "src/cli/main.ts", formats: ["es"], fileName: () => "flute.js" },
     rollupOptions: {
-      external: id => id.startsWith("node:") || builtinModules.includes(id) || ["zod", "typescript"].includes(id),
+      external: id => id.startsWith("node:") || builtinModules.includes(id) || ["zod", "typescript", "playwright"].includes(id),
     },
   },
 });

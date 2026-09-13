@@ -12,13 +12,13 @@ function track(target: unknown = surface, property = "x", from = 0, to = 100) {
     target,
     property,
     keyframes: [
-      { timeMs: 100, value: from },
+      { timeMs: 100, value: from, easing: "linear" },
       { timeMs: 900, value: to },
     ],
   };
 }
 function motion(tracks: unknown[] = [track()]) {
-  return { durationMs: 1000, tracks };
+  return { durationMs: 1000, speed: 1, tracks };
 }
 function expectInvalid(input: unknown, time = 500) {
   const state = evaluateMotion(input, time);
@@ -81,7 +81,7 @@ describe("explicit scene time motion", () => {
 
   it("uses outgoing smoothstep easing and a separate linear next segment", () => {
     const input: MotionInput = {
-      durationMs: 2000,
+      durationMs: 2000, speed: 1,
       tracks: [
         {
           target: surface,
@@ -115,14 +115,14 @@ describe("explicit scene time motion", () => {
   });
 
   it("supports empty tracks, static keyframes and zero duration", () => {
-    expect(evaluateMotion({ durationMs: 0, tracks: [] }, 20)).toEqual({
+    expect(evaluateMotion({ durationMs: 0, speed: 1, tracks: [] }, 20)).toEqual({
       surfaces: {},
       camera: {},
       focus: {},
       issues: [],
     });
     const input = {
-      durationMs: 0,
+      durationMs: 0, speed: 1,
       tracks: [
         {
           target: surface,
@@ -216,7 +216,7 @@ describe("motion validation boundary", () => {
     { durationMs: Infinity, tracks: [] },
     { durationMs: NaN, tracks: [] },
     { durationMs: "1000", tracks: [] },
-    { durationMs: 1000, tracks: [], extra: true },
+    { durationMs: 1000, speed: 1, tracks: [], extra: true },
   ])("rejects malformed config %#", (input) => {
     expectInvalid(input);
   });

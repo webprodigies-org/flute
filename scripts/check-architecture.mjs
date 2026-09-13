@@ -16,6 +16,8 @@ const owners = new Map([
   ['InitProjectSchema', 'src/core/project.ts'],
   ['SceneSchema', 'src/core/scene.ts'], ['TransformSchema', 'src/core/scene.ts'],
   ['uniformFocusBlur','src/core/spatial.ts'], ['focusForSurface','src/core/spatial.ts'], ['sampleFocus','src/core/spatial.ts'], ['focusMask','src/core/spatial.ts'], ['cameraToCss','src/core/spatial.ts'],
+  ...['motionDuration','motionTime','cinematicProgress','cinematicTimeAtProgress'].map(name=>[name,'src/core/motion.ts']),
+  ['CascadeSchema','src/core/choreography.ts'], ['createCascadeTracks','src/core/choreography.ts'],
   ['MotionSchema','src/core/motion.ts'], ['evaluateMotion','src/core/motion.ts'],
   ['evaluateScene', 'src/core/spatial.ts'], ['transformToCss', 'src/core/spatial.ts'],
 ]);
@@ -28,7 +30,9 @@ const layers = {
   projectAdapter: { local: ['core', 'projectAdapter', 'projectErrors'], external: ['typescript', 'zod'] },
   projectErrors: { local: ['projectErrors'], external: [] },
   services: { local: ['core', 'services', 'projectErrors'], external: ['zod', 'typescript'] },
-  cli: { local: ['core', 'commands', 'cli'], external: [] },
+  exportCommands: {local:['core','exportCommands','exportServices','services','projectErrors'], external:['zod']},
+  exportServices: {local:['core','exportServices','services','projectErrors'],external:['zod','playwright']},
+  cli: { local: ['core', 'commands', 'exportCommands', 'cli'], external: [] },
 };
 const nodeModules = new Set(builtinModules.map(name => name.replace(/^node:/, '')));
 const nodeGlobals = new Set(['process', 'Buffer', 'global', '__dirname', '__filename', 'module', 'exports', 'setImmediate', 'clearImmediate', 'Deno', 'Bun']);
@@ -48,6 +52,8 @@ const layerOf = name => {
   if (/^src\/project\/errors(?:\.[cm]?[jt]s)?$/.test(name)) return 'projectErrors';
   if (/^src\/project\/commands(?:\.[cm]?[jt]s)?$/.test(name)) return 'commands';
   if (/^src\/project\/services(?:\.[cm]?[jt]s$|\/|$)/.test(name)) return 'services';
+  if (/^src\/export\/commands\.[cm]?[jt]s$/.test(name)) return 'exportCommands';
+  if (name.startsWith('src/export/')) return 'exportServices';
   if (name.startsWith('src/project/')) return 'projectAdapter';
   return /^src\/(core|runtime|react|preview|cli)(?:\/|$)/.exec(name)?.[1];
 };
@@ -100,7 +106,7 @@ export function checkArchitecture(input, { compilerOptions = {} } = {}) {
       const target = resolved?.startsWith(`${root}/`) ? resolved.slice(root.length + 1) : relative;
       const builtin = nodeModules.has(specifier.replace(/^node:/, ''));
       const allowed = target ? layers[layer].local.includes(layerOf(target))
-        : (layer === 'services' && builtin) || (!specifier.startsWith('node:') && !builtin && layers[layer].external.includes(packageOf(specifier)));
+        : (['services','exportServices'].includes(layer) && builtin) || (!specifier.startsWith('node:') && !builtin && layers[layer].external.includes(packageOf(specifier)));
       if (!allowed) add(file, expression, 'module-boundary', `${layer} cannot depend on ${specifier}; consume its allowed canonical owners instead.`);
     }
 
@@ -162,7 +168,7 @@ export function checkArchitecture(input, { compilerOptions = {} } = {}) {
         const propertyName = (ts.isPropertyAccessExpression(parent) && parent.name === node)
           || ((ts.isPropertyAssignment(parent) || ts.isMethodDeclaration(parent) || ts.isPropertyDeclaration(parent)) && parent.name === node)
           || ts.isImportSpecifier(parent) || ts.isExportSpecifier(parent);
-        const forbidden = layer !== 'services' && (
+        const forbidden = !['services','exportServices'].includes(layer) && (
           (nodeGlobals.has(node.text) && !(layer === 'cli' && node.text === 'process'))
           || (!browserLayers.has(layer) && domGlobals.has(node.text) && !(layer === 'commands' && node.text === 'URL'))
         );

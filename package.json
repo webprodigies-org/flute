@@ -23,7 +23,8 @@
     "verify:launch": "npm run verify:motion && npm run test:launch && npm run test:installed",
     "dev:storage": "vite --host 127.0.0.1",
     "setup:dashboard": "node scripts/setup-dashboard.mjs",
-    "verify:dashboard": "npm run setup:dashboard && npm --prefix examples/dashboard-lab run build && node scripts/check-dashboard.mjs"
+    "verify:dashboard": "npm run setup:dashboard && npm --prefix examples/dashboard-lab run build && node scripts/check-dashboard.mjs",
+    "test:export": "vitest run tests/export tests/cli"
   },
   "dependencies": {
     "react-error-boundary": "6.1.5",
@@ -67,5 +68,8 @@
   },
   "engines": {
     "node": ">=22.12.0"
+  },
+  "optionalDependencies": {
+    "playwright": "1.58.2"
   }
 }

@@ -1,3 +1,4 @@
+import { motionDuration } from "../src/core";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Scene, Surface, SceneErrorBoundary, useSceneTime } from "../src/react";
 import type { SceneIssue, FocusInput, CameraInput } from "../src/core";
@@ -11,7 +12,8 @@ import { RevenueCard, CustomersCard, ActivityCard } from "./cards";
  * WHERE: ../src/core/motion evaluates tracks; ../src/react owns live DOM binding;
  * ./data and ./cards retain the existing host provider, API and component identity.
  */
-const durationMs = 8000;
+const authoredDurationMs = 8000;
+const durationMs = motionDuration({durationMs: authoredDurationMs, tracks: []});
 const initialFocus = {
   x: 40,
   y: -70,
@@ -35,11 +37,11 @@ function storageMotion(recipe: Recipe): MotionInput {
   const keyframes = (start: number, middle: number, end = start) => [
     { timeMs: 0, value: start, easing: "easeInOut" as const },
     { timeMs: 4000, value: middle, easing: "easeInOut" as const },
-    { timeMs: durationMs, value: end, easing: "easeInOut" as const },
+    { timeMs: authoredDurationMs, value: end, easing: "easeInOut" as const },
   ];
   if (recipe === "fixed")
     return {
-      durationMs,
+      durationMs: authoredDurationMs,
       tracks: [
         {
           target: { kind: "camera" },
@@ -80,7 +82,7 @@ function storageMotion(recipe: Recipe): MotionInput {
     };
   if (recipe === "travel")
     return {
-      durationMs,
+      durationMs: authoredDurationMs,
       tracks: [
         {
           target: { kind: "focus" },
@@ -104,7 +106,7 @@ function storageMotion(recipe: Recipe): MotionInput {
         },
       ],
     };
-  return { durationMs, tracks: [] };
+  return { durationMs: authoredDurationMs, tracks: [] };
 }
 
 function Slider({

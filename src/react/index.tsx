@@ -17,6 +17,7 @@ import {
   cameraToCss,
   transformToCss,
   uniformFocusBlur,
+  motionTime,
   type CameraInput,
   type EvaluatedNode,
   type FocusInput,
@@ -143,7 +144,7 @@ export function Scene({
   const context = useMemo(
     () => ({
       registry,
-      timeMs: Number.isFinite(timeMs) ? timeMs : 0,
+      timeMs: motion ? motionTime(motion, timeMs) : Number.isFinite(timeMs) ? timeMs : 0,
       opacities: new Map(
         Object.entries(result.state.surfaces).map(([id, s]) => [
           id,
@@ -157,7 +158,7 @@ export function Scene({
           : [],
       ),
     }),
-    [registry, result, timeMs],
+    [registry, result, timeMs, motion],
   );
   // Callback identity can change when the host stores diagnostics in state. Only
   // issue changes notify it, including a single empty report after correction.
@@ -355,3 +356,5 @@ function SceneErrorFallback({ error, resetErrorBoundary }: FallbackProps) {
     </div>
   );
 }
+
+export { useSceneCapture } from "./capture";
