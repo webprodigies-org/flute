@@ -9,7 +9,8 @@
     "lint": "eslint .",
     "format": "prettier --write \"**/*.{ts,tsx}\"",
     "typecheck": "tsc --noEmit",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "check:scenes": "node checks/scenes.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

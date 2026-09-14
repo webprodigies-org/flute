@@ -1,0 +1,250 @@
+import assert from "node:assert/strict";
+import { mkdir, writeFile } from "node:fs/promises";
+import { fileURLToPath } from "node:url";
+import { createServer } from "vite";
+import { chromium } from "playwright";
+import { reviewAuthoring, getAuthoringGuide } from "@flute/scene";
+import { execFileSync } from "node:child_process";
+import { recipes, reviews } from "../src/scenes/recipes.ts";
+
+// SOURCE OF TRUTH: installed-authoring-trial browser evidence.
+// WHAT: checks live registration, state continuity, seeking, playback and responsive
+// entry/recovery. WHY: metadata alone cannot demonstrate actual UI. WHERE: output
+// screenshots in ignored artifacts/ support human inspection; no library internals.
+const root = fileURLToPath(new URL("../", import.meta.url));
+const cli = JSON.parse(
+  execFileSync("npx", ["flute", "guide", "--json"], {
+    cwd: root,
+    encoding: "utf8",
+  }),
+);
+await mkdir(root + "artifacts", { recursive: true });
+await writeFile(
+  root + "artifacts/cli-guide.json",
+  JSON.stringify(cli, null, 2),
+);
+assert.deepEqual(cli, getAuthoringGuide());
+for (const review of reviews) assert.equal(review.valid, true);
+assert.equal(
+  reviewAuthoring({
+    scene: recipes[0].scene,
+    motion: {
+      durationMs: 100,
+      tracks: [
+        {
+          target: { kind: "surface", id: "missing" },
+          property: "x",
+          keyframes: [{ timeMs: 0, value: 1 }],
+        },
+      ],
+    },
+  }).valid,
+  false,
+);
+assert.equal(
+  reviewAuthoring({
+    scene: { nodes: [{ id: "same" }, { id: "same" }] },
+    motion: { durationMs: 1, tracks: [] },
+  }).valid,
+  false,
+);
+const base = process.env.TRIAL_BASE || "/";
+const server = await createServer({
+  root,
+  base,
+  server: {
+    host: "127.0.0.1",
+    port: Number(process.env.APP_PORT || process.env.PORT || 65076),
+    strictPort: true,
+  },
+});
+await server.listen();
+const browser = await chromium.launch({ headless: true });
+const page = await browser.newPage({
+  viewport: { width: 1440, height: 1200 },
+  reducedMotion: "reduce",
+});
+const errors = [];
+page.on("pageerror", (error) => errors.push(error.message));
+const origin = server.resolvedUrls.local[0];
+const report = [];
+const seek = async (value) => {
+  const slider = page.getByRole("slider", { name: "Scene time" });
+  await slider.fill(String(value));
+  await slider.dispatchEvent("input");
+  await page.waitForTimeout(160);
+};
+try {
+  await page.goto(origin);
+  await page.getByText("Total Revenue", { exact: true }).waitFor();
+  const baseline = await page
+    .getByText("Total Revenue", { exact: true })
+    .evaluate((el) => ({
+      font: getComputedStyle(el).fontFamily,
+      color: getComputedStyle(el).color,
+    }));
+  await page.screenshot({
+    path: root + "artifacts/dashboard.png",
+    fullPage: true,
+  });
+  for (const [id, count] of [
+    ["pullback", 1],
+    ["assembly", 3],
+    ["orbit", 2],
+  ]) {
+    await page.goto(origin + "?scene=" + id);
+    await page.getByText("Ready to inspect", { exact: true }).waitFor();
+    assert.equal(
+      await page.getByRole("button", { name: "Play", exact: true }).count(),
+      1,
+    );
+    assert.equal(await page.locator("[data-panel]").count(), count);
+    assert.equal(
+      await page.getByText("Total Revenue", { exact: true }).count(),
+      1,
+    );
+    assert.equal(
+      await page.getByText("Total Visitors", { exact: true }).count(),
+      1,
+    );
+    assert.deepEqual(
+      await page
+        .getByText("Total Revenue", { exact: true })
+        .evaluate((el) => ({
+          font: getComputedStyle(el).fontFamily,
+          color: getComputedStyle(el).color,
+        })),
+      baseline,
+    );
+    await page
+      .getByText("Total Revenue", { exact: true })
+      .evaluate((el) => (window.__trialLeaf = el));
+    const transforms = [];
+    for (const t of [0, 2500, 5000, 7500, 10000]) {
+      await seek(t);
+      assert.equal(
+        await page.getByTestId("diagnostics").textContent(),
+        "Ready to inspect",
+      );
+      transforms.push(
+        await page
+          .locator("[data-panel]")
+          .first()
+          .evaluate((el) => {
+            let current = el;
+            const values = [];
+            while (current) {
+              values.push(getComputedStyle(current).transform);
+              current = current.parentElement;
+            }
+            return values;
+          }),
+      );
+      await page.screenshot({
+        path: root + `artifacts/${id}-${t}.png`,
+        fullPage: true,
+      });
+    }
+    assert.notDeepEqual(transforms[0], transforms.at(-1));
+    assert.equal(
+      await page
+        .getByText("Total Revenue", { exact: true })
+        .evaluate((el) => window.__trialLeaf === el),
+      true,
+    );
+    await seek(5000);
+    const state = await page.getByTestId("time").textContent();
+    await page.waitForTimeout(250);
+    assert.equal(await page.getByTestId("time").textContent(), state);
+    await page.getByRole("button", { name: "Play", exact: true }).click();
+    await page.waitForTimeout(350);
+    await page.getByRole("button", { name: "Pause", exact: true }).click();
+    assert.notEqual(await page.getByTestId("time").textContent(), state);
+    await page.getByRole("button", { name: "Restart", exact: true }).click();
+    assert.match(await page.getByTestId("time").textContent(), /^0.00/);
+    await seek(10000);
+    const chartSelect = page.getByRole("combobox", { name: "Select a value" });
+    if (await chartSelect.isVisible()) {
+      await chartSelect.click();
+      await page
+        .getByRole("option", { name: "Last 30 days", exact: true })
+        .click();
+      await seek(5000);
+      assert.match(await chartSelect.textContent(), /Last 30 days/);
+    } else {
+      await page
+        .getByRole("radio", { name: "Last 30 days", exact: true })
+        .click();
+      await seek(5000);
+      assert.equal(
+        await page
+          .getByRole("radio", { name: "Last 30 days", exact: true })
+          .getAttribute("aria-checked"),
+        "true",
+      );
+    }
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.waitForTimeout(200);
+    assert.equal(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+      true,
+    );
+    await page.getByRole("button", { name: "Play", exact: true }).click();
+    await page.waitForTimeout(100);
+    await page.getByRole("button", { name: "Pause", exact: true }).click();
+    await page.screenshot({
+      path: root + `artifacts/${id}-mobile.png`,
+      fullPage: true,
+    });
+    await page
+      .getByRole("button", { name: "Inspect at full size", exact: true })
+      .click();
+    const viewport = page.getByLabel(
+      "Scene viewport; scroll to inspect in full-size mode",
+    );
+    assert.equal(
+      await viewport.evaluate((el) => el.scrollWidth > el.clientWidth),
+      true,
+    );
+    await viewport.evaluate((el) => {
+      el.scrollLeft = 300;
+      el.scrollTop = 200;
+    });
+    assert.equal(await viewport.evaluate((el) => el.scrollLeft), 300);
+    assert.equal(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+      true,
+    );
+    await page.screenshot({
+      path: root + `artifacts/${id}-mobile-inspect.png`,
+      fullPage: true,
+    });
+    await page.getByRole("button", { name: "Fit scene", exact: true }).click();
+    report.push({
+      id,
+      panels: count,
+      sampledFrames: 5,
+      liveIdentity: true,
+      playPauseSeek: true,
+      mobileWidth: 390,
+    });
+    await page.setViewportSize({ width: 1440, height: 1200 });
+  }
+  await page.goto(origin + "?scene=missing");
+  await page.getByText("Scene not found.", { exact: false }).waitFor();
+  await page.getByRole("link", { name: "← Dashboard" }).click();
+  await page.getByText("Total Revenue", { exact: true }).waitFor();
+  assert.deepEqual(errors, []);
+  await writeFile(
+    root + "artifacts/report.json",
+    JSON.stringify(report, null, 2),
+  );
+  console.log(JSON.stringify(report));
+} finally {
+  await browser.close();
+  await server.close();
+}

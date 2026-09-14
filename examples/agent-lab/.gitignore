@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Browser trial evidence is regenerated locally.
+artifacts/

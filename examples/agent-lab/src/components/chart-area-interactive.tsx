@@ -140,7 +140,7 @@ const chartConfig = {
   },
 } satisfies ChartConfig
 
-export function ChartAreaInteractive() {
+export function ChartAreaInteractive({ animate = true }: { animate?: boolean } = {}) {
   const isMobile = useIsMobile()
   const [timeRange, setTimeRange] = React.useState("90d")
 
@@ -271,6 +271,7 @@ export function ChartAreaInteractive() {
             />
             <Area
               dataKey="mobile"
+              isAnimationActive={animate}
               type="natural"
               fill="url(#fillMobile)"
               stroke="var(--color-mobile)"
@@ -278,6 +279,7 @@ export function ChartAreaInteractive() {
             />
             <Area
               dataKey="desktop"
+              isAnimationActive={animate}
               type="natural"
               fill="url(#fillDesktop)"
               stroke="var(--color-desktop)"
