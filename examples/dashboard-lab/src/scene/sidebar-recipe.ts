@@ -18,7 +18,7 @@ function rail(y: number, compact: boolean) {
 export function createSidebarShot(compact = false, cascade = true) {
   const start = rail(-485, compact), end = rail(425, compact)
   const camera = { ...start, perspective: 1600 }
-  const focus = { distance: compact ? 1240 : 980, fStop:5.6, maxBlur:6 }
+  const focus = { distance: compact ? 1240 : 980, fStop:2.8, maxBlur:6 }
   const entrances = createCascadeTracks({
     items: Object.values(sidebarSlots).map(slot=>({id:slot.id,
       atMs: Math.max(0, cinematicTimeAtProgress((slot.y+485)/910)*authoredDurationMs-1800),
