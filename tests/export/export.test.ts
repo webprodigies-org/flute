@@ -15,7 +15,7 @@ beforeAll(async () => {
   server = createServer((req, res) => {
     requests++;
     res.setHeader("content-type", "text/html");
-    res.end(`<style>body{margin:0}#scene{width:127px;height:95px;background:black}#box{width:32px;height:32px;background:red}</style><div id="scene" data-flute-capture="scene"><div id="box"></div></div><script>${req.url === "/missing" ? "" : `window.__FLUTE_CAPTURE__={version:${req.url === "/wrong" ? 2 : 1},durationMs:${req.url === "/cancel" ? 120000 : 100},selector:'[data-flute-capture="scene"]',seek(t){${req.url === '/throw' ? 'if(t>0)throw new Error("fixture failure");' : ''}document.getElementById('box').style.background=t<40?'red':'blue';document.getElementById('box').style.transform='translateX('+t+'px)'}}`}</script>`);
+    res.end(`<style>body{margin:0}#scene{width:127px;height:95px;background:black}#box{width:32px;height:32px;background:red}</style><div id="scene" data-flute-capture="scene"><div id="box"></div></div><div data-flute-preview-chrome style="position:fixed;inset:0;background:lime;z-index:999"></div><script>${req.url === "/missing" ? "" : `window.__FLUTE_CAPTURE__={version:${req.url === "/wrong" ? 2 : 1},durationMs:${req.url === "/cancel" ? 120000 : 100},selector:'[data-flute-capture="scene"]',seek(t){${req.url === '/throw' ? 'if(t>0)throw new Error("fixture failure");' : ''}document.getElementById('box').style.background=t<40?'red':'blue';document.getElementById('box').style.transform='translateX('+t+'px)'}}`}</script>`);
   });
   await new Promise<void>(resolve => server.listen(0, "127.0.0.1", resolve));
   url = `http://127.0.0.1:${(server.address() as { port: number }).port}`;
@@ -35,6 +35,8 @@ describe("live MP4 export", () => {
     expect(Number(probe.duration)).toBeCloseTo(.1,3);
     const raw = execFileSync("ffmpeg",["-v","error","-i",filename,"-f","rawvideo","-pix_fmt","rgb24","pipe:1"]);
     const frameSize = 128*96*3;
+    // The real frame remains red, not the opaque green product overlay above it.
+    const pixel=(10*128+10)*3;expect(raw[pixel]).toBeGreaterThan(200);expect(raw[pixel+1]).toBeLessThan(40);
     expect(raw.subarray(0,frameSize).equals(raw.subarray(raw.length-frameSize))).toBe(false);
     expect((await readdir(root)).some(name=>name.startsWith('.flute-export-'))).toBe(false);
   },30_000);

@@ -1,7 +1,5 @@
 import {RESOURCES} from "../core/resources";
-import { z } from "zod";
-import { SCENE_RECIPE_DIRECTORY, SceneRecipeIdSchema, type SceneCatalog } from "../core/recipes";
-import { OpenPreviewSchema } from "../core/project";
+import { SCENE_RECIPE_DIRECTORY, type SceneCatalog } from "../core/recipes";
 import type { SceneIssue } from "../core/scene";
 import { executeProjectCommand } from "./commands";
 import * as services from "./services";
@@ -13,9 +11,6 @@ import * as services from "./services";
  * Lists succeed with individual diagnostics; load/open fail when selection is unavailable.
  * Discovery stops at 256 directory entries; each JSON read is limited to 256000 bytes.
  */
-const ListScenesSchema = z.strictObject({});
-const LoadSceneSchema = z.strictObject({ sceneId: SceneRecipeIdSchema });
-const OpenSceneSchema = OpenPreviewSchema.extend({ sceneId: SceneRecipeIdSchema });
 export type RecipeCommandResult = { success: true; data: SceneCatalog & { url?: string } }
   | { success: false; issues: SceneIssue[] };
 function diagnostic(error: unknown, target = ""): SceneIssue {
@@ -49,14 +44,14 @@ async function discover(root: string, sceneId?: string): Promise<SceneCatalog> {
       } catch (error) { issues.push(diagnostic(error, path)); }
     }
   }
-  const catalog = RESOURCES["load-scene"]({ sources, bindingPaths, ...(sceneId === undefined ? {} : { sceneId }) });
+  const catalog = RESOURCES["resolve-recipes"]({ sources, bindingPaths, ...(sceneId === undefined ? {} : { sceneId }) });
   return { ...catalog, issues: [...issues, ...catalog.issues].sort((a, b) => a.path < b.path ? -1 : a.path > b.path ? 1 : 0) };
 }
 export async function executeRecipeCommand(
   operation: "list-scenes" | "load-scene" | "open-scene", input: unknown, context: { root: string },
 ): Promise<RecipeCommandResult> {
-  const schema = operation === "list-scenes" ? ListScenesSchema : operation === "load-scene" ? LoadSceneSchema
-    : operation === "open-scene" ? OpenSceneSchema : undefined;
+  const schema = operation === "list-scenes" ? RESOURCES["list-scenes"] : operation === "load-scene" ? RESOURCES["load-scene"]
+    : operation === "open-scene" ? RESOURCES["open-scene"] : undefined;
   if (!schema) return { success: false, issues: [{ path: "operation", message: "Unknown scene operation." }] };
   const parsed = schema.safeParse(input);
   if (!parsed.success) return { success: false, issues: parsed.error.issues.map(issue => ({

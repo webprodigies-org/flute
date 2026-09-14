@@ -6,4 +6,4 @@ From the repository root run `npm run build && npm run setup:local`, then `npm r
 
 Each scene is one versioned JSON recipe plus its matching default-export TSX component in `src/flute/scenes/`. All ten are discovered by the installed package. The TSX files reuse `components/scene-content.tsx`, which uses the original dashboard components and provider. Change the JSON to adjust camera, focus and motion. Add another file pair to add a scene. No second list registry or copied playback UI is needed.
 
-The `.local-package` archive and installed dependencies are generated locally by setup. Run setup again after changing the library. The `.flute` integration identity is local to each copy.
+The `.local-package` archive and installed dependencies are generated locally by setup. Run setup again after changing the library. The committed `.flute/project.json` identity contains no machine paths or application data; filesystem operations are scoped to the caller’s project root.

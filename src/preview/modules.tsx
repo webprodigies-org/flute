@@ -19,12 +19,14 @@ export function SceneModuleLibrary({modules,hot,backHref}:{modules:SceneModules;
    try{
     const entries=Object.entries(modules);
     if(entries.length>256)throw new Error('Keep this library at or below 128 scene/component pairs.');
-    await Promise.all(entries.map(async([path,loader])=>{
+    const results=await Promise.allSettled(entries.map(async([path,loader])=>{
      const value=await loader();const item=value&&typeof value==='object'&&'default' in value?value.default:undefined;
      const normalized=path.replace(/^\//,'');
      if(path.endsWith('.scene.json'))sources[normalized]=item;
      else if(path.endsWith('.tsx')&&(typeof item==='function'||(typeof item==='object'&&item!==null)))bindings[normalized]=item as ComponentType;
     }));
+    const failed=results.find(result=>result.status==='rejected');
+    if(failed?.status==='rejected')throw failed.reason;
     if(active)setState({sources,bindings});
    }catch(error){if(active)setState({sources,bindings,error:error instanceof Error?error.message:'Scene source could not be loaded.'})}
   };void load();return()=>{active=false};

@@ -1,14 +1,24 @@
 import { z } from "zod";
+import {OpenPreviewSchema} from "./project";
 import { PreviewDefinitionSchema, presentPreview } from "./preview";
 import type { SceneIssue } from "./scene";
 
-/** SOURCE OF TRUTH: SceneRecipeSchema, loadSceneRecipes, SCENE_RECIPE_DIRECTORY.
+/** SOURCE OF TRUTH: SceneRecipeSchema, loadSceneRecipes, SCENE_RECIPE_DIRECTORY,
+ * ListScenesSchema, LoadSceneSchema, OpenSceneSchema.
  * WHAT: versioned JSON recipes and deterministic local scene catalog validation.
  * WHY: CLI and browser reopen identical metadata without executing component source.
  * WHERE: project/recipes supplies scoped files; the browser supplies JSON and binding paths.
  */
 export const SCENE_RECIPE_DIRECTORY = "src/flute/scenes";
 export const SceneRecipeIdSchema = z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Use a lowercase scene slug containing letters, digits and single hyphens.");
+/** SOURCE OF TRUTH: ListScenesSchema, LoadSceneSchema, OpenSceneSchema.
+ * WHAT: runtime contracts for trusted recipe operations.
+ * WHY: CLI and command adapters consume the same RESOURCES entries.
+ * WHERE: project/recipes executes these operations through scoped services.
+ */
+export const ListScenesSchema=z.strictObject({});
+export const LoadSceneSchema=z.strictObject({sceneId:SceneRecipeIdSchema});
+export const OpenSceneSchema=z.strictObject({...OpenPreviewSchema.shape,sceneId:SceneRecipeIdSchema});
 export const SceneRecipeSchema = z.strictObject({
   version: z.literal(1),
   id: SceneRecipeIdSchema,

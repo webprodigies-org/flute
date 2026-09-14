@@ -323,3 +323,10 @@ describe("trusted project commands", () => {
     expect(() => inspectEntry(original + "\nfunction another(createRoot: unknown) {}", "main.tsx", id)).toThrow();
   });
 });
+
+it('upgrades a legacy generated wrapper to lazy source discovery without replacing providers',async()=>{
+ const root=await fixture();success(await run(root));const filename=path.join(root,'src/main.tsx');const current=await readFile(filename,'utf8');
+ const legacy=current.replace(' sceneModules={import.meta.env.DEV ? import.meta.glob("/src/flute/scenes/*.{scene.json,tsx}") : undefined}','');await writeFile(filename,legacy);
+ expect(success(await run(root)).changed).toBe(true);expect(await readFile(filename,'utf8')).toBe(current);expect(success(await run(root)).changed).toBe(false);
+ const wrong=current.replace('/src/flute/scenes/*.{scene.json,tsx}','/../*.tsx');await writeFile(filename,wrong);failure(await run(root),'conflict');expect(await readFile(filename,'utf8')).toBe(wrong);
+});

@@ -15,4 +15,4 @@ test-results/
 .test-dist/
 
 .local-package/
-local-project/.flute/
+local-project/.flute/init-pending.json
