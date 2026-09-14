@@ -47,3 +47,35 @@ test('one product shell preserves real context/state through seek and invalid-so
  await page.setViewportSize({width:390,height:844});
  expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBe(390);
 });
+
+test('scene cover fills every viewport and the bottom backdrop progressively blurs real pixels',async({page})=>{
+ await page.goto('/tests/preview/fixture.html');
+ await expect(page.getByRole('button',{name:'Play',exact:true})).toBeEnabled();
+ for(const size of [{width:1920,height:1080},{width:390,height:844},{width:667,height:320}]){
+  await page.setViewportSize(size);
+  await expect.poll(()=>page.locator('[data-flute-capture="scene"]').boundingBox()).toEqual({x:0,y:0,...size});
+  await expect.poll(async()=>(await page.locator('[data-flute-scene]').boundingBox())!.width).toBeGreaterThanOrEqual(size.width-1);
+  await expect.poll(async()=>(await page.locator('[data-flute-scene]').boundingBox())!.height).toBeGreaterThanOrEqual(size.height-1);
+  const geometry=await page.locator('[data-flute-scene]').boundingBox();
+  expect(geometry!.width/geometry!.height).toBeCloseTo(1400/980,3);
+ }
+ await page.setViewportSize({width:1440,height:1000});
+ // A diagnostic pattern on the actual capture viewport isolates backdrop blur
+ // from scene depth of field. A tint/gradient alone cannot remove stripe contrast.
+ await page.addStyleTag({content:'.flute-canvas{background:repeating-linear-gradient(90deg,#000 0 12px,#fff 12px 24px)!important}.flute-canvas>*{visibility:hidden}'});
+ const contrast=async()=>{
+  const shot=await page.screenshot();
+  return page.evaluate(async data=>{
+   const img=new Image();img.src=data;await img.decode();const canvas=document.createElement('canvas');canvas.width=img.width;canvas.height=img.height;const ctx=canvas.getContext('2d')!;ctx.drawImage(img,0,0);
+   return [650,760,940].map(y=>{const p=ctx.getImageData(24,y,48,4).data;const values=Array.from({length:p.length/4},(_,i)=>p[i*4]);return Math.max(...values)-Math.min(...values)});
+  },'data:image/png;base64,'+shot.toString('base64'));
+ };
+ const blurred=await contrast();
+ expect(blurred[0]).toBeGreaterThan(240);
+ expect(blurred[1]).toBeLessThan(blurred[0]-30);
+ expect(blurred[2]).toBeLessThan(blurred[1]-30);
+ expect(blurred[2]).toBeLessThan(20);
+ await page.addStyleTag({content:'.flute-bottom-blur i{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}'});
+ const tintOnly=await contrast();
+ expect(tintOnly[2]).toBeGreaterThan(150);
+});

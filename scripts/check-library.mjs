@@ -20,6 +20,16 @@ try{
  browser=await chromium.launch({channel:'chromium',headless:true});const page=await browser.newPage({viewport:{width:1440,height:1000}});
  await page.goto(origin+'/?flute-preview=1');await expect(page.getByRole('heading',{name:'Your scenes',exact:true})).toBeVisible();
  await expect(page.locator('[data-scene-id]')).toHaveCount(10);
+ // Real projected edges must widen toward the viewer at the bottom.
+ const upper=await page.locator('[data-scene-id]').nth(0).boundingBox();
+ const lower=await page.locator('[data-scene-id]').nth(3).boundingBox();
+ assert.ok(lower.width>upper.width*1.15&&lower.y>upper.y,'Credits recede at the top and approach at the bottom');
+ // Isolate the existing per-surface optical filter with a high-frequency texture.
+ const pattern=await page.addStyleTag({content:'.flute-scene-row,.flute-library-heading{background:repeating-linear-gradient(90deg,#000 0 12px,#fff 12px 24px)!important}.flute-scene-row>*,.flute-library-heading>*{visibility:hidden}'});
+ const shot=await page.screenshot();
+ const contrast=await page.evaluate(async data=>{const img=new Image();img.src=data;await img.decode();const canvas=document.createElement('canvas');canvas.width=img.width;canvas.height=img.height;const ctx=canvas.getContext('2d');ctx.drawImage(img,0,0);return [340,500,820].map(y=>{const p=ctx.getImageData(690,y,60,4).data;const v=Array.from({length:p.length/4},(_,i)=>p[i*4]);return Math.max(...v)-Math.min(...v)})},'data:image/png;base64,'+shot.toString('base64'));
+ assert.ok(contrast[1]>200&&contrast[0]<contrast[1]-80&&contrast[2]<contrast[1]-80,`Center stays clear; near/far blur increases: ${contrast}`);
+ await pattern.evaluate(e=>e.remove());
  const gpu=await (await browser.newBrowserCDPSession()).send('SystemInfo.getInfo');assert.equal(gpu.gpu.featureStatus.gpu_compositing,'enabled');
  const frames=await page.evaluate(()=>new Promise(resolve=>{const values=[];let start=0,last=0;const el=document.querySelector('.flute-library-scroll');function tick(now){if(!start){start=now;last=now}else if(now-start>300)values.push(now-last);last=now;el.scrollTop=450+450*Math.sin((now-start)/1200);if(now-start<3300)requestAnimationFrame(tick);else resolve(values)}requestAnimationFrame(tick)}));
  frames.sort((a,b)=>a-b);const fps=1000/(frames.reduce((a,b)=>a+b,0)/frames.length);const p95=frames[Math.floor(frames.length*.95)];console.log(JSON.stringify({libraryFps:fps,p95,frames:frames.length}));assert.ok(fps>=55&&p95<22,'Library scrolling must meet the hardware frame budget');

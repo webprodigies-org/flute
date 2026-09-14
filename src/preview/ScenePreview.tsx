@@ -98,7 +98,7 @@ export function ScenePreview({definition: input, children, title = "Untitled sce
     if (blocked) throw new Error("Correct the scene before exporting.");
     session.seek(ms);
   }, [blocked, session.seek]);
-  const scale = definition && size.width && size.height ? Math.min(size.width / definition.width, size.height / definition.height, 1) : 1;
+  const scale = definition && size.width && size.height ? Math.max(size.width / definition.width, size.height / definition.height) : 1;
   const stateText = !connection.connected ? "Reconnecting to your app…" : connection.error ? "Source needs a correction" :
     connection.updating ? "Updating scene…" : renderError || session.issues.length ? "Scene needs a correction" :
     !definition ? "Waiting for a scene" : session.playing ? "Playing" : "Live preview";
@@ -126,8 +126,9 @@ export function ScenePreview({definition: input, children, title = "Untitled sce
         <SceneErrorBoundary resetKey={resetKey} onError={failure} onReset={() => setRenderError("")}>
           {definition && viewport && createPortal(
             <div className="flute-canvas" data-flute-capture="scene" data-flute-valid={blocked ? "false" : "true"}
-              style={{width: definition.width * scale, height: definition.height * scale}}>
-              <div style={{width: definition.width, height: definition.height, transform: `scale(${scale})`, transformOrigin: "top left"}}>
+              style={{width: "100%", height: "100%"}}>
+              {/* One aspect-preserving cover frame fills preview and capture; overflow is cropped, never stretched. */}
+              <div style={{position: "absolute", left: "50%", top: "50%", width: definition.width, height: definition.height, transform: `translate(-50%, -50%) scale(${scale})`, transformOrigin: "center"}}>
                 <Scene camera={definition.scene.camera} focus={definition.scene.focus} motion={definition.motion}
                   timeMs={session.timeMs} onDiagnostics={session.onDiagnostics} style={{width: definition.width, height: definition.height}}>
                   {children}
