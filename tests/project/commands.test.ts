@@ -7,6 +7,8 @@ import { executeProjectCommand } from "../../src/project/commands";
 import { ProjectResultSchema, type ProjectResult } from "../../src/core/project";
 import * as services from "../../src/project/services";
 import { htmlEntry, inspectEntry } from "../../src/project/vite";
+import { RESOURCES } from "../../src/core/resources";
+import { FLUTE_BRAND } from "../../src/core/branding";
 
 const roots: string[] = [];
 const servers: Server[] = [];
@@ -184,7 +186,7 @@ describe("trusted project commands", () => {
     success(await run(root));
     await rm(path.join(root, "node_modules/@flute/scene/preview.js"));
     failure(await run(root, "validate-project"), "missing-installation");
-    failure(await run(root), "package-unavailable");
+    failure(await run(root), "missing-installation");
   });
   it.each(["../outside.tsx", ".env.tsx", ".git/secret.tsx", "src/../../outside.tsx"])("denies entry traversal/protected target %s", async entry => {
     const root = await fixture();
@@ -192,7 +194,7 @@ describe("trusted project commands", () => {
     failure(await run(root), "denied-path");
     expect(await readdir(root)).not.toContain(".flute");
   });
-  it.each([".flute", "src/main.tsx", "package-lock.json", "vite.config.ts", "node_modules/@flute/scene"])("denies symlink targets %s before writing", async target => {
+  it.each([".flute", "FLUTE.md", "src/main.tsx", "package-lock.json", "vite.config.ts", "node_modules/@flute/scene"])("denies symlink targets %s before writing", async target => {
     const root = await fixture();
     const outside = await fixture();
     const destination = [".flute", "node_modules/@flute/scene"].includes(target) ? outside : path.join(outside, "src/main.tsx");
@@ -321,6 +323,118 @@ describe("trusted project commands", () => {
     expect(() => inspectEntry(adapted.replace("import.meta.env.DEV", "true"), "main.tsx", id)).toThrow();
     expect(() => inspectEntry(adapted + "\nconst stolen = FluteProjectPreview;", "main.tsx", id)).toThrow();
     expect(() => inspectEntry(original + "\nfunction another(createRoot: unknown) {}", "main.tsx", id)).toThrow();
+  });
+});
+
+describe("installed coding-agent handoff", () => {
+  it("creates the canonical guide pointer without requiring a tarball or changing agent instructions", async () => {
+    const root = await fixture();
+    for (const name of ["AGENTS.md", "CLAUDE.md", ".agents/custom.md", ".codex/config.toml"])
+      await put(root, name, "user instructions\n");
+    const install = vi.spyOn(services, "installPackage");
+    const first = success(await run(root));
+    expect(first.handoff).toMatchObject({ path: "FLUTE.md", guideCommand: "npx flute guide --json", guideVersion: RESOURCES["authoring-guide"]().version });
+    expect(first.handoff!.prompt).toContain("<page route or component path>");
+    const text = await readFile(path.join(root, "FLUTE.md"), "utf8");
+    for (const pointer of [FLUTE_BRAND.title, FLUTE_BRAND.url, "npx flute guide --json", "capabilities.api", "@flute/scene/preview", "src/flute/scenes"])
+      expect(text).toContain(pointer);
+    expect(text).not.toContain(RESOURCES["authoring-guide"]().concepts[0].mechanism);
+    const repeat = success(await run(root));
+    expect(repeat.changed).toBe(false);
+    expect(repeat.handoff).toEqual(first.handoff);
+    expect(await readFile(path.join(root, "FLUTE.md"), "utf8")).toBe(text);
+    expect(install).not.toHaveBeenCalled();
+    for (const name of ["AGENTS.md", "CLAUDE.md", ".agents/custom.md", ".codex/config.toml"])
+      expect(await readFile(path.join(root, name), "utf8")).toBe("user instructions\n");
+  });
+  it.each(["# My Flute notes\n", ""])("preserves a pre-existing user FLUTE.md before any setup mutation", async content => {
+    const root = await fixture();
+    await put(root, "FLUTE.md", content);
+    const result = await run(root);
+    failure(result, "conflict");
+    expect(JSON.stringify(result)).toContain("Move or rename");
+    expect(await readFile(path.join(root, "FLUTE.md"), "utf8")).toBe(content);
+    expect(await readFile(path.join(root, "src/main.tsx"), "utf8")).toBe(original);
+    expect(await readdir(root)).not.toContain(".flute");
+    await rm(path.join(root, "FLUTE.md"));
+    success(await run(root));
+  });
+  it("does not mistake an edited generated entry for permission to overwrite", async () => {
+    const root = await fixture();
+    success(await run(root));
+    const text = await readFile(path.join(root, "FLUTE.md"), "utf8") + "My notes\n";
+    await put(root, "FLUTE.md", text);
+    failure(await run(root), "conflict");
+    expect(await readFile(path.join(root, "FLUTE.md"), "utf8")).toBe(text);
+    // The handoff is onboarding, not a runtime requirement for existing scenes.
+    success(await run(root, "load-project"));
+  });
+  it("adds the handoff to an already initialized app without rewrapping it", async () => {
+    const root = await fixture();
+    const first = success(await run(root));
+    const source = await readFile(path.join(root, "src/main.tsx"), "utf8");
+    await rm(path.join(root, "FLUTE.md"));
+    const resumed = success(await run(root));
+    expect(resumed.changed).toBe(true);
+    expect(resumed.project).toEqual(first.project);
+    expect(await readFile(path.join(root, "src/main.tsx"), "utf8")).toBe(source);
+  });
+  it.each(["FLUTE.md", "src/main.tsx"])("resumes interruption at %s with the same identity and handoff", async target => {
+    const root = await fixture();
+    const write = services.atomicWrite;
+    vi.spyOn(services, "atomicWrite").mockImplementation(async (...args) => {
+      if (args[1] === target) throw new Error("interrupted");
+      return write(...args);
+    });
+    failure(await run(root), "project-error");
+    const pending = JSON.parse(await readFile(path.join(root, ".flute/pending.json"), "utf8"));
+    vi.restoreAllMocks();
+    const result = success(await run(root));
+    expect(result.project).toEqual(pending.project);
+    expect(result.handoff!.path).toBe("FLUTE.md");
+    expect(success(await run(root)).changed).toBe(false);
+    expect(await readdir(path.join(root, ".flute"))).toEqual(["project.json"]);
+  });
+  it("preserves a handoff created by another writer during installation and then recovers", async () => {
+    const root = await fixture({ installed: false });
+    await put(root, "flute.tgz", "fixture transport only");
+    vi.spyOn(services, "installPackage").mockImplementation(async project => {
+      await installFixture(project);
+      await put(project, "FLUTE.md", "user document created during install");
+    });
+    failure(await run(root, "init-project", { packageSource: "./flute.tgz" }), "conflict");
+    expect(await readFile(path.join(root, "src/main.tsx"), "utf8")).toBe(original);
+    expect(await readFile(path.join(root, "FLUTE.md"), "utf8")).toBe("user document created during install");
+    await rm(path.join(root, "FLUTE.md"));
+    success(await run(root));
+  });
+  it("creates absent files exclusively under concurrent writes", async () => {
+    const root = await fixture();
+    const results = await Promise.allSettled([
+      services.atomicWrite(root, "FLUTE.md", "first", undefined),
+      services.atomicWrite(root, "FLUTE.md", "second", undefined),
+    ]);
+    expect(results.filter(result => result.status === "fulfilled")).toHaveLength(1);
+    expect(results.find(result => result.status === "rejected")).toMatchObject({ reason: { code: "conflict" } });
+    expect(["first", "second"]).toContain(await readFile(path.join(root, "FLUTE.md"), "utf8"));
+    expect((await readdir(root)).filter(name => name.startsWith("FLUTE.md."))).toEqual([]);
+  });
+  it.each(["react", "react-dom"])("reports missing %s instead of asking for a Flute tarball", async name => {
+    const root = await fixture();
+    await rm(path.join(root, "node_modules", name), { recursive: true });
+    const result = await run(root);
+    failure(result, "missing-installation");
+    expect(JSON.stringify(result)).toContain("npm install");
+    expect(JSON.stringify(result)).toContain(name);
+    expect(await readdir(root)).not.toContain(".flute");
+    expect(await readdir(root)).not.toContain("FLUTE.md");
+  });
+  it("reports an absent local tarball before creating setup files", async () => {
+    const root = await fixture({ installed: false });
+    const result = await run(root, "init-project", { packageSource: "./missing.tgz" });
+    failure(result, "package-unavailable");
+    expect(JSON.stringify(result)).toContain("Correct --package");
+    expect(await readdir(root)).not.toContain(".flute");
   });
 });
 

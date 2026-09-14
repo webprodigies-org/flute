@@ -26,6 +26,10 @@ export const ProjectStateSchema = z.strictObject({
 export const ProjectResultSchema = z.discriminatedUnion("success", [
   z.strictObject({success:z.literal(true),data:z.strictObject({
     project:ProjectStateSchema.optional(),url:z.string().optional(),changed:z.boolean().optional(),
+    handoff:z.strictObject({
+      path:z.literal("FLUTE.md"), guideCommand:z.literal("npx flute guide --json"),
+      guideVersion:z.number().int().positive(), prompt:z.string().min(1),
+    }).optional(),
   })}),
   z.strictObject({success:z.literal(false),issues:z.array(z.strictObject({
     code:z.string(),message:z.string(),path:z.string().optional(),

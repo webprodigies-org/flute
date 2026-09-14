@@ -1,4 +1,5 @@
 import { RESOURCES } from "../core/resources";
+import { FLUTE_BRAND } from "../core/branding";
 import { executeSceneSnapshot, executeVideoExport } from "../export/commands";
 import { executeProjectCommand } from "../project/commands";
 import { executeRecipeCommand, type RecipeCommandResult } from "../project/recipes";
@@ -12,8 +13,9 @@ import type { ProjectResult } from "../core/project";
 type Environment = { root: string; port?: string };
 type Execute = typeof executeProjectCommand;
 export type CliResult = { code: number; stdout: string; stderr: string };
-const usage = `Flute — cinematic 3D motion from your real application UI.
-Start with flute guide to learn spatial composition, camera, focus and motion.
+const usage = `${FLUTE_BRAND.title} — cinematic 3D motion from your real application UI.
+${FLUTE_BRAND.url}
+Start with npx flute guide to learn spatial composition, camera, focus and motion.
 
 flute guide [--json]
 flute init [--project DIR] [--package TARBALL] [--url ORIGIN] [--no-open]
@@ -24,17 +26,24 @@ flute load [--scene ID] [--project DIR] [--json]
 flute validate [--project DIR]
 flute export --url URL --output FILE [--fps 30|60|120] [--width N --height N] [--project DIR] [--json]
 
-init preserves the existing root/providers. Add --url to initialize and open in one command.
+After installing @flute/scene locally, run npx flute init in your npm Vite React 19.2.x app.
+--package is optional when Flute is already installed; it accepts a local .tgz for setup.
+init preserves the existing root/providers and creates FLUTE.md for your coding agent.
+Add --url to initialize and open in one command.
 open reuses your running dev server (APP_PORT / PORT / 5173); it never starts another server.
 --no-open verifies and prints the preview URL without launching a browser.
 --json prints the canonical command result for scripts.
 `;
 function output(result: ProjectResult, json: boolean): CliResult {
-  if (!result.success) return { code: 1, stdout: "", stderr: json ? JSON.stringify(result) + "\n" : result.issues.map(i => `${i.code}: ${i.message}`).join("\n") + "\n" };
+  if (!result.success) return { code: 1, stdout: "", stderr: json ? JSON.stringify(result) + "\n" : result.issues.map(i => `${i.code}${i.path ? ` (${i.path})` : ""}: ${i.message}`).join("\n") + "\n" };
   const message = result.data.url ?? (result.data.project
-    ? `Project ready: ${result.data.project.entry}${result.data.changed ? " (initialized)" : ""}.\nRun your existing dev server, then flute open --url http://127.0.0.1:PORT.`
+    ? `Project ready: ${result.data.project.entry}${result.data.changed ? " (initialized)" : ""}.\nUse your running dev server, or start it with npm run dev. Then run npx flute open --url <origin printed by Vite>.`
     : "Project command completed.");
-  return { code: 0, stdout: (json ? JSON.stringify(result) : message + "\nScene authoring: run npx flute guide before composing animations.") + "\n", stderr: "" };
+  const handoff = result.data.handoff;
+  const next = handoff
+    ? `\nAgent handoff: ${handoff.path}\nCopy this prompt into your coding agent (replace <page route or component path>):\n${handoff.prompt}`
+    : "\nScene authoring: run npx flute guide before composing animations.";
+  return { code: 0, stdout: (json ? JSON.stringify(result) : `${FLUTE_BRAND.title}\n${FLUTE_BRAND.url}\n${message}${next}`) + "\n", stderr: "" };
 }
 function recipeOutput(result: RecipeCommandResult, json: boolean): CliResult {
   const issues = result.success ? result.data.issues : result.issues;
@@ -53,7 +62,7 @@ export async function runCli(argv: string[], environment: Environment, execute: 
     if(args.length>1 || (args.length===1 && args[0]!=="--json"))return {code:2,stdout:"",stderr:"Usage: flute guide [--json]\n"};
     const guide=RESOURCES["authoring-guide"]();
     const text=[guide.purpose,guide.creativeFreedom,...guide.concepts.map(c=>`## ${c.title}\n${c.meaning}\nHow it works: ${c.mechanism}\nCreative choices: ${c.choices}\nWatch for: ${c.pitfalls}\nVerify: ${c.verify}`),"## Workflow\n"+guide.workflow.map((s,i)=>`${i+1}. ${s}`).join("\n"),"## Installed API and defaults\n"+JSON.stringify(guide.capabilities,null,2)].join("\n\n");
-    return {code:0,stdout:(args[0]==="--json"?JSON.stringify(guide):text)+"\n",stderr:""};
+    return {code:0,stdout:(args[0]==="--json"?JSON.stringify(guide):`${FLUTE_BRAND.title}\n${FLUTE_BRAND.url}\n\n${text}`)+"\n",stderr:""};
   }
   const aliases = { init: "init-project", open: "open-preview", load: "load-project", validate: "validate-project" } as const;
   const fail = (message: string): CliResult => ({ code: 2, stdout: "", stderr: message + "\n\n" + usage });
@@ -73,6 +82,7 @@ export async function runCli(argv: string[], environment: Environment, execute: 
   if (flags.has("--package") && command !== "init") return fail("--package is only valid for init.");
   if (flags.has("--scene") && !["load", "open", "snapshot"].includes(command)) return fail("--scene is only valid for load, open or snapshot.");
   if (["load", "validate", "scenes"].includes(command) && (flags.has("--url") || flags.has("--no-open"))) return fail("Preview options require init or open.");
+  if (command === "init" && flags.has("--no-open") && !flags.has("--url")) return fail("init --no-open requires --url. To initialize without opening a browser, run npx flute init.");
   const context = { root: flags.get("--project") as string ?? environment.root };
   const json = flags.has("--json");
   if(command==="snapshot"){
@@ -106,7 +116,10 @@ export async function runCli(argv: string[], environment: Environment, execute: 
   try {
     const result = await execute(aliases[command as keyof typeof aliases], input, context);
     if (!result.success || command !== "init" || !flags.has("--url")) return output(result, json);
-    return output(await execute("open-preview", { url: flags.get("--url"), launch: !flags.has("--no-open") }, context), json);
+    const opened = await execute("open-preview", { url: flags.get("--url"), launch: !flags.has("--no-open") }, context);
+    if (opened.success) return output({ success: true, data: { ...result.data, ...opened.data } }, json);
+    const failure = output(opened, json);
+    return json ? failure : { ...failure, stdout: output(result, false).stdout };
   } catch {
     return {code:1,stdout:"",stderr:"Project command failed unexpectedly. Your setup may be incomplete; run flute validate, correct the reported issue and retry.\n"};
   }
