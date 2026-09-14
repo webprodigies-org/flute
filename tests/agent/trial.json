@@ -56,7 +56,7 @@
     "Scene framing is provisional until parent browser inspection. One tilted plane offers progressive depth, not separate floating layers.",
     "No API credentials or app records serialized; live revenue stays in the host provider."
   ],
-  "status": "source-trial-passed-parent-browser-verification-pending",
+  "status": "source-and-installed-integration-passed",
   "feedbackMessageId": "f92c204e-6994-4754-866c-2a3d4044f5ec",
   "revision": {
     "durationMs": 6000,
@@ -85,5 +85,19 @@
     ],
     "coverage": "Both public catalog/authoring validations; missing binding, identity and legacy-focus rejection; exact feedback delta; matching camera positions at seven normalized times; unchanged binding hash; real component/provider AST checks and negative private-math/cloned/invented UI; TypeScript transpilation only (not installed consumer type resolution).",
     "browserVerified": false
+  },
+  "parentIntegration": {
+    "verifiedBy": "scripts/check-agent.mjs and scripts/verify-agent.mjs",
+    "result": "passed",
+    "evidence": [
+      "Actual npm tarball installed into independent host; npm exec flute init uses installed bin",
+      "Strict TypeScript consumer check and host production build",
+      "Exact guide example and agent initial/revised source render real provider revenue and one live component",
+      "Five timestamps preserve DOM and Inspect1; JSON HMR changes duration without state reset; reload reopens revised source",
+      "Real cached snapshots for both scenes; 390px no document overflow",
+      "Revised 12-second MP4 encoded at 30fps, 360 frames, FFprobe checked; export screenshot inspected without chrome",
+      "Production host bundle excludes unused studio renderer"
+    ],
+    "visualLimits": "Inspected frames prove live host wiring, tilted camera and focus behavior; minimal test host is not a cinematic design template or universal LLM quality guarantee."
   }
 }
