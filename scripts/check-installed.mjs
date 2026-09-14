@@ -68,6 +68,14 @@ try {
   assert.ok(entryAfter.includes('Existing provider composition'));
   assert.notEqual(entryAfter,originalEntry);
   const cli=path.join(host,'node_modules/@flute/scene/dist/cli/flute.js');
+  const installedGuide=JSON.parse(await ok(process.execPath,[cli,'guide','--json']));
+  const publicGuide=JSON.parse(await ok(process.execPath,['--input-type=module','-e',"import {getAuthoringGuide} from '@flute/scene'; console.log(JSON.stringify(getAuthoringGuide()))"]));
+  assert.deepEqual(installedGuide,publicGuide,'Installed CLI and browser-compatible package share the exact guide');
+  assert.equal(installedGuide.version,1);
+  assert.ok(installedGuide.concepts.some(c=>c.id==='focus'));
+  assert.ok((await ok(process.execPath,[cli,'--help'])).includes('flute guide'));
+  const guideFailure=await run(process.execPath,[cli,'guide','--unknown']);assert.notEqual(guideFailure.code,0);
+
   await ok(process.execPath,[cli,'init','--project',host,'--json']);
   assert.equal(await readFile(path.join(host,'src/main.tsx'),'utf8'),entryAfter);
   await ok(process.execPath,[cli,'validate','--project',host,'--json']);

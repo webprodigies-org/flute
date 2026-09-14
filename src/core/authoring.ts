@@ -82,7 +82,7 @@ export function getAuthoringGuide(): AuthoringGuide {
       sceneVersion:SceneSchema.parse({nodes:[]}).version,
       camera:CameraSchema.parse({}),focus:FocusSchema.parse({}),surface:TransformSchema.parse({}),
       motionDefaults:MotionSchema.parse({durationMs:0,tracks:[]}),
-      tracks:MotionTrackSchema.options.map(option=>({target:option.shape.target.shape.kind.value,properties:option.shape.property.options})),
+      tracks:MotionTrackSchema.options.map(option=>({target:option.shape.target.shape.kind.value,properties:[...option.shape.property.options]})),
       cascadeDefaults,
       easingDefault:MotionKeyframeSchema.parse({timeMs:0,value:0}).easing,
       exportFps:SUPPORTED_EXPORT_FPS,

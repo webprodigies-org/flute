@@ -12,6 +12,7 @@ describe('canonical authoring system',()=>{
   expect(guide.capabilities.camera).toEqual(CameraSchema.parse({}));expect(guide.capabilities.focus).toEqual(FocusSchema.parse({}));
   expect(guide.capabilities.motionDefaults).toEqual(MotionSchema.parse({durationMs:0,tracks:[]}));
   expect(RESOURCES['authoring-guide']).toBe(getAuthoringGuide);expect(RESOURCES['review-authoring']).toBe(reviewAuthoring);
+  const tracks=guide.capabilities.tracks as {properties:string[]}[];tracks[0].properties.push('invented');expect(JSON.stringify(getAuthoringGuide().capabilities.tracks)).not.toContain('invented');
   guide.concepts[0].meaning='modified';expect(getAuthoringGuide().concepts[0].meaning).not.toBe('modified');
  });
  it('CLI and package return the same guide without project or export effects',async()=>{
