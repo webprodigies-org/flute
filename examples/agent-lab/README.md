@@ -28,10 +28,14 @@ The whole dashboard and original `SectionCards`, `ChartAreaInteractive`, `DataTa
 
 ## Verification and limits
 
-`npm --prefix examples/agent-lab run build` and `npm --prefix examples/agent-lab run check:scenes` are Ticket checks. Browser execution uses Morphite `run_command` because native Chromium execution is OS blocked. The check owns a temporary local Vite server on this runtime's allocated app port and closes it after Chromium exits.
+`npm --prefix examples/agent-lab run build` and `npm --prefix examples/agent-lab run check:scenes` are Ticket checks. Browser execution uses Morphite `run_command` because native Chromium execution is OS blocked. The check owns an isolated temporary local Vite server and closes it after Chromium exits, or tests the explicit TRIAL_URL supplied by integration.
 
 The browser check verifies all metadata with canonical review; invalid duplicate IDs and unknown motion targets are rejected. All three reviews return valid, no issues/advice, and `requiresVisualReview: true`. It compares installed CLI/package guidance, samples 0/2.5/5/7.5/10 seconds, checks scene diagnostics, confirms transformed movement, unique chosen content and preserved DOM leaf identity, compares original text font/color, exercises play/pause/restart/seek and chart state across seeking, and tests unknown-route recovery to the ordinary dashboard. At 390×844 it checks playback, absence of page overflow and full-size scrolling. A second run with `TRIAL_BASE=/agent-trial/` passed.
 
 Actual desktop and mobile screenshots were inspected, including initial, intermediate and final compositions. This caught and corrected a viewport-height sidebar spill. Orbit visibly transitions between sharp and soft regions within live surfaces. Generated screenshots and `report.json` live in ignored `artifacts/`; regenerate with the check. No browser page errors were reported. Production build reports the host's existing Vite configuration warning and a large bundle warning.
 
 This is one successful Codex/model trial, not evidence that every LLM can discover or use Flute. It does not establish cross-browser performance, physical lens accuracy, pixel equality for every component, or production publication. Small-screen fit mode is an overview; full-size mode is provided for legible inspection. Parent owns combined integration and publication. No export was requested or produced.
+
+## Parent integration findings
+
+The independent worker produced the scene designs above. Parent production playback measurement then found that the whole-dashboard shot rerendered its host subtree on each tick (p95 25 ms on the measured device). The parent memoized the existing panel element tree without changing the designs and added this distinction to the canonical composition guide. The fresh trial therefore exposed a performance-guidance gap; the integrated result includes that correction. The browser check now uses isolated ports or an explicit TRIAL_URL and full Chromium; optional TRIAL_PERFORMANCE=1 enforces the shared frame budget.

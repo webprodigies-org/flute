@@ -49,24 +49,18 @@ assert.equal(
   false,
 );
 const base = process.env.TRIAL_BASE || "/";
-const server = await createServer({
-  root,
-  base,
-  server: {
-    host: "127.0.0.1",
-    port: Number(process.env.APP_PORT || process.env.PORT || 65076),
-    strictPort: true,
-  },
+const server = process.env.TRIAL_URL ? undefined : await createServer({
+  root, base, server: {host:"127.0.0.1", port:0, strictPort:true},
 });
-await server.listen();
-const browser = await chromium.launch({ headless: true });
+await server?.listen();
+const browser = await chromium.launch({ headless: true, channel:"chromium" });
 const page = await browser.newPage({
   viewport: { width: 1440, height: 1200 },
   reducedMotion: "reduce",
 });
 const errors = [];
 page.on("pageerror", (error) => errors.push(error.message));
-const origin = server.resolvedUrls.local[0];
+const origin = process.env.TRIAL_URL || server.resolvedUrls.local[0];
 const report = [];
 const seek = async (value) => {
   const slider = page.getByRole("slider", { name: "Scene time" });
@@ -183,6 +177,17 @@ try {
         "true",
       );
     }
+
+    if(process.env.TRIAL_PERFORMANCE==='1') {
+      await seek(0);
+      await page.getByRole('button',{name:'Play',exact:true}).click();
+      const intervals=await page.evaluate(()=>new Promise(resolve=>{const values=[];let start,last;function frame(now){if(start===undefined){start=last=now}else if(now-start>500)values.push(now-last);last=now;if(now-start<4500)requestAnimationFrame(frame);else resolve(values)}requestAnimationFrame(frame)}));
+      await page.getByRole('button',{name:'Pause',exact:true}).click();
+      intervals.sort((a,b)=>a-b);
+      const performance={id,fps:1000/(intervals.reduce((a,b)=>a+b,0)/intervals.length),p95:intervals[Math.floor(intervals.length*.95)],over33:intervals.filter(t=>t>33.4).length/intervals.length};
+      console.log('Trial playback',JSON.stringify(performance));
+      assert.ok(performance.fps>=55,'trial average FPS >=55');assert.ok(performance.p95<20,'trial p95 <20ms');assert.ok(performance.over33<.02,'trial missed frames <2%');
+    }
     await page.setViewportSize({ width: 390, height: 844 });
     await page.waitForTimeout(200);
     assert.equal(
@@ -246,5 +251,5 @@ try {
   console.log(JSON.stringify(report));
 } finally {
   await browser.close();
-  await server.close();
+  await server?.close();
 }

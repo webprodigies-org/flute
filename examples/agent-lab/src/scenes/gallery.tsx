@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Scene,
   Surface,
@@ -33,6 +33,34 @@ function ScenePlayer({ recipe }: { recipe: Recipe }) {
   const [fullSize, setFullSize] = useState(false);
   const viewport = useRef<HTMLDivElement>(null);
   const duration = motionDuration(recipe.motion);
+  // Keep host components outside per-frame reconciliation; Scene still updates spatial state.
+  const panels = useMemo(() => recipe.panels.map((panel) => (
+                <Surface
+                  key={panel.id}
+                  id={panel.id}
+                  transform={
+                    recipe.scene.nodes.find((node) => node.id === panel.id)
+                      ?.transform
+                  }
+                  style={{
+                    position: "absolute",
+                    left: panel.left,
+                    top: panel.top,
+                    width: panel.width,
+                  }}
+                >
+                  <div
+                    className="scene-panel @container/main"
+                    data-panel={panel.id}
+                    style={{
+                      height: panel.height,
+                      overflow: panel.height ? "auto" : undefined,
+                    }}
+                  >
+                    <Panel kind={panel.component} />
+                  </div>
+                </Surface>
+              )), [recipe]);
   const seek = useCallback(
     (value: number) => {
       setPlaying(false);
@@ -124,33 +152,7 @@ function ScenePlayer({ recipe }: { recipe: Recipe }) {
               style={{ width: 1400, height: 980 }}
               onDiagnostics={setIssues}
             >
-              {recipe.panels.map((panel) => (
-                <Surface
-                  key={panel.id}
-                  id={panel.id}
-                  transform={
-                    recipe.scene.nodes.find((node) => node.id === panel.id)
-                      ?.transform
-                  }
-                  style={{
-                    position: "absolute",
-                    left: panel.left,
-                    top: panel.top,
-                    width: panel.width,
-                  }}
-                >
-                  <div
-                    className="scene-panel @container/main"
-                    data-panel={panel.id}
-                    style={{
-                      height: panel.height,
-                      overflow: panel.height ? "auto" : undefined,
-                    }}
-                  >
-                    <Panel kind={panel.component} />
-                  </div>
-                </Surface>
-              ))}
+              {panels}
             </Scene>
           </SceneErrorBoundary>
         </div>

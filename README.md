@@ -142,3 +142,9 @@ npx flute export --url 'http://127.0.0.1:5173/?scene=sidebar' \
 Choose 30, 60 or 120 FPS; output resolution defaults 1440×1000 (`--width`/`--height` override it). FPS changes cadence, not animation speed or duration. Use a new relative filename; existing files are never overwritten. Export is offline frame capture and may take longer than playback. It preserves live DOM rendering, without asking for source screenshots. No sound track is produced.
 
 For this repository's example: `npm run export:dashboard -- 60 30`. The Export MP4 panel offers completed sample downloads and a command for new renders. Export uses [Playwright screenshots](https://playwright.dev/docs/screenshots) and [FFmpeg's image stream input](https://ffmpeg.org/ffmpeg-formats.html#image2).
+
+## Fresh-agent scene trial
+
+`npm run verify:agent-trial` installs the package into the clean host, builds three independently authored scenes, publishes their generated assets and runs browser/performance checks. With the usual dashboard dev server running, open `/agent-trial/index.html?scene=pullback` and switch among the three scenes. `assembly` separates and reunites sections; `orbit` moves attention across a foreground chart. The original dashboard and its video downloads remain available.
+
+The trial worker had no conversation or prior scene brief and used installed CLI guidance and public declarations. Parent integration found and corrected a host-rerender performance gap, then added that distinction to the shared guide. The trial record in `examples/agent-lab/README.md` separates independent output from integration changes; this is evidence for one GPT-6 Astra trial.
