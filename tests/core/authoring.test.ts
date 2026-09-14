@@ -43,4 +43,14 @@ describe('canonical authoring system',()=>{
  it('uses the capture contract for export-duration advice without rejecting live scenes',()=>{
   const result=reviewAuthoring({scene,motion:{durationMs:70000,tracks:[]}});expect(result.valid).toBe(true);expect(result.advice.some(a=>a.code==='export-duration')).toBe(true);
  });
+ it('advises on object-only movement without banning intentional choreography',()=>{
+  const objectOnly=reviewAuthoring({scene,motion});
+  expect(objectOnly.valid).toBe(true);
+  expect(objectOnly.advice.some(a=>a.code==='camera-travel-missing')).toBe(true);
+  const camera={target:{kind:'camera'},property:'y',keyframes:[{timeMs:0,value:0},{timeMs:2000,value:120}]};
+  const tracked=reviewAuthoring({scene,motion:{...motion,tracks:[...motion.tracks,camera]}});
+  expect(tracked.advice.some(a=>a.code==='camera-travel-missing')).toBe(false);
+  const stationary={...camera,keyframes:[{timeMs:0,value:0},{timeMs:2000,value:0}]};
+  expect(reviewAuthoring({scene,motion:{...motion,tracks:[...motion.tracks,stationary]}}).advice.some(a=>a.code==='camera-travel-missing')).toBe(true);
+ });
 });
