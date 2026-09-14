@@ -1,0 +1,66 @@
+{
+  "version": 1,
+  "id": "agent-survey",
+  "title": "Revenue at an angle",
+  "description": "A left-near survey of the existing revenue dashboard; its original provider, controls and green design remain intact.",
+  "definition": {
+    "scene": {
+      "version": 3,
+      "camera": {
+        "x": -240,
+        "y": -50,
+        "z": -200,
+        "perspective": 1400,
+        "rotateX": 0,
+        "rotateY": 38,
+        "rotateZ": 0
+      },
+      "focus": {
+        "distance": 1000,
+        "fStop": 8,
+        "focalLength": 100,
+        "maxBlur": 6
+      },
+      "nodes": [
+        {
+          "id": "revenue-dashboard",
+          "transform": {
+            "x": 0,
+            "y": 0,
+            "z": 0,
+            "rotateX": 0,
+            "rotateY": 0,
+            "rotateZ": 0,
+            "scale": 1
+          }
+        }
+      ]
+    },
+    "motion": {
+      "durationMs": 6000,
+      "speed": 0.5,
+      "tracks": [
+        {
+          "target": {
+            "kind": "camera"
+          },
+          "property": "y",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": -50,
+              "easing": "cinematic"
+            },
+            {
+              "timeMs": 6000,
+              "value": 70,
+              "easing": "cinematic"
+            }
+          ]
+        }
+      ]
+    },
+    "width": 1200,
+    "height": 720
+  }
+}
