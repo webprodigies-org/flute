@@ -46,6 +46,12 @@ try {
   const packed=JSON.parse(await ok('npm',['pack','--json','--pack-destination',scratch],root));
   const tarball=path.join(scratch,packed[0].filename);
   assert.ok(packed[0].files.some(f=>f.path==='dist/cli/flute.js'));
+  assert.ok(packed[0].files.some(f=>f.path==='LICENSE'));
+  assert.ok(packed[0].files.some(f=>f.path==='README.md'));
+  assert.ok(!packed[0].files.some(f=>/^(local-project|tests|app|docs)\//.test(f.path)));
+  const metadata=JSON.parse(await readFile(path.join(root,'package.json'),'utf8'));
+  assert.equal(metadata.license,'MIT');
+  assert.notEqual(metadata.private,true);
   assert.ok(packed[0].files.some(f=>f.path==='dist/library/preview.js'));
   assert.ok(!packed[0].files.some(f=>f.path.includes('.env')));
   await ok('npm',['install','--offline','--ignore-scripts','--no-audit','--no-fund']);
@@ -113,6 +119,10 @@ try {
   if(process.env.FLUTE_VERIFY_ITERATE==='1') {
     const {verifyIteration}=await import('./verify-iteration.mjs');
     await verifyIteration({page,host,origin,server,processes,waitFor,root,originalApp});
+  }
+  if(process.env.FLUTE_VERIFY_AGENT==='1') {
+    const {verifyAgent}=await import('./verify-agent.mjs');
+    await verifyAgent({page,host,origin,root,cli,ok,installedGuide});
   }
   await page.goto(origin);
   await page.getByText('Revenue: 12840',{exact:true}).waitFor();

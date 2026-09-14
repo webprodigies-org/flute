@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { FLUTE_BRAND } from "./branding";
+import { SceneRecipeSchema, SCENE_RECIPE_DIRECTORY } from "./recipes";
 import { CameraSchema, FocusSchema, SceneSchema, TransformSchema, SCENE_BACKGROUND } from "./scene";
 import { MotionSchema, MotionTrackSchema, MotionKeyframeSchema, motionDuration } from "./motion";
 import { CascadeSchema } from "./choreography";
@@ -97,15 +99,33 @@ export function getAuthoringGuide(): AuthoringGuide {
     creativeFreedom:"Concepts explain effects and tradeoffs. The stage is always a black void; the host UI keeps its original theme. No fixed camera angle, path, layout, focus target, layer count or entrance pattern is mandatory. User direction overrides artistic defaults. Technical schema/identity constraints still apply. For multiple scenes choose different compositional ideas, not just different labels or durations.",
     concepts,
     workflow:[
-      "Read this installed-version guide, then inspect the requested page, original components, providers, styles and existing app entry. Do not start by copying a demo.",
+      "Start with the project-root FLUTE.md handoff created by npx flute init. Read npx flute guide --json for this installed version, then inspect the requested page, original components, providers, styles and existing app entry. Do not start by copying a demo.",
       "Choose a shot family and layout relationship: surface travel, plating, micro detail or floating foreground, or a deliberate variation. State the near edge/corner, subject, camera distance, one travel axis, focus region and visible depth references. Choose camera framing before object animation.",
       "Approve the opening still visually before adding motion: strong near/far perspective, intentional close crop, identifiable detail and visible progressive focus in black void. Reject a small flat overview when the request calls for a dramatic shot. Reference images establish composition cues; motion direction comes from the brief, not a still image.",
       "Compose real components as stable Surface children of ScenePreview from @flute/scene/preview, using canonical motion helpers and matching scene node metadata. Keep the normal app available. Use an authored scene route without flute-preview=1: that query activates the separate ProjectPreview bootstrap around the whole app. Do not nest the two previews. For automatic discovery instead use src/flute/scenes/<id>.scene.json plus matching <id>.tsx: the library owns ScenePreview around the selected component, so that component returns Surface content, not another preview shell.",
       "Use reviewAuthoring on the supplied metadata, host checks and the live scene diagnostics. Inspect actual browser frames and fix fidelity, framing, clipping and performance issues.",
       "Use the scene library at ?flute-preview=1. Adding a valid recipe/component pair automatically adds a row; ?flute-preview=1&flute-scene=<id> deep-links it. The installed entry must include the DEV-only sceneModules glob; rerun flute init to upgrade older wrappers. The catalog is code-driven, not a separate database. Native list scrolling keeps its camera/focus fixed. After creating or revising each scene, run flute snapshot --scene <id> --url <running-app-url> to save its real PNG thumbnail in the recipe; use --time <milliseconds> to choose a frame (default midpoint). Snapshots are local cached images of rendered host data, not live tile animations; regenerate them after changing the scene.",
-      "Show the shared paused product preview. Revise source code from user feedback; do not recreate playback or diagnostic controls per scene. ScenePreview registers capture for animated scenes and exposes the canonical CLI export command when valid. Export only when requested.",
+      "Show the shared paused product preview. Revise source code from user feedback; do not recreate playback or diagnostic controls per scene. ScenePreview registers capture for static and animated scenes and exposes the canonical CLI export command when valid. Export only when requested.",
     ],
     capabilities:{
+      brand:FLUTE_BRAND,
+      example:{
+        purpose:"A tested file-pair contract, not a mandatory composition. Replace the host import with the requested app's actual component and its existing providers. Choose framing, dimensions and focus for that content; do not recreate its UI.",
+        recipePath:`${SCENE_RECIPE_DIRECTORY}/page-survey.scene.json`,
+        componentPath:`${SCENE_RECIPE_DIRECTORY}/page-survey.tsx`,
+        recipe:SceneRecipeSchema.parse({version:1,id:"page-survey",title:"Page survey",definition:{
+          width:1400,height:980,
+          scene:{camera:{perspective:1400,rotateY:-24,rotateX:10},focus:{distance:1400,fStop:5.6,focalLength:100,maxBlur:6},nodes:[{id:"page"}]},
+          motion:{durationMs:6000,tracks:[{target:{kind:"camera"},property:"y",keyframes:[{timeMs:0,value:-100},{timeMs:6000,value:100}]}]},
+        }}),
+        componentSource:`import { Surface } from '@flute/scene';
+import { App, DashboardProvider } from '../../App';
+
+export default function PageSurvey() {
+  return <DashboardProvider><Surface id="page" style={{ width: 1400, height: 980 }}><App /></Surface></DashboardProvider>;
+}
+`,
+      },
       sceneVersion:SceneSchema.parse({nodes:[]}).version,
       camera:CameraSchema.parse({}),focus:FocusSchema.parse({}),surface:TransformSchema.parse({}),
       motionDefaults:MotionSchema.parse({durationMs:0,tracks:[]}),
@@ -114,7 +134,7 @@ export function getAuthoringGuide(): AuthoringGuide {
       easingDefault:MotionKeyframeSchema.parse({timeMs:0,value:0}).easing,
       exportFps:SUPPORTED_EXPORT_FPS,
       api:{
-        recipes:"src/flute/scenes/<id>.scene.json contains {version:1,id,title,description?,definition:{scene,motion?,width?,height?}}. Lowercase slug id matches both filename and sibling <id>.tsx default component export. The component returns actual Surface subtrees matching definition.scene.nodes; reuse original providers around those subtrees when needed. Do not render Scene/ScenePreview inside it: SceneLibrary supplies them. No serialized React instances, credentials or application data. Keep helpers outside the discovery directory. Unknown versions, missing bindings and duplicate IDs are rejected with repair diagnostics.",
+        recipes:"src/flute/scenes/<id>.scene.json contains {version:1,id,title,description?,definition:{scene,motion?,width?,height?}}. Lowercase slug id matches both filename and sibling <id>.tsx default component export. The component returns actual Surface subtrees matching definition.scene.nodes; reuse original providers around those subtrees when needed. Do not render Scene/ScenePreview inside it: SceneLibrary supplies them. No serialized React instances, credentials or raw application records. An optional snapshot contains visible rendered pixels; generate it only for the local scene. Keep helpers outside the discovery directory. Unknown versions, missing bindings and duplicate IDs are rejected with repair diagnostics.",
         catalog:"flute scenes --json lists canonical validated recipes; flute load --scene ID --json returns that source; flute open --scene ID --url ORIGIN verifies the same host before opening the scene. Browser and CLI call loadSceneRecipes through RESOURCES. The generated Vite adapter discovers file pairs only in development; normal app routes and production stay ordinary. Recipe JSON is editable and survives refresh; playback state is in-memory.",
         ScenePreview:"Import from @flute/scene/preview. {definition?:{scene:{version?:3,camera?,focus?,nodes:[{id,parentId?,transform?}]},motion?,width?,height?},children?,title?,backHref?,revision?,hot?}; dimensions default to 1400x980. Actual Surface children must match node metadata. No definition displays the empty product state. Owns playback/capture; do not pass a second timeMs or register another capture bridge. revision can signal source changes; Vite hosts pass import.meta.hot explicitly.",
         Scene:"{camera?,focus?,motion?,timeMs?,children?,style?,className?,onDiagnostics?}; no explicit nodes prop: the React adapter registers Surface children.",

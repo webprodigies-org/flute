@@ -16,6 +16,7 @@ const owners = new Map([
   ['executeRecipeCommand','src/project/recipes.ts'],['SceneLibrary','src/preview/SceneLibrary.tsx'],
   ["PreviewDefinitionSchema","src/core/preview.ts"], ["presentPreview","src/core/preview.ts"],
   ["ScenePreview","src/preview/ScenePreview.tsx"], ["usePreviewSession","src/preview/session.ts"],
+  ...["FLUTE_BRAND"].map(name=>[name,"src/core/branding.ts"]),
   ...["getAuthoringGuide","reviewAuthoring","AuthoringGuideSchema"].map(name=>[name,"src/core/authoring.ts"]),
   ['ExportVideoSchema','src/core/export.ts'], ['CaptureManifestSchema','src/core/export.ts'], ['executeVideoExport','src/export/commands.ts'], ['executeSceneSnapshot','src/export/commands.ts'],
   ['executeProjectCommand', 'src/project/commands.ts'],
@@ -131,7 +132,10 @@ export function checkArchitecture(input, { compilerOptions = {} } = {}) {
         const exported = statement.modifiers?.some(modifier => modifier.kind === ts.SyntaxKind.ExportKeyword);
         const ambient = statement.modifiers?.some(modifier => modifier.kind === ts.SyntaxKind.DeclareKeyword);
         let implemented = false;
-        if (symbol.endsWith('Schema') && ts.isVariableDeclaration(node) && node.initializer) {
+        if (symbol === 'FLUTE_BRAND' && ts.isVariableDeclaration(node) && node.initializer) {
+          const value=node.initializer;
+          implemented=ts.isCallExpression(value) && value.expression.getText(file)==='Object.freeze' && value.arguments.length===1 && ts.isObjectLiteralExpression(value.arguments[0]);
+        } else if (symbol.endsWith('Schema') && ts.isVariableDeclaration(node) && node.initializer) {
           // A real schema constructor, including chained refinements, must be rooted in the Zod import.
           let expression = node.initializer;
           while (ts.isCallExpression(expression) && ts.isPropertyAccessExpression(expression.expression)) {
@@ -152,7 +156,7 @@ export function checkArchitecture(input, { compilerOptions = {} } = {}) {
           implemented = !!body && (!ts.isBlock(body) || body.statements.length > 0);
         }
         if (exported && !ambient && implemented && statement.parent === file) implementations.get(symbol).push(node);
-        else add(file, identifier, 'canonical-implementation', `${symbol} needs an exported runtime ${symbol.endsWith('Schema') ? 'Zod object schema' : 'function body'} in its owner.`);
+        else add(file, identifier, 'canonical-implementation', `${symbol} needs an exported runtime ${symbol==='FLUTE_BRAND' ? 'frozen metadata object' : symbol.endsWith('Schema') ? 'Zod object schema' : 'function body'} in its owner.`);
       }
     }
 
