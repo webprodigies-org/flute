@@ -50,7 +50,7 @@ Missing or wrong-port dev servers report an actionable error; start the original
 ```tsx
 <Scene
   camera={{ perspective: 1400, x: 0, rotateY: -15 }}
-  focus={{ x: 0, y: 0, z: 0, radius: 100, falloff: 180, maxBlur: 10 }}
+  focus={{ distance: 1400, fStop: 8, focalLength: 50, maxBlur: 6 }}
   motion={recipe}
   timeMs={timeMs}
 >
@@ -63,9 +63,9 @@ Missing or wrong-port dev servers report an actionable error; start the original
 
 Scene coordinates are pixels centered on the viewport; positive z faces the viewer. Focus is **camera-attached**, so it stays fixed on screen while camera translation moves the scene beneath it. Change focus xyz to move it independently. Camera xyz subtracts from the scene; rotation angles retain the existing stage-rotation convention, not a physical camera-pose API.
 
-`radius` defines the clear 3D region. `falloff` is the distance from clear to maximum blur, with smooth interpolation. Sharpness varies **within** each visual surface using distance to the focus point, including distance in front and behind. It is a stylized spherical focus field, not a physical lens simulation or depth-buffer renderer. Six Gaussian levels blend through continuous radial masks; the live UI is neither cloned nor captured as a screenshot.
+`distance` sets the focal plane measured along the camera axis. Increase `fStop` for gentler, deeper focus; decrease it for stronger separation. `focalLength` and `distance` share scene units; distance must exceed focal length. The default is deliberately mild. Camera movement changes each point's depth automatically, and focus distance can be animated independently. Two objects at the same focal depth can both be sharp, regardless of screen position.
 
-Scene schema is now **version 2**. Version 1 and old `targetId`, `depth`, `range` focus fields reject explicitly. Replace them with independent xyz/radius/falloff. There is one active focus implementation.
+Scene schema is **version 3**. Version 2 circular focus (`x/y/z/radius/falloff`) rejects explicitly. Migrate to `distance = camera.perspective - subjectCameraSpaceZ`, then tune aperture. There is one active focus implementation. The thin-lens circle-of-confusion calculation is projected once; native Gaussian basis filters approximate the aperture kernel. This is not Blender ray tracing or aperture-shaped bokeh.
 
 ## Animate
 
@@ -83,16 +83,16 @@ const recipe = {
 };
 ```
 
-Tracks target a surface ID, camera or focus. Surface tracks support xyz, rotations, scale and opacity; camera tracks support xyz and rotations; focus tracks support xyz, radius, falloff and maximum blur. Easing belongs to the outgoing keyframe. Duplicate property tracks reject. Explicit time clamps to the duration and replays deterministically. `useSceneTime()` lets an opt-in component feed that same time into its supported animation API.
+Tracks target a surface ID, camera or focus. Surface tracks support xyz, rotations, scale and opacity; camera tracks support xyz and rotations; focus tracks support distance, fStop, focalLength and maximum blur. Easing belongs to the outgoing keyframe. Duplicate property tracks reject. Explicit time clamps to the duration and replays deterministically. `useSceneTime()` lets an opt-in component feed that same time into its supported animation API.
 
-Keep wrappers and child identity stable during edits. Adding/removing wrappers around already mounted UI can remount it. For spatial groups, put decoration in `content` and nested surfaces in `children`. Opacity/filters apply only to visual leaves; group fades require tracks on the actual visual surfaces. Host clipping, filters, portals, competing CSS transforms and unusual layout can require adaptation. This does not promise universal component compatibility. The renderer reuses one static radial texture through native SVG transfer tables; it never rebuilds mask images during playback. Host CSP must permit the packaged mask asset (or data images when the library bundle inlines it).
+Keep wrappers and child identity stable during edits. Adding/removing wrappers around already mounted UI can remount it. For spatial groups, put decoration in `content` and nested surfaces in `children`. Opacity/filters apply only to visual leaves; group fades require tracks on the actual visual surfaces. Host clipping, filters, portals, competing CSS transforms and unusual layout can require adaptation. This does not promise universal component compatibility. The renderer reuses two static linear depth textures through native SVG transfer tables; it never rebuilds mask images during playback. Host CSP must permit the packaged mask asset (or data images when the library bundle inlines it).
 
 ## Code map
 
 | Owner | Responsibility |
 | --- | --- |
 | `src/core/scene.ts` | Versioned schemas, inferred types and input validation |
-| `src/core/spatial.ts` | Camera transforms, spatial focus law and radial masks |
+| `src/core/spatial.ts` | Camera transforms, camera depth-of-field law and depth masks |
 | `src/core/motion.ts` | Validated tracks and deterministic time evaluation |
 | `src/core/resources.ts` | Canonical operation identities and bindings |
 | `src/react/` | Live registration, measurements, visual filters and diagnostics |
@@ -148,3 +148,5 @@ For this repository's example: `npm run export:dashboard -- 60 30`. The Export M
 `npm run verify:agent-trial` installs the package into the clean host, builds three independently authored scenes, publishes their generated assets and runs browser/performance checks. With the usual dashboard dev server running, open `/agent-trial/index.html?scene=pullback` and switch among the three scenes. `assembly` separates and reunites sections; `orbit` moves attention across a foreground chart. The original dashboard and its video downloads remain available.
 
 The trial worker had no conversation or prior scene brief and used installed CLI guidance and public declarations. Parent integration found and corrected a host-rerender performance gap, then added that distinction to the shared guide. The trial record in `examples/agent-lab/README.md` separates independent output from integration changes; this is evidence for one GPT-6 Astra trial.
+
+Mixed spatial groups must give every visible text/media region a Surface leaf or `content` owner. The renderer reports uncovered content, including content from custom host components, instead of silently leaving it sharp. Fix diagnostics before export; capture rejects invalid scenes. Pure layout containers remain unfiltered to retain 3D depth. Host paint on those containers must be isolated on visual leaves; arbitrary CSS cannot be converted into an optical scene automatically.

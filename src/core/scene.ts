@@ -37,22 +37,24 @@ export const CameraSchema = z.strictObject({
   rotateY: finite.default(0),
   rotateZ: finite.default(0),
 });
+/** SOURCE OF TRUTH: camera depth-of-field controls. Distance and focalLength
+ * share scene units; fStop controls aperture. The renderer owns kernel quality. */
 export const FocusSchema = z.strictObject({
-  x: finite.default(0),
-  y: finite.default(0),
-  z: finite.default(0),
-  radius: finite.nonnegative().default(100),
-  falloff: finite.positive().default(180),
-  maxBlur: finite.min(0).max(32).default(10),
+  distance: finite.positive().default(1400),
+  fStop: finite.min(0.7).max(128).default(8),
+  focalLength: finite.min(1).max(300).default(50),
+  maxBlur: finite.min(0).max(32).default(6),
 });
 export const SceneSchema = z
   .strictObject({
-    version: z.literal(2).default(2),
+    version: z.literal(3).default(3),
     camera: CameraSchema.prefault({}),
     focus: FocusSchema.prefault({}),
     nodes: z.array(NodeSchema).max(1000),
   })
   .superRefine((scene, ctx) => {
+    if (scene.focus.distance > 0 && scene.focus.distance <= scene.focus.focalLength)
+      ctx.addIssue({code:"custom",path:["focus","distance"],message:"Focus distance must exceed focal length."});
     const nodes = new Map<string, (typeof scene.nodes)[number]>();
     for (const [index, node] of scene.nodes.entries()) {
       if (nodes.has(node.id))

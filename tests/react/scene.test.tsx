@@ -98,11 +98,7 @@ describe("live React spatial adapter", () => {
       <Host.Provider value="API result">
         <Scene
           focus={{
-            x: -300,
-            y: -150,
-            z: focus === "front" ? 200 : -100,
-            radius: 0,
-            falloff: 50,
+            distance: focus === "front" ? 1200 : 1500,
           }}
         >
           <Surface id="back" transform={{ z }}>
@@ -122,7 +118,7 @@ describe("live React spatial adapter", () => {
     expect(screen.getByRole("button")).toBe(button);
     expect(button.textContent).toBe("API result: 1");
     expect(mounts).toBe(1);
-    expect(node("back").dataset.fluteBlur).toBe("10");
+    expect(Number(node("back").dataset.fluteBlur)).toBeGreaterThan(0);
     expect(node("front").dataset.fluteBlur).toBe("0");
   });
 
@@ -198,7 +194,7 @@ describe("live React spatial adapter", () => {
       );
     }
     render(
-      <Scene focus={{ z: 0, radius: 0, falloff: 50 }}>
+      <Scene focus={{ distance:1400, fStop:0.7, focalLength:300, maxBlur:6 }}>
         <Surface
           id="group"
           transform={{ z: -100 }}
@@ -219,14 +215,14 @@ describe("live React spatial adapter", () => {
       node("group")
         .querySelector("[data-flute-content]")
         ?.getAttribute("style"),
-    ).toContain("blur(10px)");
+    ).toContain("blur(6px)");
     expect(node("child").closest("[data-flute-content]")).toBeNull();
     expect(node("implicit-group").style.filter).toBe("none");
     expect(node("motion").parentElement?.style.filter).toBe("none");
     expect(
       node("leaf").querySelector<HTMLElement>("[data-flute-content]")?.style
         .filter,
-    ).toBe("blur(10px)");
+    ).toBe("blur(6px)");
   });
 
   it("updates local geometry on ResizeObserver and releases measurements on unmount", () => {
@@ -295,7 +291,7 @@ describe("live React spatial adapter", () => {
 
   it("reports invalid independent focus and recovers without replacing the host", () => {
     const app = (radius: number) => (
-      <Scene focus={{ radius }}>
+      <Scene focus={{ distance: radius }}>
         <Surface id="a">
           <input defaultValue="kept" />
         </Surface>
@@ -304,7 +300,7 @@ describe("live React spatial adapter", () => {
     const view = render(app(100));
     const input = screen.getByRole("textbox");
     view.rerender(app(-1));
-    expect(screen.getByRole("alert").textContent).toContain("focus.radius");
+    expect(screen.getByRole("alert").textContent).toContain("focus.distance");
     view.rerender(app(100));
     expect(screen.queryByRole("alert")).toBeNull();
     expect(screen.getByRole("textbox")).toBe(input);
@@ -318,7 +314,7 @@ describe("live React spatial adapter", () => {
         <>
           <output>{count}</output>
           <Scene
-            focus={{ radius: target === "missing" ? -1 : 100 }}
+            focus={{ distance: target === "missing" ? -1 : 100 }}
             onDiagnostics={(issues) => {
               calls++;
               setCount(issues.length);
@@ -338,7 +334,7 @@ describe("live React spatial adapter", () => {
 
   it.each([
     { camera: { perspective: 0 } },
-    { focus: { falloff: 0 } },
+    { focus: { fStop: 0 } },
     { transform: { scale: 0 } },
     { transform: { z: Infinity } },
   ])("validates runtime config through core and recovers: %j", (config) => {
@@ -496,7 +492,7 @@ it("applies deterministic camera, focus and surface tracks without replacing liv
       },
       {
         target: { kind: "focus" as const },
-        property: "radius" as const,
+        property: "distance" as const,
         keyframes: [
           { timeMs: 0, value: 10 },
           { timeMs: 1000, value: 100 },
@@ -538,4 +534,25 @@ it('keeps the scene void black without recoloring the live UI',()=>{
  const scene=document.querySelector('[data-flute-scene]') as HTMLElement;
  expect(scene.style.backgroundColor).toBe('rgb(0, 0, 0)');expect(scene.style.backgroundImage).toBe('none');
  expect(screen.getByRole('button',{name:'Original host'}).style.backgroundColor).toBe('white');
+});
+
+  it("diagnoses mixed group content and recovers when each region has a focus owner", async () => {
+    const app=(covered:boolean)=><Scene><Surface id="group"><div>{covered ? <Surface id="label">Background label</Surface> : <span>Background label</span>}<Surface id="front">Foreground</Surface></div></Surface></Scene>;
+    const view=render(app(false));
+    await act(async()=>{});
+    expect(screen.getByRole("alert").textContent).toContain("Unfiltered content");
+    view.rerender(app(true));
+    await act(async()=>{});
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(node("label").querySelector('[data-flute-content]')).not.toBeNull();
+  });
+
+it("diagnoses scene content outside any focus owner", async()=>{
+ const app=(covered:boolean)=><Scene>{covered ? <Surface id="back">Background</Surface> : <span>Background</span>}<Surface id="front">Foreground</Surface></Scene>;
+ const view=render(app(false));
+ await act(async()=>{});
+ expect(screen.getByRole("alert").textContent).toContain("Unfiltered scene content");
+ view.rerender(app(true));
+ await act(async()=>{});
+ expect(screen.queryByRole("alert")).toBeNull();
 });

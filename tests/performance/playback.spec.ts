@@ -77,5 +77,5 @@ for (const recipe of ["Move through focus", "Let focus wander"])
           (nodes) =>
             new Set(nodes.map((node) => node.getAttribute("href"))).size,
         ),
-    ).toBe(1);
+    ).toBe(2);
   });

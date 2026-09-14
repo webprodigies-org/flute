@@ -22,7 +22,7 @@ test("real pointer and keyboard interactions preserve API data, host DOM and sta
   await page.getByRole("button", { name: "Inspect trend" }).click();
   await expect(page.getByTestId("revenue-card")).toContainText("Day 7");
   await page.getByLabel("Revenue period").selectOption("Last month");
-  await setRange(page, "Focus horizontal", -120);
+  await setRange(page, "Focus distance", 1300);
   await setRange(page, "Camera horizontal", 40);
   await expect(page.getByTestId("revenue-card")).toHaveAttribute(
     "data-original",
@@ -77,12 +77,12 @@ test("deterministic seeking moves camera/layers, reveals chart, and independentl
   ).toBeVisible();
   await page.getByRole("button", { name: /Let focus wander/ }).click();
   const beforeMask = await page
-    .locator("feFuncA")
+    .locator('feComponentTransfer[result="mask0"] feFuncA')
     .first()
     .getAttribute("tableValues");
   await setRange(page, "Scene time", 4000);
   expect(
-    await page.locator("feFuncA").first().getAttribute("tableValues"),
+    await page.locator('feComponentTransfer[result="mask0"] feFuncA').first().getAttribute("tableValues"),
   ).not.toBe(beforeMask);
   await expect(node(page, "composition")).toHaveCSS("filter", "none");
   await expect(node(page, "composition")).toHaveCSS(
@@ -110,7 +110,7 @@ test("manual camera/depth controls and disabled blur update real geometry", asyn
   ).toHaveCSS("filter", "none");
   await page.getByRole("button", { name: "Reset composition" }).click();
   await expect(page.getByRole("slider", { name: "Maximum blur" })).toHaveValue(
-    "10",
+    "6",
   );
 });
 test("host baseline performs one request and keeps native interaction", async ({
@@ -148,7 +148,7 @@ test("invalid focus and duplicate IDs recover in the same scene", async ({
 }) => {
   await page.goto("/?fixture=invalid");
   await expect(page.locator("[data-flute-diagnostics]")).toContainText(
-    "focus.radius",
+    "focus.distance",
   );
   await page
     .getByRole("button", { name: "Restore valid scene" })

@@ -128,6 +128,7 @@ export function Scene({
     const ids = new Set(bindings.map((b) => b.id));
     evaluation.issues.push(
       ...state.issues,
+      ...(validated.success && validated.data.focus.maxBlur>0 ? registry.coverageIssues : []),
       ...Object.keys(state.surfaces)
         .filter((id) => !ids.has(id))
         .map((id) => ({
@@ -182,6 +183,7 @@ export function Scene({
         <div
           className={className}
           data-flute-scene=""
+          data-flute-valid={result.evaluation.issues.length===0 ? "true" : "false"}
           style={{
             ...style,
             background: SCENE_BACKGROUND,

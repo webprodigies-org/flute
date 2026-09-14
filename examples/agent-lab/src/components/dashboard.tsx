@@ -9,14 +9,14 @@ import data from "@/app/dashboard/data.json"
 
 // SOURCE OF TRUTH: this dashboard composes the official shadcn dashboard-01 block.
 // The host dashboard owns its components and data.
-export type DashboardSection = "metrics" | "chart" | "table";
+export type DashboardSection = "sidebar" | "header" | "metrics" | "chart" | "table";
 export function Dashboard({ animate = true, renderSection = (_id, content) => content }: { animate?: boolean; renderSection?: (id: DashboardSection, content: ReactNode) => ReactNode } = {}) {
   return <SidebarProvider style={{
     "--sidebar-width": "17rem", "--header-height": "3.5rem",
   } as CSSProperties}>
-    <AppSidebar variant="inset" />
+    {renderSection("sidebar", <AppSidebar variant="inset" />)}
     <SidebarInset>
-      <SiteHeader />
+      {renderSection("header", <SiteHeader />)}
       <div className="flex flex-1 flex-col">
         <div className="@container/main flex flex-1 flex-col gap-2">
           <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">

@@ -64,17 +64,15 @@ describe("explicit scene time motion", () => {
       (property) => track({ kind: "camera" }, property, -100, 100),
     );
     tracks.push(
-      ...["x", "y", "z"].map((property) =>
-        track({ kind: "focus" }, property, 50, 150),
-      ),
-      track({ kind: "focus" }, "radius", 0, 40),
-      track({ kind: "focus" }, "falloff", 10, 50),
+      track({kind:"focus"},"distance",1000,1400),
+      track({kind:"focus"},"fStop",4,12),
+      track({kind:"focus"},"focalLength",40,60),
       track({ kind: "focus" }, "maxBlur", 0, 32),
     );
     expect(evaluateMotion(motion(tracks), 500)).toEqual({
       surfaces: {},
       camera: { x: 0, y: 0, z: 0, rotateX: 0, rotateY: 0, rotateZ: 0 },
-      focus: { x: 100, y: 100, z: 100, radius: 20, falloff: 30, maxBlur: 16 },
+      focus: { distance:1200, fStop:8, focalLength:50, maxBlur:16 },
       issues: [],
     });
   });
@@ -185,12 +183,12 @@ describe("explicit scene time motion", () => {
     const state = evaluateMotion(
       motion([
         track(surface, "scale", Number.MIN_VALUE, Number.MIN_VALUE),
-        track({ kind: "focus" }, "falloff", Number.MIN_VALUE, Number.MIN_VALUE),
+        track({ kind: "focus" }, "distance", Number.MIN_VALUE, Number.MIN_VALUE),
       ]),
       500,
     );
     expect(state.surfaces.panel.scale).toBe(Number.MIN_VALUE);
-    expect(state.focus.falloff).toBe(Number.MIN_VALUE);
+    expect(state.focus.distance).toBe(Number.MIN_VALUE);
   });
 });
 
@@ -228,8 +226,8 @@ describe("motion validation boundary", () => {
     [surface, "opacity", -0.01],
     [surface, "opacity", 1.01],
     [{ kind: "focus" }, "radius", -1],
-    [{ kind: "focus" }, "falloff", 0],
-    [{ kind: "focus" }, "falloff", -1],
+    [{ kind: "focus" }, "distance", 0],
+    [{ kind: "focus" }, "distance", -1],
     [{ kind: "focus" }, "maxBlur", -1],
     [{ kind: "focus" }, "maxBlur", 33],
     [surface, "x", NaN],

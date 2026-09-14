@@ -28,3 +28,8 @@ it('updates the manifest without losing host component state',()=>{
  act(()=>host.__FLUTE_CAPTURE__!.seek(3500));
  expect(screen.getByTestId('time').textContent).toBe('3500');
 });
+
+it('refuses capture when a scene reports unfiltered or invalid content',()=>{
+ render(<><Fixture/><div data-flute-capture="scene"><div data-flute-valid="false"/></div></>);
+ expect(()=>{act(()=>host.__FLUTE_CAPTURE__!.seek(500))}).toThrow('Correct scene diagnostics');
+});

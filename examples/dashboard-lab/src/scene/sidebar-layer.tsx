@@ -1,4 +1,4 @@
-import { createContext, useContext, type ComponentProps } from "react"
+import { createContext, useContext, type ReactNode, type ComponentProps } from "react"
 import { Surface } from "@flute/scene"
 import { SidebarMenuItem } from "@/components/ui/sidebar"
 
@@ -28,4 +28,10 @@ export function SidebarLayer({ slot, children, className, ...props }:
       <div className={className} style={{background: "var(--sidebar)"}}>{children}</div>
     </Surface> : children}
   </SidebarMenuItem>
+}
+
+// Stationary sidebar paint needs its own visual leaf beside animated rows.
+export function SidebarLabel({children}: {children: ReactNode}) {
+  const spatial = useContext(SpatialSidebar)
+  return spatial ? <Surface id="documents-label">{children}</Surface> : children
 }
