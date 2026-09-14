@@ -1,3 +1,4 @@
+import { presentPreview } from "./preview";
 import { getAuthoringGuide, reviewAuthoring } from "./authoring";
 import { ExportVideoSchema } from "./export";
 import { InitProjectSchema, LoadProjectSchema, ValidateProjectSchema, OpenPreviewSchema } from "./project";
@@ -11,6 +12,7 @@ import { validateScene } from "./scene";
  * This local renderer has no permissions, product account or navigation gates.
  */
 export const RESOURCES = Object.freeze({
+  "present-preview": presentPreview,
   "authoring-guide": getAuthoringGuide,
   "review-authoring": reviewAuthoring,
   "export-video": ExportVideoSchema,

@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-for (const recipe of ["Move through focus", "Let focus wander"])
+for (const recipe of ["camera", "focus"])
   test(`${recipe}: sustained frame budget with progressive focus enabled`, async ({
     page,
     browser,
@@ -10,9 +10,8 @@ for (const recipe of ["Move through focus", "Let focus wander"])
       info.gpu.featureStatus?.gpu_compositing,
       "Performance qualification requires hardware GPU compositing; use full Chromium, not headless-shell software rendering.",
     ).toBe("enabled");
-    await page.goto("/");
-    await expect(page.getByTestId("revenue-card")).toBeVisible();
-    await page.getByRole("button", { name: new RegExp(recipe) }).click();
+    await page.goto("/tests/preview/fixture.html?mode=" + recipe);
+    await expect(page.getByTestId("host")).toBeVisible();
     await page.evaluate(() => {
       (window as unknown as { maskMutations: number }).maskMutations = 0;
       new MutationObserver((records) => {

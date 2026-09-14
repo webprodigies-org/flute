@@ -56,7 +56,7 @@ it("uses canonical camera and progressive focus while preserving host context, e
     </ProjectPreview>
   );
   const view = render(app("host", "API data"));
-  const button = screen.getByRole("button");
+  const button = screen.getByRole("button", {name: /API data:/});
   fireEvent.click(button);
   expect(button.textContent).toBe("API data: 1");
   expect(document.querySelectorAll("[data-flute-scene]")).toHaveLength(1);
@@ -77,7 +77,7 @@ it("uses canonical camera and progressive focus while preserving host context, e
   view.rerender(app("renamed-host", "Updated API data"));
   width = 390;
   act(() => resize());
-  expect(screen.getByRole("button")).toBe(button);
+  expect(screen.getByRole("button", {name: /API data:/})).toBe(button);
   expect(button.textContent).toBe("Updated API data: 1");
   expect(requestData).toHaveBeenCalledTimes(1);
   expect(document.querySelector("[data-flute-project]")!.getAttribute("data-flute-project")).toBe("renamed-host");

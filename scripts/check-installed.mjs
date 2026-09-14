@@ -106,6 +106,10 @@ try {
   await page.screenshot({path:path.join(root,'test-results/installed-preview.png'),fullPage:true});
   await page.setViewportSize({width:390,height:844});
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,'Preview must fit a mobile viewport');
+  if(process.env.FLUTE_VERIFY_ITERATE==='1') {
+    const {verifyIteration}=await import('./verify-iteration.mjs');
+    await verifyIteration({page,host,origin,server,processes,waitFor,root,originalApp});
+  }
   await page.goto(origin);
   await page.getByText('Revenue: 12840',{exact:true}).waitFor();
   assert.equal(await page.locator('[data-flute-scene]').count(),0,'Ordinary host URL stays ordinary');

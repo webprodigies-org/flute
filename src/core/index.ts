@@ -7,3 +7,5 @@ export * from "./choreography";
 export * from "./export";
 
 export * from "./authoring";
+
+export * from "./preview";

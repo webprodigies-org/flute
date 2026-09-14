@@ -337,15 +337,17 @@ export const Motion = Surface;
 export type SceneErrorBoundaryProps = {
   children?: ReactNode;
   resetKey?: unknown;
+  onError?: (error: unknown) => void;
+  onReset?: () => void;
 };
 /** SOURCE OF TRUTH: scene render recovery.
  * WHAT: SceneErrorBoundary owns the scene fallback and resetKey adapter.
  * WHY: preserve a consistent recovery action for failed host components.
  * WHERE: react-error-boundary catches render failures; callers keep their existing API.
  */
-export function SceneErrorBoundary({ children, resetKey }: SceneErrorBoundaryProps) {
+export function SceneErrorBoundary({ children, resetKey, onError, onReset }: SceneErrorBoundaryProps) {
   return (
-    <ErrorBoundary FallbackComponent={SceneErrorFallback} resetKeys={[resetKey]}>
+    <ErrorBoundary FallbackComponent={SceneErrorFallback} resetKeys={[resetKey]} onError={onError} onReset={onReset}>
       {children}
     </ErrorBoundary>
   );
@@ -354,7 +356,7 @@ export function SceneErrorBoundary({ children, resetKey }: SceneErrorBoundaryPro
 function SceneErrorFallback({ error, resetErrorBoundary }: FallbackProps) {
   const message = error instanceof Error ? error.message : String(error);
   return (
-    <div role="alert">
+    <div role="alert" data-flute-error="">
       <strong>Unable to render the Flute scene.</strong>
       <p>{message}</p>
       <p>Correct the component or scene configuration, then retry.</p>

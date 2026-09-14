@@ -116,7 +116,7 @@ describe("trusted project commands", () => {
     const data = success(await run(root));
     const text = await readFile(path.join(root, "src/main.tsx"), "utf8");
     const id = data.project!.projectId;
-    const wrapperStart = '<FluteProjectPreview projectId="' + id + '" enabled={import.meta.env.DEV}>{';
+    const wrapperStart = '<FluteProjectPreview projectId="' + id + '" enabled={import.meta.env.DEV} hot={import.meta.hot}>{';
     expect(text).toContain(wrapperStart);
     expect(text.replace(/^import \{ ProjectPreview as FluteProjectPreview \} from "@flute\/scene\/preview";\n/, "")
       .replace(wrapperStart, "").replace("}</FluteProjectPreview>", "")).toBe(original);
