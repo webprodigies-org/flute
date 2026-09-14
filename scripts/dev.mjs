@@ -6,7 +6,7 @@ function start(args){const child=spawn(process.execPath,args,{stdio:'inherit',en
 start(['node_modules/vite/bin/vite.js',...process.argv.slice(2)]);
 if(existsSync('local-project/node_modules/@flute/scene/package.json')){
  const port=process.env.API_PORT??'5174';
- start(['local-project/node_modules/vite/bin/vite.js','--config','local-project/vite.config.ts','local-project','--host','127.0.0.1','--port',port,'--strictPort']);
+ start(['local-project/node_modules/vite/bin/vite.js','--config','local-project/vite.config.ts','local-project','--force','--host','127.0.0.1','--port',port,'--strictPort']);
  console.log(`Installed local project: http://127.0.0.1:${port}/?flute-preview=1`);
 }
 for(const signal of ['SIGINT','SIGTERM'])process.on(signal,()=>{for(const child of children)child.kill(signal)});

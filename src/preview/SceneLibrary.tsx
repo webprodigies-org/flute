@@ -14,8 +14,10 @@ export type SceneLibraryProps={sources?:Record<string,unknown>;bindings?:Record<
 const EMPTY_SOURCES:Record<string,unknown>={};
 const EMPTY_BINDINGS:Record<string,ComponentType>={};
 const ROW=150;
-const camera={perspective:1800,rotateX:30};
-const focus={distance:1720,fStop:2.8,focalLength:50,maxBlur:4};
+// Positive X tilt recedes at the top and approaches the viewer at the bottom.
+// The lens stays fixed at the viewport center while the entire list travels through it.
+const camera={perspective:1400,rotateX:42};
+const focus={distance:1400,fStop:1.4,focalLength:220,maxBlur:10};
 function selection(){return typeof location==='undefined'?undefined:new URL(location.href).searchParams.get('flute-scene')??undefined;}
 export function SceneLibrary({sources=EMPTY_SOURCES,bindings=EMPTY_BINDINGS,hot,backHref}:SceneLibraryProps){
  const [sceneId,setSceneId]=useState(selection);
@@ -44,7 +46,7 @@ export function SceneLibrary({sources=EMPTY_SOURCES,bindings=EMPTY_BINDINGS,hot,
     <div style={{height:`calc(100svh + ${Math.max(0,(catalog.scenes.length-2)*ROW)}px)`}}>
      <div className="flute-library-stage">
       <SceneErrorBoundary><Scene camera={camera} focus={focus} style={{width:'100%',height:'100%'}}>
-       <Surface id="scene-list" transform={{y:-scroll}} style={{position:'absolute',left:(width-planeWidth)/2,top:170,width:planeWidth,height:1}}>
+       <Surface id="scene-list" transform={{y:-scroll}} style={{position:'absolute',left:(width-planeWidth)/2,top:80,width:planeWidth,height:1}}>
         {scroll<300&&<Surface id="scene-list-heading" style={{position:'absolute',top:0,width:planeWidth,height:110}}><header className="flute-library-heading"><h1>Your scenes</h1><span>{catalog.scenes.length} perspectives</span></header></Surface>}
         {catalog.scenes.slice(start,end).map((scene,index)=>{const number=start+index;return <Surface key={scene.id} id={`scene-row-${scene.id}`} style={{position:'absolute',top:110+number*ROW,width:planeWidth,height:ROW}}>
           <a className="flute-scene-row" data-scene-id={scene.id} onFocus={event=>{if(event.currentTarget.matches(':focus-visible')&&scroller.current)scroller.current.scrollTop=Math.max(0,(number-1)*ROW)}} href={destination(scene.id)} onClick={event=>navigate(event,scene.id)}>
