@@ -19,6 +19,13 @@ const spatialDoc = `/** SOURCE OF TRUTH: evaluateScene, transformToCss, focusFor
  * WHERE: consumed by React adapter.
  */`;
 const valid = {
+ 'src/core/authoring.ts': `/** SOURCE OF TRUTH: getAuthoringGuide, reviewAuthoring, AuthoringGuideSchema.
+ * WHAT: define cinematic concepts and review.
+ * WHY: share capabilities across clients.
+ * WHERE: CLI and package consume these operations.
+ */
+ import {z} from 'zod'; export const AuthoringGuideSchema=z.strictObject({}); export function getAuthoringGuide(){return {};} export function reviewAuthoring(){return {};}`,
+
  'src/core/export.ts': `/** SOURCE OF TRUTH: ExportVideoSchema, CaptureManifestSchema.
  * WHAT: validate capture configuration.
  * WHY: share one export contract.
@@ -276,3 +283,7 @@ test("uniform blur classification cannot move into a renderer", () => rejects("s
 test('export UI cannot bypass the trusted command',()=>rejects('src/cli/bypass.ts',"import '../export/services';"));
 test('export commands cannot import Node effects',()=>rejects('src/export/commands.ts',"import 'node:fs';"));
 test('cascade builder cannot be reimplemented in React',()=>rejects('src/react/cascade.ts',"export function createCascadeTracks(){return [];}",'canonical-owner'));
+
+test('authoring concepts cannot acquire a competing CLI owner',()=>{
+ rejects('src/cli/guide.ts','export function getAuthoringGuide(){return {purpose:"copied"};}', 'canonical-owner');
+});

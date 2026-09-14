@@ -5,3 +5,5 @@ export * from "./resources";
 export * from "./project";
 export * from "./choreography";
 export * from "./export";
+
+export * from "./authoring";

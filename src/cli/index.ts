@@ -1,3 +1,4 @@
+import { RESOURCES } from "../core/resources";
 import { executeVideoExport } from "../export/commands";
 import { executeProjectCommand } from "../project/commands";
 import type { ProjectResult } from "../core/project";
@@ -10,8 +11,10 @@ import type { ProjectResult } from "../core/project";
 type Environment = { root: string; port?: string };
 type Execute = typeof executeProjectCommand;
 export type CliResult = { code: number; stdout: string; stderr: string };
-const usage = `Flute — install a live scene preview in a Vite React project.
+const usage = `Flute — cinematic 3D motion from your real application UI.
+Start with flute guide to learn spatial composition, camera, focus and motion.
 
+flute guide [--json]
 flute init [--project DIR] [--package TARBALL] [--url ORIGIN] [--no-open]
 flute open [--project DIR] [--url ORIGIN] [--no-open]
 flute load [--project DIR]
@@ -28,12 +31,18 @@ function output(result: ProjectResult, json: boolean): CliResult {
   const message = result.data.url ?? (result.data.project
     ? `Project ready: ${result.data.project.entry}${result.data.changed ? " (initialized)" : ""}.\nRun your existing dev server, then flute open --url http://127.0.0.1:PORT.`
     : "Project command completed.");
-  return { code: 0, stdout: (json ? JSON.stringify(result) : message) + "\n", stderr: "" };
+  return { code: 0, stdout: (json ? JSON.stringify(result) : message + "\nScene authoring: run npx flute guide before composing animations.") + "\n", stderr: "" };
 }
 export async function runCli(argv: string[], environment: Environment, execute: Execute = executeProjectCommand, exporter: typeof executeVideoExport = executeVideoExport): Promise<CliResult> {
   if (argv.length === 0 || (argv.length === 1 && ["--help", "-h", "help"].includes(argv[0])))
     return { code: 0, stdout: usage, stderr: "" };
   const [command, ...args] = argv;
+  if(command === "guide") {
+    if(args.length>1 || (args.length===1 && args[0]!=="--json"))return {code:2,stdout:"",stderr:"Usage: flute guide [--json]\n"};
+    const guide=RESOURCES["authoring-guide"]();
+    const text=[guide.purpose,guide.creativeFreedom,...guide.concepts.map(c=>`## ${c.title}\n${c.meaning}\nHow it works: ${c.mechanism}\nCreative choices: ${c.choices}\nWatch for: ${c.pitfalls}\nVerify: ${c.verify}`),"## Workflow\n"+guide.workflow.map((s,i)=>`${i+1}. ${s}`).join("\n"),"## Installed API and defaults\n"+JSON.stringify(guide.capabilities,null,2)].join("\n\n");
+    return {code:0,stdout:(args[0]==="--json"?JSON.stringify(guide):text)+"\n",stderr:""};
+  }
   const aliases = { init: "init-project", open: "open-preview", load: "load-project", validate: "validate-project" } as const;
   const fail = (message: string): CliResult => ({ code: 2, stdout: "", stderr: message + "\n\n" + usage });
   if (command !== "export" && !Object.hasOwn(aliases, command)) return fail(`Unknown command: ${command}`);

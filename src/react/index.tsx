@@ -14,6 +14,7 @@ import {
 } from "react";
 import {
   RESOURCES,
+  SCENE_BACKGROUND,
   cameraToCss,
   transformToCss,
   uniformFocusBlur,
@@ -183,11 +184,16 @@ export function Scene({
           data-flute-scene=""
           style={{
             ...style,
+            background: SCENE_BACKGROUND,
+            backgroundColor: SCENE_BACKGROUND,
+            backgroundImage: "none",
             position: style?.position ?? "relative",
             pointerEvents: "none",
             perspective: validCamera?.perspective ?? 1400,
             perspectiveOrigin: "50% 50%",
-            transformStyle: "preserve-3d",
+            // Keep the backdrop outside the 3D sorting context so negative-z UI stays visible.
+            // The inner camera stage preserves depth among all surfaces.
+            transformStyle: "flat",
           }}
         >
           <div

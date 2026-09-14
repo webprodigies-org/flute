@@ -25,7 +25,11 @@
     "setup:dashboard": "node scripts/setup-dashboard.mjs",
     "verify:dashboard": "npm run setup:dashboard && npm --prefix examples/dashboard-lab run build && node scripts/check-dashboard.mjs",
     "test:export": "vitest run tests/export tests/cli",
-    "export:dashboard": "npm --prefix examples/dashboard-lab run build && node scripts/render-dashboard.mjs"
+    "export:dashboard": "npm --prefix examples/dashboard-lab run build && node scripts/render-dashboard.mjs",
+    "test:authoring": "vitest run tests/core/authoring.test.ts tests/cli",
+    "setup:agent-lab": "node scripts/setup-agent-lab.mjs",
+    "publish:agent-trial": "node scripts/publish-agent-trial.mjs",
+    "verify:agent-trial": "npm run setup:dashboard && npm run setup:agent-lab && npm run publish:agent-trial && node scripts/check-agent-trial.mjs"
   },
   "dependencies": {
     "react-error-boundary": "6.1.5",
