@@ -1,5 +1,5 @@
 import { constants } from "node:fs";
-import { lstat, realpath, open, mkdir, rename, unlink } from "node:fs/promises";
+import { lstat, realpath, open, opendir, mkdir, rename, unlink } from "node:fs/promises";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { spawn } from "node:child_process";
@@ -39,18 +39,54 @@ export async function scopedPath(root: string, target: string): Promise<string> 
   }
   return current;
 }
-export async function readText(root: string, target: string): Promise<string | undefined> {
+export async function readText(root: string, target: string, maxBytes = 2_000_000): Promise<string | undefined> {
   const filename = await scopedPath(root, target);
   let handle;
   try {
     handle = await open(filename, constants.O_RDONLY | constants.O_NOFOLLOW);
     const stat = await handle.stat();
-    if (!stat.isFile() || stat.size > 2_000_000) throw fault("invalid-file", "Expected a regular project file under 2 MB.", target);
-    return await handle.readFile("utf8");
+    if (!Number.isSafeInteger(maxBytes) || maxBytes < 1 || maxBytes > 2_000_000)
+      throw fault("invalid-input", "Read limit must be between 1 and 2000000 bytes.", target);
+    if (!stat.isFile() || stat.size > maxBytes) throw fault("invalid-file", `Expected a regular project file at most ${maxBytes} bytes.`, target);
+    const buffer = Buffer.alloc(maxBytes + 1);
+    let length = 0;
+    while (length < buffer.length) {
+      const { bytesRead } = await handle.read(buffer, length, buffer.length - length, null);
+      if (bytesRead === 0) break;
+      length += bytesRead;
+    }
+    if (length > maxBytes) throw fault("invalid-file", `Project file exceeded ${maxBytes} bytes while reading.`, target);
+    return buffer.subarray(0, length).toString("utf8");
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") return undefined;
     throw error;
   } finally { await handle?.close(); }
+}
+// Bounded, nonrecursive transport only; commands choose directories, limits and eligible files.
+export async function scanDirectory(root: string, target: string, maxEntries: number): Promise<string[]> {
+  if (!Number.isSafeInteger(maxEntries) || maxEntries < 1 || maxEntries > 1024)
+    throw fault("invalid-input", "Directory limit must be between 1 and 1024 entries.", target);
+  const filename = await scopedPath(root, target);
+  let directory;
+  try { directory = await opendir(filename); }
+  catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return [];
+    throw error;
+  }
+  const entries: string[] = [];
+  for await (const entry of directory) {
+    if (entries.length >= maxEntries) throw fault("invalid-file", `Directory exceeds ${maxEntries} entries; reduce its size and retry.`, target);
+    entries.push(`${target}/${entry.name}`);
+  }
+  return entries.sort();
+}
+export async function isRegularFile(root: string, target: string): Promise<boolean> {
+  const filename = await scopedPath(root, target);
+  try { return (await lstat(filename)).isFile(); }
+  catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return false;
+    throw error;
+  }
 }
 export async function atomicWrite(root: string, target: string, content: string, expected: string | undefined) {
   const filename = await scopedPath(root, target);
