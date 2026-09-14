@@ -12,6 +12,7 @@ import { fileURLToPath } from 'node:url';
  * New external dependencies require an explicit layer decision here and a fixture.
  */
 const owners = new Map([
+  ...["getAuthoringGuide","reviewAuthoring","AuthoringGuideSchema"].map(name=>[name,"src/core/authoring.ts"]),
   ['ExportVideoSchema','src/core/export.ts'], ['CaptureManifestSchema','src/core/export.ts'], ['executeVideoExport','src/export/commands.ts'],
   ['executeProjectCommand', 'src/project/commands.ts'],
   ['InitProjectSchema', 'src/core/project.ts'],

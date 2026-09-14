@@ -2,6 +2,10 @@
 
 Wrap existing React UI in perspective surfaces, then animate the camera, surfaces and an independent 3D focus point. Components keep their providers, data and interactions.
 
+## For coding agents
+
+Start with `npx flute guide` (or `npx flute guide --json`) from the installed host project. It explains the cinematic concepts, creative choices, actual APIs and verification workflow. You do not need a reference scene. `getAuthoringGuide()` returns that same versioned contract; `reviewAuthoring({scene,motion})` checks technical metadata and supplies non-blocking artistic advice. The live renderer remains the authority on registered components and visual output.
+
 ## Run
 
 ```sh
@@ -99,7 +103,7 @@ Keep wrappers and child identity stable during edits. Adding/removing wrappers a
 | `demo/` | Storage study and provider/API-backed host components |
 | `scripts/check-architecture.mjs` | Executable dependency and named-owner checks |
 
-Inline SOURCE OF TRUTH comments explain WHAT, WHY and WHERE. Scene metadata never contains React instances, secrets or host database content. The CLI uses canonical project commands. Coding-agent conventions, saved recipes, hosted accounts and still-image output remain later work; Flute does not authenticate to AI providers.
+Inline SOURCE OF TRUTH comments explain WHAT, WHY and WHERE. Scene metadata never contains React instances, secrets or host database content. The CLI uses canonical project commands. Persistent agent sessions, saved recipes, hosted accounts and still-image output remain later work; Flute does not authenticate to AI providers.
 
 ## Verify
 
@@ -120,12 +124,9 @@ See [performance evidence](docs/architecture.md#progressive-focus-performance) f
 
 `npm run verify:launch` includes the existing renderer/performance suite, project command and preview tests, CLI tests, and an independently installed tarball fixture. The installed fixture starts its own Vite server on a free configured port, checks source/config preservation and repeated init, rejects missing/wrong servers, exercises a provider-backed live counter, and checks the normal route and production preview exclusion. It cleans up its temporary project and servers. npm cache must contain the fixture dependencies for its offline initial install.
 
-## Cinematic defaults and agent guidance
+## Cinematic authoring
 
-- Use existing components with their original theme, classes and providers. Wrappers own spatial placement, not a redesigned UI. Carry a transparent element's original backing paint when lifting it; do not invent borders, colors or corner radii. Verify computed styles against the normal view.
-- Motion defaults to `speed: 0.5` and `easing: "cinematic"`: gentle starts and finishes. `durationMs` and keyframes are authored time; pass elapsed presentation time to Scene and use `motionDuration(recipe)` for controls/export duration. Host animations read `useSceneTime()` instead of starting another clock. An 11-second recipe plays for 22 seconds. Creators may explicitly override speed/easing.
-- Use `createCascadeTracks({items:[{id:"first"},{id:"second"}]})` for ordered entrances. It creates varying depth and overlapping settling, like a shrinking staircase. `cascade:false` opts out; depth, depthStep, staggerMs, entranceMs and item atMs are explicit controls. Do not copy its math into generated scenes.
-- Prefer one continuous eased camera move. `cinematicTimeAtProgress` locates corresponding entrance times along that curve. Keep focus independent of component IDs, and use a narrow radius when the shot should emphasize one or two items.
+`src/core/authoring.ts` owns the installed conceptual guide. The CLI, package consumers and future interfaces can read the same `getAuthoringGuide()` contract and `reviewAuthoring()` operation. Defaults derive from the actual scene/motion schemas. No angle, layout, camera path, palette or entrance pattern is prescribed. Review advice does not block deliberate creative overrides. See `npx flute guide` for the complete concepts and API; avoid keeping a competing prompt or copied guide in an agent-specific file.
 
 ## Export MP4 locally
 

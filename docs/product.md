@@ -17,3 +17,5 @@ Product login, collaboration, hosted AI infrastructure and still-image export ar
 See architecture.md for canonical technical ownership, boundaries and verification.
 
 The user explicitly expanded this iteration to include downloadable MP4 video. Export uses the same scene clock as live preview; it does not depend on real-time playback keeping up. Default export is 60 FPS, with 30 and 120 FPS options. Native preview cadence follows the display and is distinct from an encoded frame rate.
+
+The installed CLI teaches cinematic concepts through `flute guide`, backed by the same structured authoring contract available to package clients. It explains choices and their consequences rather than forcing a common design. Existing coding agents compose real UI through the canonical API; Flute does not supply an AI subscription, builder or automatic scene generation service. Technical validation and artistic advice are separate. A fresh GPT-6 Astra trial creating three distinct scenes tests discoverability without relying on the previous examples; its result does not guarantee every LLM will produce good art.
