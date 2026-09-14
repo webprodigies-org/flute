@@ -6,6 +6,7 @@ import { fault } from "./errors";
  * WHY: text surgery preserves original providers, comments and formatting without executing config.
  * WHERE: commands.ts supplies file text; services.ts alone reads or writes files.
  */
+const sceneModulesAttribute = `sceneModules={import.meta.env.DEV ? import.meta.glob("/src/flute/scenes/*.{scene.json,tsx}") : undefined}`;
 const alias = "FluteProjectPreview";
 const moduleName = "@flute/scene/preview";
 function unsupported(message: string): never { throw fault("unsupported-project", message); }
@@ -191,14 +192,20 @@ export function inspectEntry(source: string, filename: string, projectId: string
       || argument.closingElement.tagName.getText(file) !== alias)
       throw fault("conflict", "Existing Flute import/wrapper differs from the generated integration.", filename);
     const attributes = argument.openingElement.attributes.properties;
-    if ((attributes.length !== 2 && attributes.length !== 3)
+    if ((attributes.length !== 2 && attributes.length !== 3 && attributes.length !== 4)
       || attributes[0].getText(file) !== 'projectId="' + projectId + '"'
       || attributes[1].getText(file).replace(/\s/g, "") !== "enabled={import.meta.env.DEV}"
-      || (attributes.length === 3 && attributes[2].getText(file).replace(/\s/g, "") !== "hot={import.meta.hot}"))
+      || (attributes.length >= 3 && attributes[2].getText(file).replace(/\s/g, "") !== "hot={import.meta.hot}")
+      || (attributes.length === 4 && attributes[3].getText(file).replace(/\s/g, "") !== sceneModulesAttribute.replace(/\s/g,"")))
       throw fault("conflict", "Flute project identity or development gate changed.", filename);
     let aliases = 0;
     walk(file, node => { if (ts.isIdentifier(node) && node.text === alias) aliases++; });
     if (aliases !== 3) throw fault("conflict", "Duplicate Flute integration.", filename);
+    if(attributes.length<4){
+      const insertion=argument.openingElement.getEnd()-1;
+      const addition=(attributes.length===2?' hot={import.meta.hot}':'')+' '+sceneModulesAttribute;
+      return {text:source.slice(0,insertion)+addition+source.slice(insertion),integrated:true};
+    }
     return { text: source, integrated: true };
   }
   let reserved = false;
@@ -208,7 +215,7 @@ export function inspectEntry(source: string, filename: string, projectId: string
   const end = argument.getEnd();
   const newline = source.includes("\r\n") ? "\r\n" : "\n";
   const prefix = 'import { ProjectPreview as ' + alias + ' } from "' + moduleName + '";' + newline;
-  const wrapped = "<" + alias + ' projectId="' + projectId + '" enabled={import.meta.env.DEV} hot={import.meta.hot}>{'
+  const wrapped = "<" + alias + ' projectId="' + projectId + '" enabled={import.meta.env.DEV} hot={import.meta.hot} ' + sceneModulesAttribute + '>{'
     + source.slice(start, end) + "}</" + alias + ">";
   const insertion = file.statements.find(ts.isImportDeclaration)!.getStart(file);
   if (insertion > start) unsupported("Place React imports before the root render call.");

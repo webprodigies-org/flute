@@ -1,0 +1,52 @@
+{
+  "version": 1,
+  "id": "diagonal",
+  "title": "Across the workspace",
+  "description": "Near and far corners move through focus.",
+  "definition": {
+    "width": 1400,
+    "height": 1000,
+    "scene": {
+      "version": 3,
+      "camera": {
+        "perspective": 1800,
+        "rotateY": -28,
+        "rotateX": 18,
+        "x": -180,
+        "y": 80,
+        "z": 340
+      },
+      "focus": {
+        "distance": 1460,
+        "fStop": 4,
+        "maxBlur": 8
+      },
+      "nodes": [
+        {
+          "id": "dashboard"
+        }
+      ]
+    },
+    "motion": {
+      "durationMs": 8000,
+      "tracks": [
+        {
+          "target": {
+            "kind": "camera"
+          },
+          "property": "x",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": -300
+            },
+            {
+              "timeMs": 8000,
+              "value": -60
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

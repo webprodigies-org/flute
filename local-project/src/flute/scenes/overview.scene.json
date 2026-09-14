@@ -1,0 +1,68 @@
+{
+  "version": 1,
+  "id": "overview",
+  "title": "A wider perspective",
+  "description": "Pull away to reveal the complete workspace.",
+  "definition": {
+    "width": 1400,
+    "height": 1000,
+    "scene": {
+      "version": 3,
+      "camera": {
+        "perspective": 1800,
+        "rotateY": -18,
+        "rotateX": 10,
+        "x": -70,
+        "y": 0,
+        "z": 150
+      },
+      "focus": {
+        "distance": 1650,
+        "fStop": 4,
+        "maxBlur": 8
+      },
+      "nodes": [
+        {
+          "id": "dashboard"
+        }
+      ]
+    },
+    "motion": {
+      "durationMs": 8000,
+      "tracks": [
+        {
+          "target": {
+            "kind": "camera"
+          },
+          "property": "x",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": -190
+            },
+            {
+              "timeMs": 8000,
+              "value": 50
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "camera"
+          },
+          "property": "z",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 600
+            },
+            {
+              "timeMs": 8000,
+              "value": 0
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,52 @@
+{
+  "version": 1,
+  "id": "sidebar-survey",
+  "title": "Along the sidebar",
+  "description": "A close camera survey, from top to bottom.",
+  "definition": {
+    "width": 1400,
+    "height": 1000,
+    "scene": {
+      "version": 3,
+      "camera": {
+        "perspective": 1800,
+        "rotateY": -24,
+        "rotateX": 14,
+        "x": -420,
+        "y": -240,
+        "z": 430
+      },
+      "focus": {
+        "distance": 1370,
+        "fStop": 4,
+        "maxBlur": 8
+      },
+      "nodes": [
+        {
+          "id": "dashboard"
+        }
+      ]
+    },
+    "motion": {
+      "durationMs": 8000,
+      "tracks": [
+        {
+          "target": {
+            "kind": "camera"
+          },
+          "property": "y",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": -370
+            },
+            {
+              "timeMs": 8000,
+              "value": -20
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

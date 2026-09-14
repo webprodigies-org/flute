@@ -13,3 +13,6 @@ test-results/
 /MORPHITE-GUARDRAIL-v2.md
 
 .test-dist/
+
+.local-package/
+local-project/.flute/

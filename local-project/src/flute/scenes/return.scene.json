@@ -1,0 +1,68 @@
+{
+  "version": 1,
+  "id": "return",
+  "title": "Back to the whole",
+  "description": "A gentle retreat from detail to context.",
+  "definition": {
+    "width": 1400,
+    "height": 1000,
+    "scene": {
+      "version": 3,
+      "camera": {
+        "perspective": 1800,
+        "rotateY": 20,
+        "rotateX": -12,
+        "x": 170,
+        "y": 0,
+        "z": 450
+      },
+      "focus": {
+        "distance": 1350,
+        "fStop": 4,
+        "maxBlur": 8
+      },
+      "nodes": [
+        {
+          "id": "dashboard"
+        }
+      ]
+    },
+    "motion": {
+      "durationMs": 8000,
+      "tracks": [
+        {
+          "target": {
+            "kind": "camera"
+          },
+          "property": "x",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 50
+            },
+            {
+              "timeMs": 8000,
+              "value": 290
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "camera"
+          },
+          "property": "z",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 600
+            },
+            {
+              "timeMs": 8000,
+              "value": 0
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite --host 127.0.0.1",
+    "dev": "node scripts/dev.mjs",
     "build": "npm run lint:architecture && tsc --noEmit && vite build && npm run build:library && npm run build:cli",
     "typecheck": "tsc --noEmit",
     "test:core": "vitest run tests/core",
@@ -25,7 +25,11 @@
     "test:authoring": "vitest run tests/core/authoring.test.ts tests/cli",
     "build:test": "vite build --config vite.test.config.ts",
     "verify:iterate": "npm run verify:launch && npm run test:export && npm run test:iterate",
-    "test:iterate": "node scripts/check-iterate.mjs"
+    "test:iterate": "node scripts/check-iterate.mjs",
+    "verify:reuse": "npm run verify:iterate && npm run test:recipes && npm run test:library",
+    "test:recipes": "vitest run tests/core/recipes.test.ts tests/project/recipes.test.ts",
+    "test:library": "node scripts/check-library.mjs",
+    "setup:local": "node scripts/setup-local.mjs"
   },
   "dependencies": {
     "react-error-boundary": "6.1.5",

@@ -1,11 +1,10 @@
 import {test,expect} from '@playwright/test';
 test('real entry has honest empty state and no demo routes or fake playback',async({page})=>{
  await page.goto('/');
- await expect(page.getByRole('heading',{name:/A new perspective/})).toBeVisible();
- await expect(page.getByRole('button',{name:'Play',exact:true})).toBeDisabled();
- await expect(page.getByRole('button',{name:'Export',exact:true})).toBeDisabled();
- await page.getByText('Get started',{exact:true}).click();
- await expect(page.getByText(/Install the Flute package/)).toBeVisible();
+ await expect(page.getByRole('heading',{name:/A place for every perspective/})).toBeVisible();
+ await expect(page.getByRole('button',{name:'Play',exact:true})).toHaveCount(0);
+ await page.getByText('Connect your first scene',{exact:true}).click();
+ await expect(page.getByText(/Save each recipe/)).toBeVisible();
  await page.setViewportSize({width:390,height:844});
  expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBe(390);
 });

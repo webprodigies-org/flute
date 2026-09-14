@@ -1,0 +1,52 @@
+{
+  "version": 1,
+  "id": "revenue-detail",
+  "title": "The growth story",
+  "description": "A tight pass over the revenue chart.",
+  "definition": {
+    "width": 1400,
+    "height": 1000,
+    "scene": {
+      "version": 3,
+      "camera": {
+        "perspective": 1800,
+        "rotateY": 18,
+        "rotateX": -8,
+        "x": 140,
+        "y": 80,
+        "z": 600
+      },
+      "focus": {
+        "distance": 1200,
+        "fStop": 4,
+        "maxBlur": 8
+      },
+      "nodes": [
+        {
+          "id": "dashboard"
+        }
+      ]
+    },
+    "motion": {
+      "durationMs": 8000,
+      "tracks": [
+        {
+          "target": {
+            "kind": "camera"
+          },
+          "property": "x",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 20
+            },
+            {
+              "timeMs": 8000,
+              "value": 260
+            }
+          ]
+        }
+      ]
+    }
+  }
+}
