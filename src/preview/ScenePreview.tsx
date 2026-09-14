@@ -4,6 +4,8 @@ import { SUPPORTED_EXPORT_FPS, ExportFrameRateSchema, type PreviewDefinitionInpu
 import { Scene, SceneErrorBoundary, useSceneCapture } from "../react";
 import { usePreviewSession } from "./session";
 import { usePreviewConnection, type PreviewHot } from "./connection";
+import { BrandAttribution } from "./BrandAttribution";
+import { GettingStarted } from "./GettingStarted";
 import { previewTheme } from "./theme";
 
 /** SOURCE OF TRUTH: ScenePreview.
@@ -148,9 +150,7 @@ export function ScenePreview({definition: input, children, title = "Untitled sce
           </div>
           <ExportMenu disabled={blocked || !session.durationMs} panelHost={exportPanel}/>
         </div>
-        {!definition && <details className="flute-onboarding"><summary className="flute-control">Get started</summary>
-          <p>Install the Flute package in your project, run <code>flute init</code>, and keep your app's dev server running. Your agent can read <code>flute guide</code> and use <code>ScenePreview</code> to connect real components.</p>
-        </details>}
+        {!definition && <GettingStarted/>}
         <div className="flute-dock">
           <button className="flute-control flute-primary flute-icon" disabled={blocked || !session.durationMs}
             aria-label={session.playing ? "Pause" : session.timeMs >= session.durationMs && session.durationMs ? "Replay" : "Play"} onClick={session.toggle}>
@@ -162,7 +162,7 @@ export function ScenePreview({definition: input, children, title = "Untitled sce
             onChange={event => session.seek(Number(event.target.value))}/>
           <output className="flute-time" data-testid="scene-time">{timeLabel(session.timeMs)} / {timeLabel(session.durationMs)}</output>
         </div>
-        <span className="flute-status" role="status"><span className="flute-status-dot"/>{stateText}</span>
+        <div className="flute-preview-meta"><span className="flute-status" role="status"><span className="flute-status-dot"/>{stateText}</span><BrandAttribution/></div>
       </div>
     </footer>
   </main>;
