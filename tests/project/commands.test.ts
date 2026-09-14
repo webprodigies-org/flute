@@ -6,7 +6,7 @@ import { createServer, type Server } from "node:http";
 import { executeProjectCommand } from "../../src/project/commands";
 import { ProjectResultSchema, type ProjectResult } from "../../src/core/project";
 import * as services from "../../src/project/services";
-import { htmlEntry, inspectEntry } from "../../src/project/vite";
+import { generatedPreview, htmlEntry, inspectEntry } from "../../src/project/vite";
 import { RESOURCES } from "../../src/core/resources";
 import { FLUTE_BRAND } from "../../src/core/branding";
 
@@ -97,7 +97,7 @@ describe("trusted project commands", () => {
     let entryRequests = 0;
     const url = await server(route => ({text: route === "/"
       ? '<script type="module" src="/src/main.tsx"></script>'
-      : ++entryRequests < 3 ? 'old entry' : '@flute ProjectPreview ' + project.projectId}));
+      : ++entryRequests < 3 ? 'old entry' : 'import { FluteProjectPreview } from \"/src/flute/ProjectPreview.tsx\"; ' + project.projectId}));
     expect(success(await run(root,"open-preview",{url,launch:false})).url).toContain("flute-preview=1");
     expect(entryRequests).toBe(3);
   });
@@ -118,9 +118,9 @@ describe("trusted project commands", () => {
     const data = success(await run(root));
     const text = await readFile(path.join(root, "src/main.tsx"), "utf8");
     const id = data.project!.projectId;
-    const wrapperStart = '<FluteProjectPreview projectId="' + id + '" enabled={import.meta.env.DEV} hot={import.meta.hot} sceneModules={import.meta.env.DEV ? import.meta.glob("/src/flute/scenes/*.{scene.json,tsx}") : undefined}>{';
+    const wrapperStart = '<FluteProjectPreview projectId="' + id + '" enabled={import.meta.env.DEV}>{';
     expect(text).toContain(wrapperStart);
-    expect(text.replace(/^import \{ ProjectPreview as FluteProjectPreview \} from "@flute\/scene\/preview";\n/, "")
+    expect(text.replace(/^import \{ FluteProjectPreview \} from "\.\/flute\/ProjectPreview";\n/, "")
       .replace(wrapperStart, "").replace("}</FluteProjectPreview>", "")).toBe(original);
     expect(success(await run(root)).changed).toBe(false);
     for (const operation of ["load-project", "validate-project"]) expect(success(await run(root, operation)).project).toEqual(data.project);
@@ -438,9 +438,121 @@ describe("installed coding-agent handoff", () => {
   });
 });
 
-it('upgrades a legacy generated wrapper to lazy source discovery without replacing providers',async()=>{
- const root=await fixture();success(await run(root));const filename=path.join(root,'src/main.tsx');const current=await readFile(filename,'utf8');
- const legacy=current.replace(' sceneModules={import.meta.env.DEV ? import.meta.glob("/src/flute/scenes/*.{scene.json,tsx}") : undefined}','');await writeFile(filename,legacy);
- expect(success(await run(root)).changed).toBe(true);expect(await readFile(filename,'utf8')).toBe(current);expect(success(await run(root)).changed).toBe(false);
- const wrong=current.replace('/src/flute/scenes/*.{scene.json,tsx}','/../*.tsx');await writeFile(filename,wrong);failure(await run(root),'conflict');expect(await readFile(filename,'utf8')).toBe(wrong);
+describe("generated preview refresh boundary setup", () => {
+  const adapterPath = "src/flute/ProjectPreview.tsx";
+  function legacyEntry(id: string, version: number) {
+    const props = `projectId="${id}" enabled={import.meta.env.DEV}`
+      + (version >= 3 ? ' hot={import.meta.hot}' : '')
+      + (version >= 4 ? ' sceneModules={import.meta.env.DEV ? import.meta.glob("/src/flute/scenes/*.{scene.json,tsx}") : undefined}' : '');
+    return 'import { ProjectPreview as FluteProjectPreview } from "@flute/scene/preview";\n'
+      + original.replace('<StrictMode>', `<FluteProjectPreview ${props}>{<StrictMode>`)
+        .replace('</StrictMode>,', '</StrictMode>}</FluteProjectPreview>,');
+  }
+  it.each([2, 3, 4])("upgrades generated v%s props while preserving identity and providers", async version => {
+    const root = await fixture();
+    const first = success(await run(root));
+    const current = await readFile(path.join(root, "src/main.tsx"), "utf8");
+    await rm(path.join(root, adapterPath));
+    await put(root, "src/main.tsx", legacyEntry(first.project!.projectId, version));
+    failure(await run(root, "load-project"), "incomplete-setup");
+    const upgraded = success(await run(root));
+    expect(upgraded.project).toEqual(first.project);
+    expect(upgraded.changed).toBe(true);
+    expect(await readFile(path.join(root, "src/main.tsx"), "utf8")).toBe(current);
+    expect(await readFile(path.join(root, adapterPath), "utf8")).toBe(generatedPreview("src/main.tsx").text);
+    expect(success(await run(root)).changed).toBe(false);
+  });
+  it("rejects a changed legacy glob without creating the adapter or a journal", async () => {
+    const root = await fixture();
+    const first = success(await run(root));
+    await rm(path.join(root, adapterPath));
+    const dirty = legacyEntry(first.project!.projectId, 4).replace('/src/flute/scenes/*.{scene.json,tsx}', '/../*.tsx');
+    await put(root, "src/main.tsx", dirty);
+    failure(await run(root), "conflict");
+    expect(await readFile(path.join(root, "src/main.tsx"), "utf8")).toBe(dirty);
+    expect(await readdir(path.join(root, ".flute"))).toEqual(["project.json"]);
+    expect(await readdir(path.join(root, "src/flute"))).not.toContain("ProjectPreview.tsx");
+  });
+  it.each([adapterPath, "src/main.tsx", ".flute/project.json"])("recovers interruption at %s with one adapter and the same identity", async target => {
+    const root = await fixture();
+    const write = services.atomicWrite;
+    vi.spyOn(services, "atomicWrite").mockImplementation(async (...args) => {
+      if (args[1] === target) throw new Error("interrupted");
+      return write(...args);
+    });
+    failure(await run(root), "project-error");
+    const pending = JSON.parse(await readFile(path.join(root, ".flute/pending.json"), "utf8"));
+    vi.restoreAllMocks();
+    expect(success(await run(root)).project).toEqual(pending.project);
+    expect(success(await run(root)).changed).toBe(false);
+    expect(await readFile(path.join(root, adapterPath), "utf8")).toBe(generatedPreview("src/main.tsx").text);
+  });
+  it("resumes a journal written by the older installer after its entry write", async () => {
+    const root = await fixture();
+    const project = {version: 1, projectId: "36c238cf-44e8-43be-b72a-e5196b075598", entry: "src/main.tsx", packageManager: "npm"};
+    await put(root, ".flute/pending.json", JSON.stringify({project, original}));
+    await put(root, "src/main.tsx", legacyEntry(project.projectId, 4));
+    expect(success(await run(root)).project).toEqual(project);
+    expect(success(await run(root)).changed).toBe(false);
+  });
+  it("refuses user adapter content before any mutation, then recovers after it is moved", async () => {
+    const root = await fixture();
+    await put(root, adapterPath, "// user file");
+    const write = vi.spyOn(services, "atomicWrite");
+    failure(await run(root), "conflict");
+    expect(write).not.toHaveBeenCalled();
+    expect(await readFile(path.join(root, adapterPath), "utf8")).toBe("// user file");
+    await rm(path.join(root, adapterPath));
+    success(await run(root));
+  });
+  it("refuses an adapter created during npm before writing the handoff or entry, then recovers", async () => {
+    const root = await fixture({installed: false});
+    await put(root, "flute.tgz", "fixture transport only");
+    vi.spyOn(services, "installPackage").mockImplementation(async project => {
+      await installFixture(project);
+      await put(project, adapterPath, "// concurrent user file");
+    });
+    failure(await run(root, "init-project", {packageSource: "./flute.tgz"}), "conflict");
+    expect(await readdir(root)).not.toContain("FLUTE.md");
+    expect(await readFile(path.join(root, "src/main.tsx"), "utf8")).toBe(original);
+    expect(await readFile(path.join(root, adapterPath), "utf8")).toBe("// concurrent user file");
+    await rm(path.join(root, adapterPath));
+    success(await run(root));
+  });
+  it("refuses adapter edits on retry and load and can repair a missing generated file", async () => {
+    const root = await fixture();
+    success(await run(root));
+    await put(root, adapterPath, "// user revision");
+    failure(await run(root), "conflict");
+    failure(await run(root, "load-project"), "conflict");
+    expect(await readFile(path.join(root, adapterPath), "utf8")).toBe("// user revision");
+    await rm(path.join(root, adapterPath));
+    failure(await run(root, "load-project"), "conflict");
+    expect(success(await run(root)).changed).toBe(true);
+    success(await run(root, "load-project"));
+  });
+  it.each(["js", "ts", "jsx", "mjs", "mts", "json"])("refuses a shadowing %s sibling before any setup write", async extension => {
+    const root = await fixture();
+    const sibling = "src/flute/ProjectPreview." + extension;
+    await put(root, sibling, "// unrelated file");
+    const write = vi.spyOn(services, "atomicWrite");
+    failure(await run(root), "conflict");
+    expect(write).not.toHaveBeenCalled();
+    expect(await readFile(path.join(root, sibling), "utf8")).toBe("// unrelated file");
+  });
+  it("refuses config-less installation before any mutation", async () => {
+    const root = await fixture();
+    await rm(path.join(root, "vite.config.ts"));
+    const write = vi.spyOn(services, "atomicWrite");
+    failure(await run(root), "unsupported-project");
+    expect(write).not.toHaveBeenCalled();
+  });
+  it("denies symlinked adapter directories before writing", async () => {
+    const root = await fixture();
+    const outside = await fixture();
+    await symlink(path.join(outside, "src"), path.join(root, "src/flute"));
+    failure(await run(root), "denied-path");
+    expect(await readdir(root)).not.toContain(".flute");
+    expect(await readdir(path.join(outside, "src"))).toEqual(["main.tsx"]);
+  });
 });
