@@ -11,7 +11,7 @@ npm ci
 npm run dev
 ```
 
-The browser opens the real product shell in its empty state. It does not pretend to be connected to another app. Demo apps and practice screens have been removed.
+Open the dev-server URL for the real scene library. An unconnected project starts empty. The newly authorized `local-project/` is a separate installed host with ten editable scenes; run `npm run build && npm run setup:local` before `npm run dev` to enable its second local URL. The old demos remain removed.
 
 ## Install into an existing app
 
@@ -38,7 +38,9 @@ Inside the installed project, `npx flute guide` gives the version-matched cinema
 
 The shared interface provides play/pause, replay, seeking, responsive framing, reduced-motion handling, validation diagnostics and an export command. No builder or interactive focus editor is included. Empty/static scenes disable unavailable actions. Invalid metadata retains the last valid settings and cursor; corrections resume the same host tree. A component that throws is recovered through the shared error boundary, so that failed subtree may remount. A full development-server reload can reset in-memory state.
 
-`ProjectPreview` is the guarded bootstrap around an unmodified application. For an authored scene, use `ScenePreview` on its own application route and open that route directly, without the bootstrap `flute-preview=1` query. Do not nest preview shells. Saved-route discovery remains a later slice.
+`ProjectPreview` is the development-only entry adapter. Initialization installs a lazy module glob; rerunning `flute init` upgrades an older generated wrapper. Open `?flute-preview=1` for the scene list. Every `src/flute/scenes/<id>.scene.json` plus matching `<id>.tsx` file pair appears automatically. The recipe is `{version:1,id,title,description?,definition}`; its component returns real Surface subtrees and the original providers it needs. Keep helper modules outside that directory. No separate list registration is required.
+
+Click a row or open `?flute-preview=1&flute-scene=<id>` to watch it with the shared bottom controls. `flute scenes --json`, `flute load --scene <id> --json` and `flute open --scene <id> --url http://127.0.0.1:5173` use the same validated catalog. Source persists as normal project files; playback time and component state do not persist through full reloads. For a custom low-level route, ScenePreview remains available without the bootstrap query. Do not nest preview shells.
 
 ## Rendering and export
 
@@ -58,4 +60,4 @@ Choose 30, 60 or 120 FPS. FFmpeg on PATH and Playwright Chromium are required. U
 
 Read [architecture](docs/architecture.md) for owners and the linear data flow. [Product](docs/product.md) records the current experience and boundaries. Morphite owns the vertical slice matrix and task stages. Those are the only two files permitted in `docs/`.
 
-`npm run verify:iterate` runs the current product gate, including installed-app HMR, schema/syntax/render-error recovery, reconnection, capture, mobile/keyboard behavior and architecture checks. Test inputs live under `tests/` and disposable temporary directories. `vite.test.config.ts` builds them into ignored `.test-dist`; the normal production build contains only the product entry, package and CLI.
+`npm run verify:reuse` runs the current product gate, including installed-app HMR, schema/syntax/render-error recovery, reconnection, capture, mobile/keyboard behavior and architecture checks. Test inputs live under `tests/` and disposable temporary directories. `vite.test.config.ts` builds them into ignored `.test-dist`; the normal production build contains only the product entry, package and CLI.

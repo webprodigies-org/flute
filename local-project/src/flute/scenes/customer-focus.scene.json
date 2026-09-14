@@ -1,0 +1,52 @@
+{
+  "version": 1,
+  "id": "customer-focus",
+  "title": "Closer to the people",
+  "description": "Settle on the customer overview.",
+  "definition": {
+    "width": 1400,
+    "height": 1000,
+    "scene": {
+      "version": 3,
+      "camera": {
+        "perspective": 1800,
+        "rotateY": -15,
+        "rotateX": 12,
+        "x": 380,
+        "y": -80,
+        "z": 560
+      },
+      "focus": {
+        "distance": 1240,
+        "fStop": 4,
+        "maxBlur": 8
+      },
+      "nodes": [
+        {
+          "id": "dashboard"
+        }
+      ]
+    },
+    "motion": {
+      "durationMs": 8000,
+      "tracks": [
+        {
+          "target": {
+            "kind": "camera"
+          },
+          "property": "x",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 260
+            },
+            {
+              "timeMs": 8000,
+              "value": 500
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

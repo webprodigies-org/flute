@@ -19,6 +19,25 @@ const spatialDoc = `/** SOURCE OF TRUTH: evaluateScene, transformToCss, focusFor
  * WHERE: consumed by React adapter.
  */`;
 const valid = {
+ 'src/core/recipes.ts':`/** SOURCE OF TRUTH: SceneRecipeSchema, loadSceneRecipes, ListScenesSchema, LoadSceneSchema, OpenSceneSchema.
+ * WHAT: validate source recipes and selection.
+ * WHY: browser and CLI share catalog policy.
+ * WHERE: project commands and SceneLibrary call the owner.
+ */
+ import {z} from 'zod'; export const SceneRecipeSchema=z.strictObject({}); export const ListScenesSchema=z.strictObject({}); export const LoadSceneSchema=z.strictObject({}); export const OpenSceneSchema=z.strictObject({}); export function loadSceneRecipes(){return {};}`,
+ 'src/project/recipes.ts':`/** SOURCE OF TRUTH: executeRecipeCommand.
+ * WHAT: load project scene recipes.
+ * WHY: reads stay scoped behind commands.
+ * WHERE: CLI calls this owner.
+ */
+ export function executeRecipeCommand(){return {};}`,
+ 'src/preview/SceneLibrary.tsx':`/** SOURCE OF TRUTH: SceneLibrary.
+ * WHAT: present the discovered source catalog.
+ * WHY: share browser scene entry behavior.
+ * WHERE: installed projects call this owner.
+ */
+ export function SceneLibrary(){return null;}`,
+
  'src/core/preview.ts': `/** SOURCE OF TRUTH: PreviewDefinitionSchema, presentPreview.
  * WHAT: validate source preview revisions.
  * WHY: preserve a canonical presentation boundary.
@@ -309,3 +328,8 @@ test('authoring concepts cannot acquire a competing CLI owner',()=>{
 
 test('preview cannot establish a competing scene validator',()=>rejects('src/preview/copied.ts','export function presentPreview(){return {};}', 'canonical-owner'));
 test('React cannot bypass the preview session owner',()=>rejects('src/react/copied.ts','export function usePreviewSession(){return {};}', 'canonical-owner'));
+
+test('recipe loader cannot be redeclared in preview',()=>{assert.ok(fixture('src/preview/fork.ts','export function loadSceneRecipes(){return {}}').some(issue=>issue.rule==='canonical-owner'))});
+test('recipe commands may use scoped services while preview cannot',()=>{assert.ok(fixture('src/preview/leak.ts',"import {readText} from '../project/services'; export const leaked=readText;").some(issue=>issue.rule==='module-boundary'))});
+
+test('CLI cannot duplicate scene request schemas',()=>{assert.ok(fixture('src/cli/repeated.ts',"import {z} from 'zod';export const OpenSceneSchema=z.strictObject({});").some(issue=>issue.rule==='canonical-owner'))});

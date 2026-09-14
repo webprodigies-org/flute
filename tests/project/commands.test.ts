@@ -116,7 +116,7 @@ describe("trusted project commands", () => {
     const data = success(await run(root));
     const text = await readFile(path.join(root, "src/main.tsx"), "utf8");
     const id = data.project!.projectId;
-    const wrapperStart = '<FluteProjectPreview projectId="' + id + '" enabled={import.meta.env.DEV} hot={import.meta.hot}>{';
+    const wrapperStart = '<FluteProjectPreview projectId="' + id + '" enabled={import.meta.env.DEV} hot={import.meta.hot} sceneModules={import.meta.env.DEV ? import.meta.glob("/src/flute/scenes/*.{scene.json,tsx}") : undefined}>{';
     expect(text).toContain(wrapperStart);
     expect(text.replace(/^import \{ ProjectPreview as FluteProjectPreview \} from "@flute\/scene\/preview";\n/, "")
       .replace(wrapperStart, "").replace("}</FluteProjectPreview>", "")).toBe(original);
@@ -322,4 +322,11 @@ describe("trusted project commands", () => {
     expect(() => inspectEntry(adapted + "\nconst stolen = FluteProjectPreview;", "main.tsx", id)).toThrow();
     expect(() => inspectEntry(original + "\nfunction another(createRoot: unknown) {}", "main.tsx", id)).toThrow();
   });
+});
+
+it('upgrades a legacy generated wrapper to lazy source discovery without replacing providers',async()=>{
+ const root=await fixture();success(await run(root));const filename=path.join(root,'src/main.tsx');const current=await readFile(filename,'utf8');
+ const legacy=current.replace(' sceneModules={import.meta.env.DEV ? import.meta.glob("/src/flute/scenes/*.{scene.json,tsx}") : undefined}','');await writeFile(filename,legacy);
+ expect(success(await run(root)).changed).toBe(true);expect(await readFile(filename,'utf8')).toBe(current);expect(success(await run(root)).changed).toBe(false);
+ const wrong=current.replace('/src/flute/scenes/*.{scene.json,tsx}','/../*.tsx');await writeFile(filename,wrong);failure(await run(root),'conflict');expect(await readFile(filename,'utf8')).toBe(wrong);
 });

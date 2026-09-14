@@ -18,7 +18,10 @@ export async function verifyIteration({page,host,origin,server,processes,waitFor
  await page.setViewportSize({width:1440,height:1000});
  await page.goto(origin);
  await page.waitForLoadState("networkidle");
- await expect(page.getByText('Revenue: 12840',{exact:true})).toBeVisible();
+ // Finish the initial temporary module-graph setup before measuring HMR identity.
+ await page.reload();
+ await page.waitForLoadState("networkidle");
+ await expect(page.getByText('Revenue: 12840',{exact:true})).toBeVisible().catch(async error=>{console.log('Iteration browser state:',await page.locator('body').innerText());await page.screenshot({path:path.join(root,'test-results/iteration-failure.png')});throw error});
  await page.getByRole('button',{name:'Inspect 0',exact:true}).click();
  await expect(page.getByRole('button',{name:'Inspect 1',exact:true})).toBeVisible();
  await page.evaluate(()=>window.hostIdentity=document.querySelector('[data-testid="host-revenue"]'));

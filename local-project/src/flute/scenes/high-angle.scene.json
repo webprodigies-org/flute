@@ -1,0 +1,52 @@
+{
+  "version": 1,
+  "id": "high-angle",
+  "title": "Looking down",
+  "description": "A measured journey from the upper corner.",
+  "definition": {
+    "width": 1400,
+    "height": 1000,
+    "scene": {
+      "version": 3,
+      "camera": {
+        "perspective": 1800,
+        "rotateY": 16,
+        "rotateX": 26,
+        "x": 0,
+        "y": -230,
+        "z": 310
+      },
+      "focus": {
+        "distance": 1490,
+        "fStop": 4,
+        "maxBlur": 8
+      },
+      "nodes": [
+        {
+          "id": "dashboard"
+        }
+      ]
+    },
+    "motion": {
+      "durationMs": 8000,
+      "tracks": [
+        {
+          "target": {
+            "kind": "camera"
+          },
+          "property": "x",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": -120
+            },
+            {
+              "timeMs": 8000,
+              "value": 120
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

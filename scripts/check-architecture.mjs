@@ -12,6 +12,8 @@ import { fileURLToPath } from 'node:url';
  * New external dependencies require an explicit layer decision here and a fixture.
  */
 const owners = new Map([
+  ...['SceneRecipeSchema','ListScenesSchema','LoadSceneSchema','OpenSceneSchema'].map(name=>[name,'src/core/recipes.ts']),['loadSceneRecipes','src/core/recipes.ts'],
+  ['executeRecipeCommand','src/project/recipes.ts'],['SceneLibrary','src/preview/SceneLibrary.tsx'],
   ["PreviewDefinitionSchema","src/core/preview.ts"], ["presentPreview","src/core/preview.ts"],
   ["ScenePreview","src/preview/ScenePreview.tsx"], ["usePreviewSession","src/preview/session.ts"],
   ...["getAuthoringGuide","reviewAuthoring","AuthoringGuideSchema"].map(name=>[name,"src/core/authoring.ts"]),
@@ -54,7 +56,7 @@ const normalize = name => path.posix.normalize(name.replaceAll('\\', '/').replac
 const sourcePattern = /\.(?:[cm]?[jt]sx?)$/;
 const layerOf = name => {
   if (/^src\/project\/errors(?:\.[cm]?[jt]s)?$/.test(name)) return 'projectErrors';
-  if (/^src\/project\/commands(?:\.[cm]?[jt]s)?$/.test(name)) return 'commands';
+  if (/^src\/project\/(?:commands|recipes)(?:\.[cm]?[jt]s)?$/.test(name)) return 'commands';
   if (/^src\/project\/services(?:\.[cm]?[jt]s$|\/|$)/.test(name)) return 'services';
   if (/^src\/export\/commands\.[cm]?[jt]s$/.test(name)) return 'exportCommands';
   if (name.startsWith('src/export/')) return 'exportServices';

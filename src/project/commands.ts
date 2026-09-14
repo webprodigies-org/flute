@@ -127,7 +127,7 @@ async function initialize(root: string, packageSource: string | undefined): Prom
       || !["missing-installation", ...(pending ? ["conflict", "invalid-file"] : [])].includes(String(error.code))) throw error;
   }
   const installSource = installed ? undefined : await sourceForInstall(root, packageSource);
-  if (saved.project && adapted.integrated && !pending && installed)
+  if (saved.project && adapted.integrated && adapted.text === host.source && !pending && installed)
     return { success: true, data: { project, changed: false } };
   const journal = pendingText ?? JSON.stringify({ project, original: host.source }, null, 2) + "\n";
   if (!pendingText) await services.atomicWrite(root, pendingPath, journal, undefined);
@@ -139,7 +139,7 @@ async function initialize(root: string, packageSource: string | undefined): Prom
   const after = await inspectProject(root);
   if (after.entry !== host.entry || after.source !== host.source)
     throw fault("conflict", "Project entry changed during installation; retry after reviewing it.", host.entry);
-  if (!adapted.integrated) await services.atomicWrite(root, host.entry, adapted.text, host.source);
+  if (adapted.text !== host.source) await services.atomicWrite(root, host.entry, adapted.text, host.source);
   const state = JSON.stringify(project, null, 2) + "\n";
   if (!saved.project) await services.atomicWrite(root, statePath, state, saved.text);
   await services.removeText(root, pendingPath, journal);

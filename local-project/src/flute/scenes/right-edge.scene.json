@@ -1,0 +1,52 @@
+{
+  "version": 1,
+  "id": "right-edge",
+  "title": "At the edge",
+  "description": "Follow the customer panel\u2019s receding edge.",
+  "definition": {
+    "width": 1400,
+    "height": 1000,
+    "scene": {
+      "version": 3,
+      "camera": {
+        "perspective": 1800,
+        "rotateY": 28,
+        "rotateX": 7,
+        "x": 360,
+        "y": 0,
+        "z": 420
+      },
+      "focus": {
+        "distance": 1380,
+        "fStop": 4,
+        "maxBlur": 8
+      },
+      "nodes": [
+        {
+          "id": "dashboard"
+        }
+      ]
+    },
+    "motion": {
+      "durationMs": 8000,
+      "tracks": [
+        {
+          "target": {
+            "kind": "camera"
+          },
+          "property": "x",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 240
+            },
+            {
+              "timeMs": 8000,
+              "value": 480
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

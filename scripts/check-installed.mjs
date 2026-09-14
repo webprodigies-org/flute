@@ -90,11 +90,15 @@ try {
   unrelated=httpServer((_req,res)=>res.end('<html><body>Another app</body></html>'));
   await new Promise(r=>unrelated.listen(0,'127.0.0.1',r));
   const wrong=await run(process.execPath,[cli,'open','--project',host,'--url',`http://127.0.0.1:${unrelated.address().port}`,'--no-open','--json']);assert.notEqual(wrong.code,0);
+  await mkdir(path.join(host,'src/flute/scenes'),{recursive:true});
+  await writeFile(path.join(host,'src/flute/scenes/revenue.scene.json'),JSON.stringify({version:1,id:'revenue',title:'Revenue scene',definition:{scene:{nodes:[{id:'host'}]}}}));
+  await writeFile(path.join(host,'src/flute/scenes/revenue.tsx'),`import {Surface} from '@flute/scene';import {App,DashboardProvider} from '../../App';export default function RevenueScene(){return <DashboardProvider><Surface id="host" style={{width:1400,height:980}}><App/></Surface></DashboardProvider>}`);
   browser=await chromium.launch({channel:'chromium',headless:true});
   const page=await browser.newPage({viewport:{width:1440,height:1000}});
   let requests=0;const errors=[];
   page.on('request',r=>{if(r.url().endsWith('/api/value'))requests++});page.on('pageerror',e=>errors.push(e.message));
   await page.goto(initialized.data.url);
+  await page.getByRole('link',{name:/Revenue scene/}).click();
   await page.getByText('Revenue: 12840',{exact:true}).waitFor();
   assert.equal(await page.locator('[data-flute-scene]').count(),1);
   assert.equal(await page.locator('[data-flute-project]').count(),1);

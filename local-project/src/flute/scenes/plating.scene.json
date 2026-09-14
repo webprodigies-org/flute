@@ -1,0 +1,157 @@
+{
+  "version": 1,
+  "id": "plating",
+  "title": "Everything in its place",
+  "description": "Five layers assemble as the camera glides past.",
+  "definition": {
+    "width": 1400,
+    "height": 1000,
+    "scene": {
+      "version": 3,
+      "camera": {
+        "perspective": 1800,
+        "rotateY": -18,
+        "rotateX": 12,
+        "x": -100,
+        "y": 0,
+        "z": 200
+      },
+      "focus": {
+        "distance": 1600,
+        "fStop": 4,
+        "maxBlur": 8
+      },
+      "nodes": [
+        {
+          "id": "dashboard"
+        },
+        {
+          "id": "sidebar",
+          "parentId": "dashboard"
+        },
+        {
+          "id": "heading",
+          "parentId": "dashboard"
+        },
+        {
+          "id": "revenue",
+          "parentId": "dashboard"
+        },
+        {
+          "id": "customers",
+          "parentId": "dashboard"
+        },
+        {
+          "id": "projects",
+          "parentId": "dashboard"
+        }
+      ]
+    },
+    "motion": {
+      "durationMs": 8000,
+      "tracks": [
+        {
+          "target": {
+            "kind": "camera"
+          },
+          "property": "x",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": -220
+            },
+            {
+              "timeMs": 8000,
+              "value": 20
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "sidebar"
+          },
+          "property": "z",
+          "keyframes": [
+            {
+              "timeMs": 0,
+              "value": 500
+            },
+            {
+              "timeMs": 5200,
+              "value": 0
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "heading"
+          },
+          "property": "z",
+          "keyframes": [
+            {
+              "timeMs": 500,
+              "value": 565
+            },
+            {
+              "timeMs": 5700,
+              "value": 0
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "revenue"
+          },
+          "property": "z",
+          "keyframes": [
+            {
+              "timeMs": 1000,
+              "value": 630
+            },
+            {
+              "timeMs": 6200,
+              "value": 0
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "customers"
+          },
+          "property": "z",
+          "keyframes": [
+            {
+              "timeMs": 1500,
+              "value": 695
+            },
+            {
+              "timeMs": 6700,
+              "value": 0
+            }
+          ]
+        },
+        {
+          "target": {
+            "kind": "surface",
+            "id": "projects"
+          },
+          "property": "z",
+          "keyframes": [
+            {
+              "timeMs": 2000,
+              "value": 760
+            },
+            {
+              "timeMs": 7200,
+              "value": 0
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

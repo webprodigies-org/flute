@@ -1,3 +1,4 @@
+import {loadSceneRecipes,ListScenesSchema,LoadSceneSchema,OpenSceneSchema} from "./recipes";
 import { presentPreview } from "./preview";
 import { getAuthoringGuide, reviewAuthoring } from "./authoring";
 import { ExportVideoSchema } from "./export";
@@ -13,6 +14,10 @@ import { validateScene } from "./scene";
  */
 export const RESOURCES = Object.freeze({
   "present-preview": presentPreview,
+  "resolve-recipes":loadSceneRecipes,
+  "list-scenes":ListScenesSchema,
+  "load-scene":LoadSceneSchema,
+  "open-scene":OpenSceneSchema,
   "authoring-guide": getAuthoringGuide,
   "review-authoring": reviewAuthoring,
   "export-video": ExportVideoSchema,
