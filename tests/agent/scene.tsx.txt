@@ -1,0 +1,16 @@
+import { Surface } from '@flute/scene';
+import { App, DashboardProvider } from '../../App';
+
+// SOURCE OF TRUTH: AgentSurvey binding.
+// WHAT: one original revenue dashboard inside its original data provider.
+// WHY: framing changes while host paint, fetching and interaction stay owned by App.
+// WHERE: src/flute/scenes/agent-survey.tsx; sibling recipe owns camera and motion.
+export default function AgentSurvey() {
+  return (
+    <DashboardProvider>
+      <Surface id="revenue-dashboard" style={{ width: 1200, height: 384 }}>
+        <App />
+      </Surface>
+    </DashboardProvider>
+  );
+}
