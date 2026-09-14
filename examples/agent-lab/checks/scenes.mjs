@@ -93,6 +93,8 @@ try {
       1,
     );
     assert.equal(await page.locator("[data-panel]").count(), count);
+    assert.equal(await page.locator("[data-flute-scene]").evaluate(e=>getComputedStyle(e).backgroundColor),"rgb(0, 0, 0)");
+    assert.equal(await page.locator(".scene-viewport").evaluate(e=>getComputedStyle(e).backgroundColor),"rgb(0, 0, 0)");
     assert.equal(
       await page.getByText("Total Revenue", { exact: true }).count(),
       1,
@@ -120,6 +122,17 @@ try {
         await page.getByTestId("diagnostics").textContent(),
         "Ready to inspect",
       );
+
+      const framePixels=await page.locator('[data-flute-scene]').screenshot();
+      const visibleContent=await page.evaluate(async encoded=>{
+        const image=new Image();image.src='data:image/png;base64,'+encoded;await image.decode();
+        const canvas=document.createElement('canvas');canvas.width=image.width;canvas.height=image.height;
+        const context=canvas.getContext('2d');context.drawImage(image,0,0);
+        const pixels=context.getImageData(0,0,canvas.width,canvas.height).data;
+        let lit=0;for(let i=0;i<pixels.length;i+=4)if(Math.max(pixels[i],pixels[i+1],pixels[i+2])>40)lit++;
+        return lit/(pixels.length/4);
+      },framePixels.toString('base64'));
+      assert.ok(visibleContent>.01,'real UI pixels must remain visible in the black void, including negative-z surfaces');
       transforms.push(
         await page
           .locator("[data-panel]")

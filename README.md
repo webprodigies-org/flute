@@ -1,6 +1,6 @@
 # Flute — live spatial scenes
 
-Wrap existing React UI in perspective surfaces, then animate the camera, surfaces and an independent 3D focus point. Components keep their providers, data and interactions.
+Render in a black void using the canonical SCENE_BACKGROUND backdrop. The UI on each surface retains its original theme. Wrap existing React UI in perspective surfaces, then animate the camera, surfaces and an independent 3D focus point. Components keep their providers, data and interactions.
 
 ## For coding agents
 

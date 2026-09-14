@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import {
   Scene,
+  SCENE_BACKGROUND,
   Surface,
   SceneErrorBoundary,
   motionDuration,
@@ -169,7 +170,7 @@ export function SceneGallery() {
   const requested = new URLSearchParams(location.search).get("scene");
   const recipe = recipes.find((item) => item.id === requested);
   return (
-    <main className="scene-gallery">
+    <main className="scene-gallery" style={{"--flute-void":SCENE_BACKGROUND,background:SCENE_BACKGROUND} as CSSProperties}>
       <a href="./index.html" className="text-sm underline">
         ← Dashboard
       </a>

@@ -39,3 +39,5 @@ This is one successful Codex/model trial, not evidence that every LLM can discov
 ## Parent integration findings
 
 The independent worker produced the scene designs above. Parent production playback measurement then found that the whole-dashboard shot rerendered its host subtree on each tick (p95 25 ms on the measured device). The parent memoized the existing panel element tree without changing the designs and added this distinction to the canonical composition guide. The fresh trial therefore exposed a performance-guidance gap; the integrated result includes that correction. The browser check now uses isolated ports or an explicit TRIAL_URL and full Chromium; optional TRIAL_PERFORMANCE=1 enforces the shared frame budget.
+
+After the independent trial, the user clarified that every scene must render in black void space. Parent applied the canonical black Scene backdrop and matching preview chrome, preserving host UI colors and independently authored motion. The user reference images were inspected only for concepts; no reference pixels or image assets were incorporated.

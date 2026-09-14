@@ -532,3 +532,10 @@ it("applies deterministic camera, focus and surface tracks without replacing liv
   view.rerender(app(500));
   expect(screen.queryByRole("alert")).toBeNull();
 });
+
+it('keeps the scene void black without recoloring the live UI',()=>{
+ render(<Scene style={{background:'pink',backgroundImage:'linear-gradient(red, blue)'}}><Surface id="host"><button style={{backgroundColor:'white',color:'black'}}>Original host</button></Surface></Scene>);
+ const scene=document.querySelector('[data-flute-scene]') as HTMLElement;
+ expect(scene.style.backgroundColor).toBe('rgb(0, 0, 0)');expect(scene.style.backgroundImage).toBe('none');
+ expect(screen.getByRole('button',{name:'Original host'}).style.backgroundColor).toBe('white');
+});

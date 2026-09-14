@@ -1,5 +1,6 @@
 .scene-gallery {
-  max-width: 1480px;
+  min-height: 100vh;
+  color: #f4f4f5;
   margin: auto;
   padding: 28px;
 }
@@ -46,9 +47,9 @@
   width: 100%;
   aspect-ratio: 10 / 7;
   overflow: hidden;
-  background: var(--muted);
-  border: 1px solid var(--border);
-  border-radius: 16px;
+  background: var(--flute-void);
+  border: 0;
+  border-radius: 0;
   margin-bottom: 12px;
 }
 .scene-panel {
@@ -83,3 +84,11 @@
     flex-basis: 100%;
   }
 }
+
+/* Preview chrome stays outside the live UI's inherited theme. */
+.scene-nav a { border-color: #3f3f46; }
+.scene-nav a[aria-current] { background: #f4f4f5; color: #09090b; }
+.scene-controls button { background: #18181b; color: #f4f4f5; border-color: #3f3f46; }
+.scene-controls button:first-child { background: #f4f4f5; color: #09090b; }
+.scene-gallery > .text-muted-foreground { color: #a1a1aa; }
+.scene-seek input { accent-color: #f4f4f5; }

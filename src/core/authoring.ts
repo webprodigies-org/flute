@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { CameraSchema, FocusSchema, SceneSchema, TransformSchema } from "./scene";
+import { CameraSchema, FocusSchema, SceneSchema, TransformSchema, SCENE_BACKGROUND } from "./scene";
 import { MotionSchema, MotionTrackSchema, MotionKeyframeSchema, motionDuration } from "./motion";
 import { CascadeSchema } from "./choreography";
 import { SUPPORTED_EXPORT_FPS, CaptureManifestSchema } from "./export";
@@ -15,16 +15,16 @@ const ConceptSchema = z.strictObject({
   choices:z.string(), pitfalls:z.string(), verify:z.string(),
 });
 export const AuthoringGuideSchema = z.strictObject({
-  version:z.literal(1), purpose:z.string(), creativeFreedom:z.string(),
+  version:z.literal(1), purpose:z.string(), creativeFreedom:z.string(), stageBackdrop:z.literal(SCENE_BACKGROUND),
   concepts:z.array(ConceptSchema), workflow:z.array(z.string()),
   capabilities:z.record(z.string(),z.unknown()),
 });
 export type AuthoringGuide = z.infer<typeof AuthoringGuideSchema>;
 const concepts: z.infer<typeof ConceptSchema>[] = [
  {id:"spatial",title:"Real UI becomes spatial material",
- meaning:"A cinematic UI scene reveals the product through depth, changing viewpoint and directed attention. It is not inherently a slideshow, a device screenshot, a new dashboard design or a collection of decorative rotations.",
- mechanism:"Scene establishes a viewport and camera. Surface places an existing React subtree in that space; nested surfaces inherit parent transforms. Motion is a positioning alias for Surface. Layout stays in CSS, spatial transforms belong to Flute. Surface morphing here means changing position, orientation, scale and composition, not bending a mesh or deforming pixels.",
- choices:"Choose meaningful content from the requested page: a whole page, a panel, a few related elements, or a progression between detail and context. The user's intent determines what deserves attention. Depth, camera path, rhythm and focus may differ radically between scenes; no sidebar layout or reference shot is required.",
+ meaning:"A cinematic UI scene reveals a recognizable product through depth, changing viewpoint and directed attention in black void space. Tight oblique detail, a receding app plane and layered fragments should read as views of the same real application, not unrelated objects floating in a presentation. It is not inherently a slideshow, a device screenshot, a new dashboard design or a collection of decorative rotations.",
+ mechanism:"Scene establishes a black void viewport and camera. Its SCENE_BACKGROUND contract owns the black backdrop; retain that same color around the capture frame. This never recolors the actual UI on a Surface. Surface places an existing React subtree in that space; nested surfaces inherit parent transforms. Motion is a positioning alias for Surface. Layout stays in CSS, spatial transforms belong to Flute. Surface morphing here means changing position, orientation, scale and composition, not bending a mesh or deforming pixels.",
+ choices:"Choose an identifiable subject and its relationship to the app. A close crop can isolate one important detail while framing, adjacent context or the unfolding reveal explains its place. Scattered unrelated elements without a product relationship miss the intended outcome. Choose meaningful content from the requested page: a whole page, a panel, a few related elements, or a progression between detail and context. The user's intent determines what deserves attention. Depth, camera path, rhythm and focus may differ radically between scenes; no sidebar layout or reference shot is required.",
  pitfalls:"Do not recreate the host UI to make it easier to animate, replace its theme, copy its fetch logic, or assume that installation invents a shot. Keep original providers and components. Use a dedicated branch when useful without changing the user's branch automatically.",
  verify:"Compare the ordinary page and the scene for styling, content, interactions and component identity. There should be one rendered instance of each chosen live component, not sharp/blurred clones."},
  {id:"camera",title:"Viewpoint creates the reveal",
@@ -68,8 +68,9 @@ export function getAuthoringGuide(): AuthoringGuide {
   const {items: _items,...cascadeDefaults}=CascadeSchema.parse({items:[{id:"subject"}]});
   return AuthoringGuideSchema.parse({
     version:1,
+    stageBackdrop:SCENE_BACKGROUND,
     purpose:"Compose cinematic 3D motion from a requested application's existing live UI. Teach a spatial language, not a prescribed design.",
-    creativeFreedom:"Concepts explain effects and tradeoffs. No fixed camera angle, path, layout, palette, focus target, layer count or entrance pattern is mandatory. User direction overrides artistic defaults. Technical schema/identity constraints still apply. For multiple scenes choose different compositional ideas, not just different labels or durations.",
+    creativeFreedom:"Concepts explain effects and tradeoffs. The stage is always a black void; the host UI keeps its original theme. No fixed camera angle, path, layout, focus target, layer count or entrance pattern is mandatory. User direction overrides artistic defaults. Technical schema/identity constraints still apply. For multiple scenes choose different compositional ideas, not just different labels or durations.",
     concepts,
     workflow:[
       "Read this installed-version guide, then inspect the requested page, original components, providers, styles and existing app entry. Do not start by copying a demo.",

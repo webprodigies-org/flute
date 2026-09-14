@@ -1,7 +1,10 @@
 import { z } from "zod";
 
-/** SOURCE OF TRUTH: SceneSchema, NodeSchema, TransformSchema.
- * WHAT: versioned spatial data, defaults and validation; exported types derive here.
+// SOURCE OF TRUTH: the spatial viewport is a black void; host surface paint remains unchanged.
+export const SCENE_BACKGROUND = "#000000" as const;
+
+/** SOURCE OF TRUTH: SceneSchema, NodeSchema, TransformSchema, SCENE_BACKGROUND.
+ * WHAT: versioned spatial data, black void backdrop and validation; types derive here.
  * WHY: renderer and future project adapters must accept the same contract.
  * WHERE: core/spatial.ts evaluates it; react/ binds live components without serializing them.
  */

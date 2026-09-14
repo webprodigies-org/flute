@@ -1,6 +1,6 @@
 import { describe,expect,it,vi } from 'vitest';
 import { getAuthoringGuide, reviewAuthoring, AuthoringGuideSchema, AuthoringReviewSchema } from '../../src/core/authoring';
-import { CameraSchema, FocusSchema } from '../../src/core/scene';
+import { CameraSchema, FocusSchema, SCENE_BACKGROUND } from '../../src/core/scene';
 import { MotionSchema } from '../../src/core/motion';
 import { RESOURCES } from '../../src/core/resources';
 import {runCli} from '../../src/cli';
@@ -8,7 +8,7 @@ const scene={nodes:[{id:'subject'}]};
 const motion={durationMs:2000,tracks:[{target:{kind:'surface',id:'subject'},property:'z',keyframes:[{timeMs:0,value:80},{timeMs:2000,value:0}]}]};
 describe('canonical authoring system',()=>{
  it('derives capabilities and defaults from the installed contracts',()=>{
-  const guide=getAuthoringGuide();expect(AuthoringGuideSchema.safeParse(guide).success).toBe(true);
+  const guide=getAuthoringGuide();expect(guide.stageBackdrop).toBe(SCENE_BACKGROUND);expect(AuthoringGuideSchema.safeParse(guide).success).toBe(true);
   expect(guide.capabilities.camera).toEqual(CameraSchema.parse({}));expect(guide.capabilities.focus).toEqual(FocusSchema.parse({}));
   expect(guide.capabilities.motionDefaults).toEqual(MotionSchema.parse({durationMs:0,tracks:[]}));
   expect(RESOURCES['authoring-guide']).toBe(getAuthoringGuide);expect(RESOURCES['review-authoring']).toBe(reviewAuthoring);
