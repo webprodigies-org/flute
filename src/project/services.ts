@@ -1,5 +1,5 @@
 import { constants } from "node:fs";
-import { lstat, realpath, open, opendir, mkdir, rename, unlink } from "node:fs/promises";
+import { lstat, realpath, open, opendir, mkdir, rename, link, unlink } from "node:fs/promises";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { spawn } from "node:child_process";
@@ -101,7 +101,16 @@ export async function atomicWrite(root: string, target: string, content: string,
     await handle.sync();
     await handle.close();
     if (await readText(root, target) !== expected) throw fault("conflict", "Project file changed during setup.", target);
-    await rename(temporaryPath, await scopedPath(root, target));
+    const destination = await scopedPath(root, target);
+    // Create-only writes must not replace a file that appears after the last read.
+    if (expected === undefined) {
+      try { await link(temporaryPath, destination); }
+      catch (error) {
+        if ((error as NodeJS.ErrnoException).code === "EEXIST")
+          throw fault("conflict", "Project file appeared during setup; review it before retrying.", target);
+        throw error;
+      }
+    } else await rename(temporaryPath, destination);
   } finally {
     await handle.close();
     await unlink(temporaryPath).catch(error => { if (error.code !== "ENOENT") throw error; });
@@ -158,7 +167,10 @@ export async function openBrowser(root: string, url: string) {
 
 export async function localPackageSource(root: string, source: string): Promise<string> {
   const filename = path.isAbsolute(source) ? source : await scopedPath(root, source.replace(/^\.\//, ""));
-  const stat = await lstat(filename);
+  const stat = await lstat(filename).catch(error => {
+    if (error.code === "ENOENT") throw fault("package-unavailable", "Local Flute tarball was not found. Correct --package to an existing .tgz file, or install @flute/scene locally and run npx flute init.", source);
+    throw error;
+  });
   if (!stat.isFile() || stat.isSymbolicLink()) throw fault("denied-path", "Package source must be a regular local tarball.");
   return realpath(filename);
 }
