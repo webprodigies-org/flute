@@ -1,0 +1,103 @@
+{
+  "schemaVersion": 1,
+  "identity": {
+    "provider": "codex",
+    "model": "gpt-6-astra",
+    "confirmedBy": "mcp__morphite__task_context",
+    "runId": "6a612755-f2d9-4a07-9413-76b9c8292667",
+    "ticketId": "a3fe3084-4cfd-4b81-94c8-fe5bcc2edc2f",
+    "parentTicketId": "22a594f9-6ece-5fa9-ab72-0247bd5b0784",
+    "tools": [
+      "functions.exec",
+      "exec_command",
+      "mcp__morphite__task_context",
+      "mcp__morphite__read_file",
+      "mcp__morphite__read_patterns",
+      "tools.apply_patch",
+      "mcp__morphite__send_message",
+      "mcp__morphite__read_messages",
+      "mcp__morphite__acknowledge_message",
+      "mcp__morphite__run_checks",
+      "mcp__morphite__commit_changes",
+      "mcp__morphite__update_ticket",
+      "mcp__morphite__recall"
+    ],
+    "delegated": false
+  },
+  "sources": [
+    "node dist/cli/flute.js guide --json (guide version 2, scene version 3)",
+    "dist/library/types/{index,core/recipes,core/authoring,core/spatial,core/motion,preview/SceneLibrary,react/index}.d.ts",
+    "tests/fixtures/project-host/src/{App,main}.tsx",
+    "tests/fixtures/project-host/package.json",
+    "tests/fixtures/project-host/public/api/value",
+    "public dist/library/index.js runtime diagnostics and matrixFor"
+  ],
+  "governanceExposures": [
+    "User-supplied AGENTS.md and MORPHITE-GUARDRAIL-v2.md",
+    "Mandatory task_context included Board/research summaries, scope/architecture decisions and userExperience guidance, also injected before the task; these are unavoidable prior context, not a fully blind trial.",
+    "read_file directory listing only; read_patterns returned no patterns. No src/**, docs, local-project scenes, previous trial or original artistic conversation read.",
+    "commit_changes required a Brain scan before committing. Scanned mandatory governance commit workflow; read only Verified delivery workflow v1 (f843b798-9b2a-4a3f-89f3-0c14463227d2). UI UX component creation patterns appeared as title/description only, not read. No artistic or previous-trial knowledge sought."
+  ],
+  "prompts": {
+    "initial": "Create a cinematic scene from this host's real revenue dashboard, preserving its component/provider/design and making the camera/depth/focus purposeful; leave normal app alone. Not a fake dashboard.",
+    "feedback": "Feedback: retain the same subject, actual components/provider, viewpoint and camera rail. Make the reveal take twice as long and deepen the in-focus range gently (less aggressive softness), using only the installed guide/contracts. Keep final camera endpoint unchanged. Save revised.scene.json with same ID; parent tests expect duration changes and preserved component source/identity. Record this exact feedback in trial.json. Complete your scoped validation, commit and close."
+  },
+  "initialConcept": {
+    "family": "surface travel",
+    "subject": "Existing revenue heading, fetched revenue and Inspect control",
+    "nearEdge": "left",
+    "camera": "38-degree fixed Y orientation, z -200, vertical rail -50 to 70; no rotating page",
+    "focus": "Distance 1000 with fStop 5.6, focalLength 100 and maxBlur 6; tilted page supplies near/far depth without cloning UI.",
+    "timing": "3000 authored milliseconds at speed 0.5 = 6000 presentation milliseconds",
+    "rationale": "The host exports only a complete App and DashboardProvider. Preserve them as one visual leaf; do not invent dashboard fragments or copy the provider. With only rotateY, canonical matrixFor confirms the y direction remains the page tangent."
+  },
+  "limits": [
+    "Source authoring and public metadata checks only; no browser, pixel, provider request count, seek/reopen or MP4 evidence. Parent owns disposable installed-host verification and snapshot generation.",
+    "Scene framing is provisional until parent browser inspection. One tilted plane offers progressive depth, not separate floating layers.",
+    "No API credentials or app records serialized; live revenue stays in the host provider."
+  ],
+  "status": "source-and-installed-integration-passed",
+  "feedbackMessageId": "f92c204e-6994-4754-866c-2a3d4044f5ec",
+  "revision": {
+    "durationMs": 6000,
+    "presentationDurationMs": 12000,
+    "speed": 0.5,
+    "fStop": 8,
+    "rationale": "Double authored duration and keyframe times with speed and endpoints unchanged; raise aperture fStop per installed focus guidance for a deeper, gentler in-focus range. Binding, camera, node identity and other focus settings remain identical."
+  },
+  "evidenceHashes": {
+    "initialSha256": "8ecf8baef22478a2d037f8317f2aeba5bde0b65847e06134a652fb6408ada88d",
+    "bindingSha256": "c97b8c00b591567831b1369c135955086b035f6bd783ae41804a042a6016cc4a"
+  },
+  "publicContractGap": "loadSceneRecipes declares input: unknown; discovered sources:[{path,document}] and bindingPaths through public validation diagnostics. No private implementation read.",
+  "browserExpectations": [
+    "One live Existing revenue dashboard; Revenue: 12840 after host provider fetch; Inspect button state survives seeking.",
+    "Compare initial at 0/3000/6000 ms with revision at 0/6000/12000 ms: identical camera framing, gentler focus in revision.",
+    "Check tilted plane progressive focus, all intermediate frames for clipping, normal app untouched, same revised recipe after reopening; parent owns actual evidence."
+  ],
+  "checks": {
+    "passed": [
+      "npm ci",
+      "npm run build:library",
+      "npm run build:cli",
+      "node scripts/check-agent-trial.mjs",
+      "Morphite run_checks: all 1 checks passed (build:library + check-agent-trial)"
+    ],
+    "coverage": "Both public catalog/authoring validations; missing binding, identity and legacy-focus rejection; exact feedback delta; matching camera positions at seven normalized times; unchanged binding hash; real component/provider AST checks and negative private-math/cloned/invented UI; TypeScript transpilation only (not installed consumer type resolution).",
+    "browserVerified": false
+  },
+  "parentIntegration": {
+    "verifiedBy": "scripts/check-agent.mjs and scripts/verify-agent.mjs",
+    "result": "passed",
+    "evidence": [
+      "Actual npm tarball installed into independent host; npm exec flute init uses installed bin",
+      "Strict TypeScript consumer check and host production build",
+      "Exact guide example and agent initial/revised source render real provider revenue and one live component",
+      "Five timestamps preserve DOM and Inspect1; JSON HMR changes duration without state reset; reload reopens revised source",
+      "Real cached snapshots for both scenes; 390px no document overflow",
+      "Revised 12-second MP4 encoded at 30fps, 360 frames, FFprobe checked; export screenshot inspected without chrome",
+      "Production host bundle excludes unused studio renderer"
+    ],
+    "visualLimits": "Inspected frames prove live host wiring, tilted camera and focus behavior; minimal test host is not a cinematic design template or universal LLM quality guarantee."
+  }
+}

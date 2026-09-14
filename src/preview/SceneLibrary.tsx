@@ -1,8 +1,10 @@
 import {useEffect,useMemo,useRef,useState,type ComponentType,type MouseEvent} from 'react';
-import {RESOURCES,motionDuration,matrixFor,TransformSchema} from '../core';
+import {FLUTE_BRAND,RESOURCES,motionDuration,matrixFor,TransformSchema} from '../core';
 import {Scene,Surface,SceneErrorBoundary} from '../react';
 import {ScenePreview} from './ScenePreview';
 import type {PreviewHot} from './connection';
+import {BrandAttribution} from './BrandAttribution';
+import {GettingStarted} from './GettingStarted';
 import {libraryTheme} from './library-theme';
 
 /** SOURCE OF TRUTH: SceneLibrary.
@@ -59,10 +61,10 @@ export function SceneLibrary({sources=EMPTY_SOURCES,bindings=EMPTY_BINDINGS,hot,
  const planeWidth=Math.min(940,Math.max(320,width-64));
  const {start,end}=visibleRows(scroll,height,catalog.scenes.length);
  return <main data-flute-library=""><style>{libraryTheme}</style>
-  <div className="flute-library-top"><a href={destination()} onClick={event=>navigate(event)} className="flute-library-brand">flute</a>{backHref&&<a href={backHref}>Back to app</a>}</div>
+  <div className="flute-library-top"><div className="flute-library-identity"><a href={destination()} onClick={event=>navigate(event)} className="flute-library-brand">{FLUTE_BRAND.name.toLowerCase()}</a><BrandAttribution showName={false}/></div>{backHref&&<a href={backHref}>Back to app</a>}</div>
   {sceneId&&<div className="flute-library-notice" role="alert">This scene cannot be opened. Correct its source or <a href={destination()} onClick={event=>navigate(event)}>return to scenes</a>.</div>}
   {catalog.issues.length>0&&<details className="flute-library-issues"><summary>Some scene sources need attention ({catalog.issues.length})</summary><ul>{catalog.issues.map((issue,index)=><li key={index}>{issue.path}: {issue.message}</li>)}</ul></details>}
-  {catalog.scenes.length===0?<section className="flute-library-empty"><span>YOUR SCENE LIBRARY</span><h1>A place for every perspective.</h1><p>Your app’s scenes appear here as your coding agent creates them.</p><details><summary>Connect your first scene</summary><p>Run <code>flute guide</code> in your app. Save each recipe in <code>src/flute/scenes/</code> with its matching component. Flute discovers the files automatically.</p></details></section>:
+  {catalog.scenes.length===0?<section className="flute-library-empty"><div><span>YOUR SCENE LIBRARY</span><h1>A place for every perspective.</h1><p>Your app’s scenes appear here as your coding agent creates them.</p><GettingStarted label="Connect your first scene"/></div></section>:
    <div ref={scroller} className="flute-library-scroll" role="region" aria-label="Scenes" tabIndex={0} onScroll={event=>{savedScroll.current=event.currentTarget.scrollTop;setScroll(event.currentTarget.scrollTop)}}>
     <div style={{height:`calc(100svh + ${Math.max(0,(catalog.scenes.length-1)*ROW)}px)`}}>
      <div className="flute-library-stage">

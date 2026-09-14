@@ -1,7 +1,6 @@
 {
   "name": "@flute/scene",
   "version": "0.1.0",
-  "private": true,
   "type": "module",
   "scripts": {
     "dev": "node scripts/dev.mjs",
@@ -29,7 +28,11 @@
     "verify:reuse": "npm run verify:iterate && npm run test:recipes && npm run test:library",
     "test:recipes": "vitest run tests/core/recipes.test.ts tests/project/recipes.test.ts",
     "test:library": "node scripts/check-library.mjs",
-    "setup:local": "node scripts/setup-local.mjs"
+    "setup:local": "node scripts/setup-local.mjs",
+    "prepack": "node scripts/prepack.mjs",
+    "release:local": "node scripts/pack-release.mjs",
+    "verify:agent": "node scripts/verify-mvp.mjs",
+    "test:agent": "node scripts/check-agent.mjs"
   },
   "dependencies": {
     "react-error-boundary": "6.1.5",
@@ -76,5 +79,15 @@
   },
   "optionalDependencies": {
     "playwright": "1.58.2"
-  }
+  },
+  "description": "Cinematic 3D scenes from your live React application. Flute by Web Prodigies.",
+  "license": "MIT",
+  "author": {
+    "name": "Web Prodigies",
+    "url": "https://www.youtube.com/@webprodigies"
+  },
+  "homepage": "https://www.youtube.com/@webprodigies",
+  "sideEffects": [
+    "./dist/cli/flute.js"
+  ]
 }

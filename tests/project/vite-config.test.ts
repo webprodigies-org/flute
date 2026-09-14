@@ -21,12 +21,12 @@ describe("static Vite configuration boundary", () => {
     ["SWC React", shadcn.replace("@vitejs/plugin-react'", "@vitejs/plugin-react-swc'")],
     ["reversed plugin order", shadcn.replace("react(), tailwindcss()", "tailwindcss(), react()")],
     ["standard React", "import react from '@vitejs/plugin-react'; export default {plugins: [react()]};"],
-    ["plain static config", "export default {root: './', base: '/', server: {port: 5173, strictPort: true}};"],
   ])("accepts %s without evaluating imports", (_name, source) => {
     expect(() => inspect(source)).not.toThrow();
   });
 
   it.each([
+    ["missing refresh plugin", "export default {root: './', base: '/', server: {port: 5173, strictPort: true}};"],
     ["external alias", shadcn.replace("'./src'", "'/tmp/src'")],
     ["parent traversal", shadcn.replace("'./src'", "'../src'")],
     ["normalized traversal", shadcn.replace("'./src'", "'./other/../src'")],

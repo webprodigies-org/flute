@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdtemp, cp, readFile, writeFile, rm, mkdir } from 'node:fs/promises';
+import { mkdtemp, cp, readFile, readdir, writeFile, rm, mkdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -43,9 +43,15 @@ try {
   const originalConfig=await readFile(path.join(host,'vite.config.mjs'),'utf8');
   const originalApp=await readFile(path.join(host,'src/App.tsx'),'utf8');
   const originalPackage=JSON.parse(await readFile(path.join(host,'package.json'),'utf8'));
-  const packed=JSON.parse(await ok('npm',['pack','--json','--pack-destination',scratch],root));
+  const packed=JSON.parse(await ok('npm',['pack','--json',...(process.env.FLUTE_VERIFY_PREBUILT==='1'?['--ignore-scripts']:[]),'--pack-destination',scratch],root));
   const tarball=path.join(scratch,packed[0].filename);
   assert.ok(packed[0].files.some(f=>f.path==='dist/cli/flute.js'));
+  assert.ok(packed[0].files.some(f=>f.path==='LICENSE'));
+  assert.ok(packed[0].files.some(f=>f.path==='README.md'));
+  assert.ok(!packed[0].files.some(f=>/^(local-project|tests|app|docs)\//.test(f.path)));
+  const metadata=JSON.parse(await readFile(path.join(root,'package.json'),'utf8'));
+  assert.equal(metadata.license,'MIT');
+  assert.notEqual(metadata.private,true);
   assert.ok(packed[0].files.some(f=>f.path==='dist/library/preview.js'));
   assert.ok(!packed[0].files.some(f=>f.path.includes('.env')));
   await ok('npm',['install','--offline','--ignore-scripts','--no-audit','--no-fund']);
@@ -53,7 +59,10 @@ try {
   const server=spawn(process.execPath,['node_modules/vite/bin/vite.js','--host','127.0.0.1','--port',String(chosen),'--strictPort'],{cwd:host,stdio:'ignore'});processes.push(server);
   await waitFor(origin,server);
   const parentCli=path.join(root,'dist/cli/flute.js');
-  const initResult=await run(process.execPath,[parentCli,'init','--project',host,'--package',tarball,'--url',origin,'--no-open','--json']);
+  if(process.env.FLUTE_VERIFY_AGENT==='1') await ok('npm',['install','--offline','--ignore-scripts','--no-audit','--no-fund',tarball]);
+  const initResult=process.env.FLUTE_VERIFY_AGENT==='1'
+    ? await run('npm',['exec','--offline','--','flute','init','--url',origin,'--no-open','--json'])
+    : await run(process.execPath,[parentCli,'init','--project',host,'--package',tarball,'--url',origin,'--no-open','--json']);
   if(initResult.code!==0) {
     await mkdir(path.join(root,'test-results'),{recursive:true});
     await writeFile(path.join(root,'test-results/install-debug.txt'),
@@ -62,6 +71,8 @@ try {
   assert.equal(initResult.code,0,initResult.stderr);
   const initialized=JSON.parse(initResult.stdout);
   assert.equal(initialized.success,true);
+  assert.equal(initialized.data.handoff.path,'FLUTE.md');
+  assert.equal(initialized.data.handoff.guideCommand,'npx flute guide --json');
   assert.equal(new URL(initialized.data.url).port,String(chosen));
   const entryAfter=await readFile(path.join(host,'src/main.tsx'),'utf8');
   assert.ok(entryAfter.includes('<DashboardProvider><App /></DashboardProvider>'));
@@ -114,10 +125,17 @@ try {
     const {verifyIteration}=await import('./verify-iteration.mjs');
     await verifyIteration({page,host,origin,server,processes,waitFor,root,originalApp});
   }
+  if(process.env.FLUTE_VERIFY_AGENT==='1') {
+    const {verifyAgent}=await import('./verify-agent.mjs');
+    await verifyAgent({page,host,origin,root,cli,ok,installedGuide});
+  }
   await page.goto(origin);
   await page.getByText('Revenue: 12840',{exact:true}).waitFor();
   assert.equal(await page.locator('[data-flute-scene]').count(),0,'Ordinary host URL stays ordinary');
   await ok('npm',['run','build']);
+  const assets=path.join(host,'dist/assets');
+  const productionCode=(await Promise.all((await readdir(assets)).filter(name=>name.endsWith('.js')).map(name=>readFile(path.join(assets,name),'utf8')))).join('\n');
+  assert.ok(!productionCode.includes('flute-library-scroll')&&!productionCode.includes('data-flute-capture'),'Production host must not ship the unused studio renderer');
   const previewPort=await port();const productionOrigin=`http://127.0.0.1:${previewPort}`;
   const production=spawn(process.execPath,['node_modules/vite/bin/vite.js','preview','--host','127.0.0.1','--port',String(previewPort),'--strictPort'],{cwd:host,stdio:'ignore'});processes.push(production);
   await waitFor(productionOrigin,production);

@@ -57,6 +57,7 @@ const valid = {
  */
  export function usePreviewSession(){return {};}`,
 
+ 'src/core/branding.ts': `/** SOURCE OF TRUTH: FLUTE_BRAND. WHAT: shared attribution. WHY: consistent presentation. WHERE: CLI and browser. */ export const FLUTE_BRAND=Object.freeze({});`,
  'src/core/authoring.ts': `/** SOURCE OF TRUTH: getAuthoringGuide, reviewAuthoring, AuthoringGuideSchema.
  * WHAT: define cinematic concepts and review.
  * WHY: share capabilities across clients.
@@ -337,3 +338,5 @@ test('snapshot schemas and command keep canonical owners',()=>{
  for(const symbol of ['SceneSnapshotSchema','SnapshotSceneSchema','executeSceneSnapshot'])rejects('src/preview/copied.ts',`export const ${symbol}=()=>({});`,'canonical-owner');
 });
 test('preview cannot call snapshot filesystem or browser effects',()=>rejects('src/preview/capture.ts',"import {openCapture} from '../export/services'; openCapture({});",'module-boundary'));
+
+test("rejects another branding owner",()=>{ rejects("src/preview/brand.ts", "export const FLUTE_BRAND=Object.freeze({});", "canonical-owner"); });
