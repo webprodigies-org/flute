@@ -4,7 +4,7 @@ import { FLUTE_BRAND } from "../core/branding";
 import { ProjectResultSchema, ProjectStateSchema, type ProjectResult, type ProjectState } from "../core/project";
 import * as services from "./services";
 import { fault } from "./errors";
-import { htmlEntry, inspectConfig, inspectEntry } from "./vite";
+import { generatedPreview, htmlEntry, inspectConfig, inspectEntry } from "./vite";
 
 /** SOURCE OF TRUTH: executeProjectCommand trusted project operations.
  * WHAT: validate RESOURCES inputs, host compatibility, integration identity and recovery state.
@@ -83,6 +83,7 @@ async function inspectProject(root: string) {
     if (source !== undefined) { found.push(target); inspectConfig(source, target); }
   }
   if (found.length > 1) throw fault("unsupported-project", "Multiple Vite configuration files are ambiguous.");
+  if (!found.length) throw fault("unsupported-project", "Use a static Vite configuration with a standard React plugin for scene refresh.");
   const html = await services.readText(root, "index.html");
   if (html === undefined) throw fault("unsupported-project", "Expected index.html at the project root.");
   const entry = services.relativeTarget(htmlEntry(html));
@@ -130,8 +131,24 @@ function checkState(project: ProjectState, entry: string) {
   services.relativeTarget(project.entry);
   if (project.entry !== entry) throw fault("conflict", "Recorded Flute entry differs from index.html; review the integration.", statePath);
 }
+async function previewAdapterFor(root: string, entry: string) {
+  const adapter = generatedPreview(entry);
+  // Vite resolves these extensions before an extensionless import. Never let an
+  // unrelated sibling shadow the generated component, including JSX/TSX switches.
+  for (const extension of ["mjs", "js", "mts", "ts", "jsx", "tsx", "json"]) {
+    const candidate = adapter.path.replace(/\.[jt]sx$/, "." + extension);
+    if (candidate !== adapter.path && await services.readText(root, candidate) !== undefined)
+      throw fault("conflict", "A file conflicts with Flute's preview adapter import. Move or rename it before setup.", candidate);
+  }
+  const existing = await services.readText(root, adapter.path);
+  if (existing !== undefined && existing !== adapter.text)
+    throw fault("conflict", "Flute preview adapter already contains different content. Move or rename it, then retry flute init.", adapter.path);
+  return { ...adapter, existing };
+}
 async function initialize(root: string, packageSource: string | undefined): Promise<ProjectResult> {
   const host = await inspectProject(root);
+  const adapter = await previewAdapterFor(root, host.entry);
+  const adapterText = adapter.existing;
   const generated = agentHandoff();
   const handoffText = await services.readText(root, generated.handoff.path);
   if (handoffText !== undefined && handoffText !== generated.text)
@@ -151,7 +168,7 @@ async function initialize(root: string, packageSource: string | undefined): Prom
   const adapted = inspectEntry(host.source, host.entry, project.projectId);
   if (pending) {
     const planned = inspectEntry(pending.original, host.entry, project.projectId);
-    if ((planned.integrated && !saved.project) || (host.source !== pending.original && host.source !== planned.text))
+    if ((planned.integrated && !saved.project) || (host.source !== pending.original && adapted.text !== planned.text))
       throw fault("conflict", "Entry changed during interrupted setup; restore the pending original or complete integration before retrying.", host.entry);
   } else if (saved.project && !adapted.integrated) {
     throw fault("conflict", "Recorded project no longer contains its Flute integration; review entry changes.", host.entry);
@@ -165,7 +182,8 @@ async function initialize(root: string, packageSource: string | undefined): Prom
       || !["missing-installation", ...(pending ? ["conflict", "invalid-file"] : [])].includes(String(error.code))) throw error;
   }
   const installSource = installed ? undefined : await sourceForInstall(root, packageSource);
-  if (saved.project && adapted.integrated && adapted.text === host.source && !pending && installed && handoffText === generated.text)
+  if (saved.project && adapted.integrated && adapted.text === host.source && !pending && installed
+    && handoffText === generated.text && adapterText === adapter.text)
     return { success: true, data: { project, changed: false, handoff: generated.handoff } };
   const journal = pendingText ?? JSON.stringify({ project, original: host.source }, null, 2) + "\n";
   if (!pendingText) await services.atomicWrite(root, pendingPath, journal, undefined);
@@ -177,11 +195,16 @@ async function initialize(root: string, packageSource: string | undefined): Prom
   const after = await inspectProject(root);
   if (after.entry !== host.entry || after.source !== host.source)
     throw fault("conflict", "Project entry changed during installation; retry after reviewing it.", host.entry);
+  // The journal covers this generated dependency too. Recheck before other generated writes;
+  // create-only transport and exact bytes permit retry after an adapter/entry interruption.
+  if ((await previewAdapterFor(root, host.entry)).existing !== adapterText)
+    throw fault("conflict", "Flute preview adapter changed during setup; review it before retrying.", adapter.path);
   // Write before entry/state, so a handoff conflict cannot commit an incomplete setup.
   // An interruption after this write resumes by recognizing the exact generated bytes.
   if (handoffText === undefined) await services.atomicWrite(root, generated.handoff.path, generated.text, undefined);
   else if (await services.readText(root, generated.handoff.path) !== generated.text)
     throw fault("conflict", "FLUTE.md changed during setup; review it before retrying npx flute init.", generated.handoff.path);
+  if (adapterText === undefined) await services.atomicWrite(root, adapter.path, adapter.text, undefined);
   if (adapted.text !== host.source) await services.atomicWrite(root, host.entry, adapted.text, host.source);
   const state = JSON.stringify(project, null, 2) + "\n";
   if (!saved.project) await services.atomicWrite(root, statePath, state, saved.text);
@@ -195,8 +218,14 @@ async function load(root: string) {
   checkState(saved.project, host.entry);
   if (await services.readText(root, pendingPath) !== undefined)
     throw fault("incomplete-setup", "Setup was interrupted. Run flute init again to resume safely.");
-  if (!inspectEntry(host.source, host.entry, saved.project.projectId).integrated)
+  const adapted = inspectEntry(host.source, host.entry, saved.project.projectId);
+  if (!adapted.integrated)
     throw fault("conflict", "The recorded Flute integration is missing.", host.entry);
+  if (adapted.text !== host.source)
+    throw fault("incomplete-setup", "Run flute init to upgrade the installed preview refresh boundary.", host.entry);
+  const adapter = await previewAdapterFor(root, host.entry);
+  if (adapter.existing !== adapter.text)
+    throw fault("conflict", "The generated preview adapter is missing or changed. Review it and run flute init.", adapter.path);
   await installationValid(root);
   return saved.project;
 }
@@ -211,7 +240,8 @@ async function openPreview(root: string, input: z.output<typeof RESOURCES["open-
       const entry = services.relativeTarget(htmlEntry(html, true));
       if (entry !== project.entry) throw fault("wrong-dev-server", "The dev server belongs to another entry.");
       const transformed = await services.fetchText(new URL("/" + entry, input.url).href);
-      if (!transformed.includes(project.projectId) || !transformed.includes("@flute") || !transformed.includes("ProjectPreview"))
+      if (!transformed.includes(project.projectId) || !transformed.includes("ProjectPreview")
+        || !(transformed.includes("@flute") || transformed.includes("/src/flute/ProjectPreview.")))
         throw fault("wrong-dev-server", "Dev server does not contain this project's preview identity.");
       matched = true;
       break;
