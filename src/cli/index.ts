@@ -1,5 +1,5 @@
 import { RESOURCES } from "../core/resources";
-import { executeVideoExport } from "../export/commands";
+import { executeSceneSnapshot, executeVideoExport } from "../export/commands";
 import { executeProjectCommand } from "../project/commands";
 import { executeRecipeCommand, type RecipeCommandResult } from "../project/recipes";
 import type { ProjectResult } from "../core/project";
@@ -19,6 +19,7 @@ flute guide [--json]
 flute init [--project DIR] [--package TARBALL] [--url ORIGIN] [--no-open]
 flute open [--scene ID] [--project DIR] [--url ORIGIN] [--no-open]
 flute scenes [--project DIR] [--json]
+flute snapshot --scene ID --url ORIGIN [--time MS] [--project DIR] [--json]
 flute load [--scene ID] [--project DIR] [--json]
 flute validate [--project DIR]
 flute export --url URL --output FILE [--fps 30|60|120] [--width N --height N] [--project DIR] [--json]
@@ -44,7 +45,7 @@ function recipeOutput(result: RecipeCommandResult, json: boolean): CliResult {
       : "No local scenes found. Add a recipe and matching component in src/flute/scenes.");
   return { code: 0, stdout: (json ? JSON.stringify(result) : text) + "\n", stderr: !json && diagnostics ? diagnostics + "\n" : "" };
 }
-export async function runCli(argv: string[], environment: Environment, execute: Execute = executeProjectCommand, exporter: typeof executeVideoExport = executeVideoExport, recipes: typeof executeRecipeCommand = executeRecipeCommand): Promise<CliResult> {
+export async function runCli(argv: string[], environment: Environment, execute: Execute = executeProjectCommand, exporter: typeof executeVideoExport = executeVideoExport, recipes: typeof executeRecipeCommand = executeRecipeCommand, snapshotter:typeof executeSceneSnapshot=executeSceneSnapshot): Promise<CliResult> {
   if (argv.length === 0 || (argv.length === 1 && ["--help", "-h", "help"].includes(argv[0])))
     return { code: 0, stdout: usage, stderr: "" };
   const [command, ...args] = argv;
@@ -56,11 +57,11 @@ export async function runCli(argv: string[], environment: Environment, execute: 
   }
   const aliases = { init: "init-project", open: "open-preview", load: "load-project", validate: "validate-project" } as const;
   const fail = (message: string): CliResult => ({ code: 2, stdout: "", stderr: message + "\n\n" + usage });
-  if (command !== "export" && command !== "scenes" && !Object.hasOwn(aliases, command)) return fail(`Unknown command: ${command}`);
+  if (command !== "snapshot" && command !== "export" && command !== "scenes" && !Object.hasOwn(aliases, command)) return fail(`Unknown command: ${command}`);
   const flags = new Map<string, string | true>();
   for (let i = 0; i < args.length; i++) {
     const flag = args[i];
-    if (!(command === "export" ? ["--project", "--url", "--output", "--fps", "--width", "--height", "--json"] : ["--project", "--package", "--url", "--no-open", "--json", "--scene"]).includes(flag)) return fail(`Unknown option: ${flag}`);
+    if (!(command === "snapshot" ? ["--project","--url","--scene","--time","--json"] : command === "export" ? ["--project", "--url", "--output", "--fps", "--width", "--height", "--json"] : ["--project", "--package", "--url", "--no-open", "--json", "--scene"]).includes(flag)) return fail(`Unknown option: ${flag}`);
     if (flags.has(flag)) return fail(`Duplicate option: ${flag}`);
     if (["--no-open", "--json"].includes(flag)) flags.set(flag, true);
     else {
@@ -70,10 +71,18 @@ export async function runCli(argv: string[], environment: Environment, execute: 
     }
   }
   if (flags.has("--package") && command !== "init") return fail("--package is only valid for init.");
-  if (flags.has("--scene") && !["load", "open"].includes(command)) return fail("--scene is only valid for load or open.");
+  if (flags.has("--scene") && !["load", "open", "snapshot"].includes(command)) return fail("--scene is only valid for load, open or snapshot.");
   if (["load", "validate", "scenes"].includes(command) && (flags.has("--url") || flags.has("--no-open"))) return fail("Preview options require init or open.");
   const context = { root: flags.get("--project") as string ?? environment.root };
   const json = flags.has("--json");
+  if(command==="snapshot"){
+    if(!flags.has("--scene")||!flags.has("--url"))return fail("snapshot requires --scene and --url.");
+    try{
+      const result=await snapshotter({sceneId:flags.get("--scene"),url:flags.get("--url"),...(flags.has("--time")?{timeMs:Number(flags.get("--time"))}:{})},context);
+      return result.success?{code:0,stdout:(json?JSON.stringify(result):`Snapshot saved for ${result.data.sceneId}.`)+"\n",stderr:""}
+       :{code:1,stdout:"",stderr:(json?JSON.stringify(result):result.issues.map(i=>i.message).join("\n"))+"\n"};
+    }catch{return {code:1,stdout:"",stderr:"Snapshot failed. Check the scene and retry.\n"}}
+  }
   if (command === "scenes" || flags.has("--scene")) {
     const operation = command === "scenes" ? "list-scenes" : command === "open" ? "open-scene" : "load-scene";
     const input = command === "scenes" ? {} : { sceneId: flags.get("--scene"), ...(command === "open" ? {

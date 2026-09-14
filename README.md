@@ -61,3 +61,5 @@ Choose 30, 60 or 120 FPS. FFmpeg on PATH and Playwright Chromium are required. U
 Read [architecture](docs/architecture.md) for owners and the linear data flow. [Product](docs/product.md) records the current experience and boundaries. Morphite owns the vertical slice matrix and task stages. Those are the only two files permitted in `docs/`.
 
 `npm run verify:reuse` runs the current product gate, including installed-app HMR, schema/syntax/render-error recovery, reconnection, capture, mobile/keyboard behavior and architecture checks. Test inputs live under `tests/` and disposable temporary directories. `vite.test.config.ts` builds them into ignored `.test-dist`; the normal production build contains only the product entry, package and CLI.
+
+Scene library tiles use cached snapshots of the real scene. Run `flute snapshot --scene <id> --url <running-app-url>` after creating or revising it; optional `--time <milliseconds>` chooses the frame. The default is the midpoint. This saves a small PNG in the local recipe, including any visible host data, without running animations in the list. Missing or unreadable images fall back to the scene number.

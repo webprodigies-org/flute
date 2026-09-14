@@ -63,3 +63,12 @@ describe("video CLI", () => {
     expect(exporter).not.toHaveBeenCalled();
   });
 });
+
+it('routes snapshot arguments through the shared operation and preserves validation failures',async()=>{
+ const snapshotter=vi.fn().mockResolvedValue({success:true,data:{sceneId:'demo',source:'src/flute/scenes/demo.scene.json',timeMs:100}});
+ const result=await runCli(['snapshot','--scene','demo','--url','http://localhost:5173','--time','100','--json'],{root:'/project'},undefined,undefined,undefined,snapshotter);
+ expect(result.code).toBe(0);expect(snapshotter).toHaveBeenCalledWith({sceneId:'demo',url:'http://localhost:5173',timeMs:100},{root:'/project'});
+ expect((await runCli(['snapshot','--scene','demo'],{root:'/project'})).code).toBe(2);
+ snapshotter.mockResolvedValue({success:false,issues:[{code:'source-changed',message:'Retry after editing.'}]});
+ expect((await runCli(['snapshot','--scene','demo','--url','http://localhost:5173'],{root:'/project'},undefined,undefined,undefined,snapshotter)).stderr).toContain('Retry after editing.');
+});

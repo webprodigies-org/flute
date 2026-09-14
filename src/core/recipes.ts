@@ -4,7 +4,7 @@ import { PreviewDefinitionSchema, presentPreview } from "./preview";
 import type { SceneIssue } from "./scene";
 
 /** SOURCE OF TRUTH: SceneRecipeSchema, loadSceneRecipes, SCENE_RECIPE_DIRECTORY,
- * ListScenesSchema, LoadSceneSchema, OpenSceneSchema.
+ * ListScenesSchema, LoadSceneSchema, OpenSceneSchema, SnapshotSceneSchema, SceneSnapshotSchema.
  * WHAT: versioned JSON recipes and deterministic local scene catalog validation.
  * WHY: CLI and browser reopen identical metadata without executing component source.
  * WHERE: project/recipes supplies scoped files; the browser supplies JSON and binding paths.
@@ -19,12 +19,22 @@ export const SceneRecipeIdSchema = z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/
 export const ListScenesSchema=z.strictObject({});
 export const LoadSceneSchema=z.strictObject({sceneId:SceneRecipeIdSchema});
 export const OpenSceneSchema=z.strictObject({...OpenPreviewSchema.shape,sceneId:SceneRecipeIdSchema});
+export const SnapshotSceneSchema=z.strictObject({
+ sceneId:SceneRecipeIdSchema,url:OpenPreviewSchema.shape.url,
+ timeMs:z.number().finite().nonnegative().max(120_000).optional(),
+});
+// A bounded, inert PNG is local cached imagery, not an executing scene or remote URL.
+export const SceneSnapshotSchema=z.strictObject({
+ image:z.string().max(128_000).regex(/^data:image\/png;base64,iVBORw0KGgo[A-Za-z0-9+/]*={0,2}$/,"Use a Flute-generated PNG snapshot."),
+ timeMs:z.number().finite().nonnegative().max(120_000),
+});
 export const SceneRecipeSchema = z.strictObject({
   version: z.literal(1),
   id: SceneRecipeIdSchema,
   title: z.string().trim().min(1),
   description: z.string().optional(),
   definition: PreviewDefinitionSchema,
+  snapshot:SceneSnapshotSchema.optional(),
 });
 export type SceneRecipe = z.output<typeof SceneRecipeSchema>;
 const BoundRecipeSchema = SceneRecipeSchema.extend({ source: z.string(), binding: z.string() });

@@ -12,12 +12,12 @@ import { fileURLToPath } from 'node:url';
  * New external dependencies require an explicit layer decision here and a fixture.
  */
 const owners = new Map([
-  ...['SceneRecipeSchema','ListScenesSchema','LoadSceneSchema','OpenSceneSchema'].map(name=>[name,'src/core/recipes.ts']),['loadSceneRecipes','src/core/recipes.ts'],
+  ...['SceneRecipeSchema','SnapshotSceneSchema','SceneSnapshotSchema','ListScenesSchema','LoadSceneSchema','OpenSceneSchema'].map(name=>[name,'src/core/recipes.ts']),['loadSceneRecipes','src/core/recipes.ts'],
   ['executeRecipeCommand','src/project/recipes.ts'],['SceneLibrary','src/preview/SceneLibrary.tsx'],
   ["PreviewDefinitionSchema","src/core/preview.ts"], ["presentPreview","src/core/preview.ts"],
   ["ScenePreview","src/preview/ScenePreview.tsx"], ["usePreviewSession","src/preview/session.ts"],
   ...["getAuthoringGuide","reviewAuthoring","AuthoringGuideSchema"].map(name=>[name,"src/core/authoring.ts"]),
-  ['ExportVideoSchema','src/core/export.ts'], ['CaptureManifestSchema','src/core/export.ts'], ['executeVideoExport','src/export/commands.ts'],
+  ['ExportVideoSchema','src/core/export.ts'], ['CaptureManifestSchema','src/core/export.ts'], ['executeVideoExport','src/export/commands.ts'], ['executeSceneSnapshot','src/export/commands.ts'],
   ['executeProjectCommand', 'src/project/commands.ts'],
   ['InitProjectSchema', 'src/core/project.ts'],
   ['SceneSchema', 'src/core/scene.ts'], ['TransformSchema', 'src/core/scene.ts'],
@@ -36,7 +36,7 @@ const layers = {
   projectAdapter: { local: ['core', 'projectAdapter', 'projectErrors'], external: ['typescript', 'zod'] },
   projectErrors: { local: ['projectErrors'], external: [] },
   services: { local: ['core', 'services', 'projectErrors'], external: ['zod', 'typescript'] },
-  exportCommands: {local:['core','exportCommands','exportServices','services','projectErrors'], external:['zod']},
+  exportCommands: {local:['core','commands','exportCommands','exportServices','services','projectErrors'], external:['zod']},
   exportServices: {local:['core','exportServices','services','projectErrors'],external:['zod','playwright']},
   cli: { local: ['core', 'commands', 'exportCommands', 'cli'], external: [] },
 };

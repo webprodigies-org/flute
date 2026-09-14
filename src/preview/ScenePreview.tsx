@@ -134,7 +134,7 @@ export function ScenePreview({definition: input, children, title = "Untitled sce
                   {children}
                 </Scene>
               </div>
-              {session.durationMs > 0 && <Capture durationMs={session.durationMs} seek={captureSeek}/>}
+              <Capture durationMs={session.durationMs} seek={captureSeek}/>
             </div>, viewport)}
         </SceneErrorBoundary>
         <div className="flute-header">
