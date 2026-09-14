@@ -43,7 +43,7 @@ try {
   const originalConfig=await readFile(path.join(host,'vite.config.mjs'),'utf8');
   const originalApp=await readFile(path.join(host,'src/App.tsx'),'utf8');
   const originalPackage=JSON.parse(await readFile(path.join(host,'package.json'),'utf8'));
-  const packed=JSON.parse(await ok('npm',['pack','--json','--pack-destination',scratch],root));
+  const packed=JSON.parse(await ok('npm',['pack','--json',...(process.env.FLUTE_VERIFY_PREBUILT==='1'?['--ignore-scripts']:[]),'--pack-destination',scratch],root));
   const tarball=path.join(scratch,packed[0].filename);
   assert.ok(packed[0].files.some(f=>f.path==='dist/cli/flute.js'));
   assert.ok(packed[0].files.some(f=>f.path==='LICENSE'));

@@ -8,7 +8,7 @@ function run(args,cwd=host){return new Promise((resolve,reject)=>{const p=spawn(
 async function port(){const s=createServer();await new Promise(r=>s.listen(0,'127.0.0.1',r));const n=s.address().port;await new Promise(r=>s.close(r));return n}
 try{
  await cp(path.join(root,'local-project'),host,{recursive:true,filter:source=>!source.includes('node_modules')&&!source.includes('/dist')});
- await mkdir(path.join(scratch,'.local-package'));await run(['npm','pack','--pack-destination',path.join(scratch,'.local-package')],root);
+ await mkdir(path.join(scratch,'.local-package'));await run(['npm','pack',...(process.env.FLUTE_VERIFY_PREBUILT==='1'?['--ignore-scripts']:[]),'--pack-destination',path.join(scratch,'.local-package')],root);
  await run(['npm','install','--offline','--force','--ignore-scripts','--no-audit','--no-fund','../.local-package/flute-scene-0.1.0.tgz']);
  assert.equal((await run([process.execPath,'--input-type=module','-e',"import {RESOURCES} from '@flute/scene'; console.log(typeof RESOURCES['resolve-recipes'])"])).trim(),'function','Use the freshly packed catalog operation');
  const cli=path.join(host,'node_modules/@flute/scene/dist/cli/flute.js');await run([process.execPath,cli,'init']);

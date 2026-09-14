@@ -31,7 +31,7 @@
     "setup:local": "node scripts/setup-local.mjs",
     "prepack": "node scripts/prepack.mjs",
     "release:local": "node scripts/pack-release.mjs",
-    "verify:agent": "npm run verify:reuse && npm run test:agent",
+    "verify:agent": "node scripts/verify-mvp.mjs",
     "test:agent": "node scripts/check-agent.mjs"
   },
   "dependencies": {
