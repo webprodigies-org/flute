@@ -24,7 +24,7 @@ Interactive focus editing was mentioned as a future possibility, not authorized 
 
 ## Scene library and scene view
 
-The home page lists the project's authored scene files automatically. It is a real clickable, scrollable list presented as a tilted plane in black space. Native scrolling moves that whole plane like movie credits while the camera and lens remain fixed. Selecting a row opens that scene; direct links, back navigation and reload resolve the same versioned source.
+The home page lists the project's authored scene files automatically. It is a real clickable, scrollable list presented as a tilted plane in black space. Native scrolling moves that whole plane like movie credits while the camera and lens remain fixed. Rows fade at the top browser edge without disappearing early, and the scroll range lets both the first and last item enter the focused center. Selecting a row opens that scene; direct links, back navigation and reload resolve the same versioned source.
 
 Scene playback fills the full viewport with proportional cover scaling and edge cropping, like a full-screen video. The credits list recedes at the top and approaches at the bottom, with a clear center and stronger blur above and below. All controls and status sit at the bottom over a transparent progressive blur fading into the scene, with plain high-contrast rounded controls. The product contains no drag-and-drop builder. Existing coding agents create a JSON recipe and matching host component; validation gives repair instructions for missing or incompatible files.
 

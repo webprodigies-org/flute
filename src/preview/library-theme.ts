@@ -6,7 +6,8 @@ export const libraryTheme=`
 [data-flute-library] a{color:inherit;text-decoration:none}
 .flute-library-top{position:absolute;z-index:5;top:28px;left:36px;right:36px;display:flex;justify-content:space-between;pointer-events:none}.flute-library-top a{pointer-events:auto}.flute-library-brand{font-size:23px;font-weight:600;letter-spacing:-1px}
 .flute-library-scroll{height:100svh;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#333 #000;outline-offset:-4px}
-.flute-library-stage{position:sticky;top:0;height:100svh;overflow:hidden}
+/* Mask the final composited viewport, outside Scene's preserve-3d hierarchy. */
+.flute-library-stage{position:sticky;top:0;height:100svh;overflow:hidden;mask-image:linear-gradient(to bottom,transparent,#000 min(180px,20svh));-webkit-mask-image:linear-gradient(to bottom,transparent,#000 min(180px,20svh))}
 .flute-library-heading,.flute-scene-row{box-sizing:border-box;background:#19191c}.flute-library-heading{height:110px;border-radius:28px 28px 0 0;padding:28px 36px;display:flex;align-items:center;justify-content:space-between;gap:20px}.flute-library-heading h1{font-size:27px;margin:0;letter-spacing:-.8px;font-weight:550}.flute-library-heading>span{color:#929297}
 .flute-scene-row{display:flex;align-items:center;gap:26px;height:150px;padding:28px 36px;border-top:1px solid #262628;outline-offset:-5px}.flute-scene-row:hover{background:#232326}.flute-scene-row:focus-visible{outline:3px solid #ddd;background:#29292c}
 .flute-scene-number{flex:none;width:76px;height:76px;display:grid;place-items:center;border-radius:18px;background:#29292d;color:#dadade;font-size:27px;font-weight:350;font-variant-numeric:tabular-nums}
