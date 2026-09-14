@@ -1,5 +1,6 @@
+import {RESOURCES} from "../core/resources";
 import { z } from "zod";
-import { loadSceneRecipes, SCENE_RECIPE_DIRECTORY, SceneRecipeIdSchema, type SceneCatalog } from "../core/recipes";
+import { SCENE_RECIPE_DIRECTORY, SceneRecipeIdSchema, type SceneCatalog } from "../core/recipes";
 import { OpenPreviewSchema } from "../core/project";
 import type { SceneIssue } from "../core/scene";
 import { executeProjectCommand } from "./commands";
@@ -48,7 +49,7 @@ async function discover(root: string, sceneId?: string): Promise<SceneCatalog> {
       } catch (error) { issues.push(diagnostic(error, path)); }
     }
   }
-  const catalog = loadSceneRecipes({ sources, bindingPaths, ...(sceneId === undefined ? {} : { sceneId }) });
+  const catalog = RESOURCES["load-scene"]({ sources, bindingPaths, ...(sceneId === undefined ? {} : { sceneId }) });
   return { ...catalog, issues: [...issues, ...catalog.issues].sort((a, b) => a.path < b.path ? -1 : a.path > b.path ? 1 : 0) };
 }
 export async function executeRecipeCommand(

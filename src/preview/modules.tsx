@@ -18,7 +18,7 @@ export function SceneModuleLibrary({modules,hot,backHref}:{modules:SceneModules;
    const sources:Record<string,unknown>={};const bindings:Record<string,ComponentType>={};
    try{
     const entries=Object.entries(modules);
-    if(entries.length>400)throw new Error('Keep this library below 200 scene/component pairs.');
+    if(entries.length>256)throw new Error('Keep this library at or below 128 scene/component pairs.');
     await Promise.all(entries.map(async([path,loader])=>{
      const value=await loader();const item=value&&typeof value==='object'&&'default' in value?value.default:undefined;
      const normalized=path.replace(/^\//,'');
