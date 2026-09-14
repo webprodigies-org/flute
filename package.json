@@ -27,7 +27,8 @@
     "test:export": "vitest run tests/export tests/cli",
     "export:dashboard": "npm --prefix examples/dashboard-lab run build && node scripts/render-dashboard.mjs",
     "test:authoring": "vitest run tests/core/authoring.test.ts tests/cli",
-    "setup:agent-lab": "node scripts/setup-agent-lab.mjs"
+    "setup:agent-lab": "node scripts/setup-agent-lab.mjs",
+    "publish:agent-trial": "node scripts/publish-agent-trial.mjs"
   },
   "dependencies": {
     "react-error-boundary": "6.1.5",
