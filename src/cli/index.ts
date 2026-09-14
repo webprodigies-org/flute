@@ -1,6 +1,7 @@
 import { RESOURCES } from "../core/resources";
 import { executeVideoExport } from "../export/commands";
 import { executeProjectCommand } from "../project/commands";
+import { executeRecipeCommand, type RecipeCommandResult } from "../project/recipes";
 import type { ProjectResult } from "../core/project";
 
 /** SOURCE OF TRUTH: runCli adapter.
@@ -16,8 +17,9 @@ Start with flute guide to learn spatial composition, camera, focus and motion.
 
 flute guide [--json]
 flute init [--project DIR] [--package TARBALL] [--url ORIGIN] [--no-open]
-flute open [--project DIR] [--url ORIGIN] [--no-open]
-flute load [--project DIR]
+flute open [--scene ID] [--project DIR] [--url ORIGIN] [--no-open]
+flute scenes [--project DIR] [--json]
+flute load [--scene ID] [--project DIR] [--json]
 flute validate [--project DIR]
 flute export --url URL --output FILE [--fps 30|60|120] [--width N --height N] [--project DIR] [--json]
 
@@ -33,7 +35,16 @@ function output(result: ProjectResult, json: boolean): CliResult {
     : "Project command completed.");
   return { code: 0, stdout: (json ? JSON.stringify(result) : message + "\nScene authoring: run npx flute guide before composing animations.") + "\n", stderr: "" };
 }
-export async function runCli(argv: string[], environment: Environment, execute: Execute = executeProjectCommand, exporter: typeof executeVideoExport = executeVideoExport): Promise<CliResult> {
+function recipeOutput(result: RecipeCommandResult, json: boolean): CliResult {
+  const issues = result.success ? result.data.issues : result.issues;
+  const diagnostics = issues.map(issue => `${issue.path}: ${issue.message}`).join("\n");
+  if (!result.success) return { code: 1, stdout: "", stderr: (json ? JSON.stringify(result) : diagnostics) + "\n" };
+  const text = result.data.url ?? (result.data.selected ? JSON.stringify(result.data.selected, null, 2)
+    : result.data.scenes.length ? result.data.scenes.map(scene => `${scene.id}\t${scene.title}`).join("\n")
+      : "No local scenes found. Add a recipe and matching component in src/flute/scenes.");
+  return { code: 0, stdout: (json ? JSON.stringify(result) : text) + "\n", stderr: !json && diagnostics ? diagnostics + "\n" : "" };
+}
+export async function runCli(argv: string[], environment: Environment, execute: Execute = executeProjectCommand, exporter: typeof executeVideoExport = executeVideoExport, recipes: typeof executeRecipeCommand = executeRecipeCommand): Promise<CliResult> {
   if (argv.length === 0 || (argv.length === 1 && ["--help", "-h", "help"].includes(argv[0])))
     return { code: 0, stdout: usage, stderr: "" };
   const [command, ...args] = argv;
@@ -45,11 +56,11 @@ export async function runCli(argv: string[], environment: Environment, execute: 
   }
   const aliases = { init: "init-project", open: "open-preview", load: "load-project", validate: "validate-project" } as const;
   const fail = (message: string): CliResult => ({ code: 2, stdout: "", stderr: message + "\n\n" + usage });
-  if (command !== "export" && !Object.hasOwn(aliases, command)) return fail(`Unknown command: ${command}`);
+  if (command !== "export" && command !== "scenes" && !Object.hasOwn(aliases, command)) return fail(`Unknown command: ${command}`);
   const flags = new Map<string, string | true>();
   for (let i = 0; i < args.length; i++) {
     const flag = args[i];
-    if (!(command === "export" ? ["--project", "--url", "--output", "--fps", "--width", "--height", "--json"] : ["--project", "--package", "--url", "--no-open", "--json"]).includes(flag)) return fail(`Unknown option: ${flag}`);
+    if (!(command === "export" ? ["--project", "--url", "--output", "--fps", "--width", "--height", "--json"] : ["--project", "--package", "--url", "--no-open", "--json", "--scene"]).includes(flag)) return fail(`Unknown option: ${flag}`);
     if (flags.has(flag)) return fail(`Duplicate option: ${flag}`);
     if (["--no-open", "--json"].includes(flag)) flags.set(flag, true);
     else {
@@ -59,9 +70,18 @@ export async function runCli(argv: string[], environment: Environment, execute: 
     }
   }
   if (flags.has("--package") && command !== "init") return fail("--package is only valid for init.");
-  if (["load", "validate"].includes(command) && (flags.has("--url") || flags.has("--no-open"))) return fail("Preview options require init or open.");
+  if (flags.has("--scene") && !["load", "open"].includes(command)) return fail("--scene is only valid for load or open.");
+  if (["load", "validate", "scenes"].includes(command) && (flags.has("--url") || flags.has("--no-open"))) return fail("Preview options require init or open.");
   const context = { root: flags.get("--project") as string ?? environment.root };
   const json = flags.has("--json");
+  if (command === "scenes" || flags.has("--scene")) {
+    const operation = command === "scenes" ? "list-scenes" : command === "open" ? "open-scene" : "load-scene";
+    const input = command === "scenes" ? {} : { sceneId: flags.get("--scene"), ...(command === "open" ? {
+      url: flags.get("--url") ?? `http://127.0.0.1:${environment.port ?? "5173"}`, launch: !flags.has("--no-open"),
+    } : {}) };
+    try { return recipeOutput(await recipes(operation, input, context), json); }
+    catch { return { code: 1, stdout: "", stderr: "Scene command failed unexpectedly. Check the local recipes and retry.\n" }; }
+  }
   if (command === "export") {
     if (!flags.has("--url") || !flags.has("--output")) return fail("export requires --url and --output.");
     const input = { url: flags.get("--url"), output: flags.get("--output"),
