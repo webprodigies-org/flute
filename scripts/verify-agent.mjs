@@ -59,6 +59,11 @@ export async function verifyAgent({page,host,origin,root,cli,ok,installedGuide})
      await page.reload();await page.waitForLoadState('networkidle');
      await expect(page.getByText('Revenue: 12840',{exact:true})).toBeVisible();
      await page.screenshot({path:path.join(root,'test-results/agent-revised.png')});
+     await ok(process.execPath,[cli,'export','--url',url,'--output','agent-revised.mp4','--fps','30','--width','960','--height','720','--json']);
+     const probe=JSON.parse(await ok('ffprobe',['-v','error','-select_streams','v:0','-show_entries','stream=nb_frames,r_frame_rate','-of','json','agent-revised.mp4']));
+     assert.equal(probe.streams[0].r_frame_rate,'30/1');
+     assert.equal(Number(probe.streams[0].nb_frames),360);
+     await ok('ffmpeg',['-v','error','-i','agent-revised.mp4','-frames:v','1','-y',path.join(root,'test-results/agent-export.png')]);
    }
    await ok(process.execPath,[cli,'snapshot','--scene',recipe.id,'--url',origin,'--json']);
    const saved=JSON.parse(await readFile(path.join(recipeDirectory,`${recipe.id}.scene.json`),'utf8'));
