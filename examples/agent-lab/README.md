@@ -1,3 +1,11 @@
+# Current preview: camera studies, revision 2
+
+The original independent-worker shots below are historical evidence, not the current gallery. After the user rejected their framing, the coordinator replaced them with `?scene=surface-travel`, `?scene=plating` and `?scene=floating`. Old query names resolve to these new shots. All use fixed oblique angles, camera rails derived with the installed matrix helper, narrow progressive focus and black void. Plating settles depth-separated original sections into their unchanged dashboard slots. Floating keeps a lifted chart and the real page behind it. The dashboard exposes a renderSection callback; normal rendering is unchanged, no duplicate UI is introduced. Layout ancestors carry preserve-3d so section depth is rendered rather than flattened.
+
+These are coordinator-authored corrections using the user's references and guide, not another blind-agent trial. Inspect flat page temporarily removes spatial presentation for live interaction/style checks without replacing the component tree. Capture always returns to the shot. Build/browser checks include camera travel, stable subject poses, controls/identity, flat inspection, mobile and performance; actual sampled frames are also reviewed visually. They are ready for user artistic review, not a guarantee of matching every reference.
+
+## Original independent trial record
+
 # Agent lab: three live Flute compositions
 
 Run root `npm run setup:agent-lab`, then `npm --prefix examples/agent-lab run dev`.

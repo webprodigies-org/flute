@@ -92,3 +92,8 @@
 .scene-controls button:first-child { background: #f4f4f5; color: #09090b; }
 .scene-gallery > .text-muted-foreground { color: #a1a1aa; }
 .scene-seek input { accent-color: #f4f4f5; }
+
+/* These are layout ancestors of registered sections, not painted/filter leaves.
+   Carry their shared 3D context through the original dashboard wrappers. */
+.scene-panel:has([data-flute-id]),
+.scene-panel :has([data-flute-id]) { transform-style: preserve-3d; }

@@ -1,147 +1,48 @@
-import {
-  reviewAuthoring,
-  type MotionInput,
-  type SceneInput,
-} from "@flute/scene";
+import { reviewAuthoring, matrixFor, TransformSchema, type MotionInput, type SceneInput } from "@flute/scene";
 
-// SOURCE OF TRUTH: recipes, scene identities, framing and authored motion.
-// WHAT: independent host compositions using installed contracts. WHY: review and
-// rendered registration share metadata. WHERE: gallery.tsx binds real components.
+// SOURCE OF TRUTH: recipes, host shot framing and camera rails.
+// WHAT: close camera surveys and depth assembly of the existing dashboard.
+// WHY: camera travel establishes perspective; local tracks only choreograph pieces.
+// WHERE: gallery binds these IDs to the original dashboard's section slots.
 type Track = NonNullable<MotionInput["tracks"]>[number];
-const frames = (a: number, b: number, end = 5000) => [
-  { timeMs: 0, value: a },
-  { timeMs: end, value: b },
-];
-const camera = (
-  property: "x" | "y" | "z" | "rotateX" | "rotateY" | "rotateZ",
-  a: number,
-  b: number,
-): Track => ({ target: { kind: "camera" }, property, keyframes: frames(a, b) });
-const surface = (
-  id: string,
-  property: "x" | "y" | "z" | "rotateX" | "rotateY" | "rotateZ",
-  a: number,
-  b: number,
-): Track => ({
-  target: { kind: "surface", id },
-  property,
-  keyframes: frames(a, b, 3600),
-});
-const focus = (
-  property: "x" | "y" | "z" | "radius",
-  a: number,
-  b: number,
-): Track => ({ target: { kind: "focus" }, property, keyframes: frames(a, b) });
+const durationMs = 6000;
+const track = (target: Track["target"], property: Track["property"], a: number, b: number, start = 0, end = durationMs): Track => ({target,property,keyframes:[{timeMs:start,value:a},{timeMs:end,value:b}]} as Track);
+const layer = (id:string, a:number, start:number):Track => track({kind:"surface",id},"z",a,0,start,Math.min(durationMs,start+4400));
+// Camera translation is in stage coordinates. Rotate a page tangent through the
+// canonical matrix, then give all three coordinates the same eased segment.
+function rail(pose: {rotateX:number;rotateY:number;rotateZ:number}, start: [number,number,number], axis: "x"|"y", distance:number):Track[] {
+  const m=matrixFor(TransformSchema.parse(pose));
+  const column=axis==="x"?0:1;
+  return (["x","y","z"] as const).map((property,row)=>track({kind:"camera"},property,start[row],start[row]+m[row*4+column]*distance));
+}
 export type Recipe = {
-  id: string;
-  title: string;
-  description: string;
-  scene: SceneInput;
-  motion: MotionInput;
-  panels: {
-    id: string;
-    component: "dashboard" | "metrics" | "chart" | "table";
-    left: number;
-    top: number;
-    width: number;
-    height?: number;
-  }[];
+  id:string; title:string; description:string; scene:SceneInput; motion:MotionInput;
+  sections: boolean;
 };
-export const recipes: Recipe[] = [
+const surveyPose={rotateX:24,rotateY:-34,rotateZ:-9};
+const platingPose={rotateX:28,rotateY:24,rotateZ:7};
+const floatingPose={rotateX:32,rotateY:-28,rotateZ:-14};
+export const recipes:Recipe[]=[
   {
-    id: "pullback",
-    title: "01 / The bigger picture",
-    description: "A close, oblique view opens into the complete dashboard.",
-    scene: {
-      camera: { perspective: 1800 },
-      focus: { radius: 900, falloff: 400, maxBlur: 2 },
-      nodes: [{ id: "dashboard" }],
-    },
-    motion: {
-      durationMs: 5000,
-      tracks: [
-        camera("z", -150, 470),
-        camera("rotateX", 8, 0),
-        camera("rotateY", -12, 0),
-        camera("y", -120, 0),
-        focus("radius", 450, 1000),
-      ],
-    },
-    panels: [
-      {
-        id: "dashboard",
-        component: "dashboard",
-        left: 60,
-        top: 20,
-        width: 1280,
-        height: 940,
-      },
-    ],
+    id:"surface-travel",title:"01 / Surface travel",
+    description:"Close to the near edge. The camera glides down the tilted dashboard while the page stays still.",
+    sections:false,
+    scene:{camera:{perspective:1800,...surveyPose,x:-100,y:0,z:-610},focus:{x:-319,y:3,z:302,radius:85,falloff:300,maxBlur:12},nodes:[{id:"dashboard"}]},
+    motion:{durationMs,tracks:rail(surveyPose,[-100,0,-610],"y",140)},
   },
   {
-    id: "assembly",
-    title: "02 / Pieces of the picture",
-    description:
-      "Metrics, traffic and documents settle from separate depths into one working view.",
-    scene: {
-      camera: { perspective: 1800, z: 320, rotateX: 7, rotateY: -9 },
-      focus: { radius: 850, falloff: 500, maxBlur: 3 },
-      nodes: [{ id: "metrics" }, { id: "chart" }, { id: "table" }],
-    },
-    motion: {
-      durationMs: 5000,
-      tracks: [
-        surface("metrics", "z", 160, 0),
-        surface("metrics", "y", -55, 0),
-        surface("chart", "z", -220, 0),
-        surface("chart", "x", -100, 0),
-        surface("table", "z", -460, 0),
-        surface("table", "x", 150, 0),
-        camera("rotateY", -9, 0),
-        camera("rotateX", 7, 0),
-      ],
-    },
-    panels: [
-      { id: "metrics", component: "metrics", left: 100, top: 90, width: 1200 },
-      { id: "chart", component: "chart", left: 124, top: 320, width: 680 },
-      {
-        id: "table",
-        component: "table",
-        left: 824,
-        top: 320,
-        width: 450,
-        height: 470,
-      },
-    ],
+    id:"plating",title:"02 / Plating",
+    description:"Real dashboard sections approach their original slots as the camera travels in the opposite direction.",
+    sections:true,
+    scene:{camera:{perspective:1800,...platingPose,x:210,y:-50,z:-360},focus:{x:60,y:-20,z:360,radius:130,falloff:360,maxBlur:12},nodes:[{id:"dashboard"},{id:"metrics",parentId:"dashboard"},{id:"chart",parentId:"dashboard"},{id:"table",parentId:"dashboard"}]},
+    motion:{durationMs,tracks:[...rail(platingPose,[210,-50,-360],"y",-160),layer("metrics",180,0),layer("chart",330,550),layer("table",480,1100)]},
   },
   {
-    id: "orbit",
-    title: "03 / Follow the signal",
-    description:
-      "The visitor chart takes the foreground as the camera glides and attention travels across it.",
-    scene: {
-      camera: { perspective: 1800, z: 260 },
-      focus: { x: -260, y: 20, z: 0, radius: 300, falloff: 550, maxBlur: 4 },
-      nodes: [
-        { id: "metrics", transform: { z: -180, rotateX: 9 } },
-        { id: "chart", transform: { z: 90, rotateY: -7 } },
-      ],
-    },
-    motion: {
-      durationMs: 5000,
-      tracks: [
-        camera("x", -100, 100),
-        camera("rotateY", -7, 7),
-        focus("x", -260, 260),
-        focus("radius", 300, 540),
-      ],
-    },
-    panels: [
-      { id: "metrics", component: "metrics", left: 100, top: 130, width: 1200 },
-      { id: "chart", component: "chart", left: 220, top: 410, width: 960 },
-    ],
+    id:"floating",title:"03 / Floating detail",
+    description:"A close oblique pass across the lifted visitor chart. The dashboard behind it supplies the second depth plane.",
+    sections:true,
+    scene:{camera:{perspective:1800,...floatingPose,x:120,y:80,z:-330},focus:{x:30,y:-60,z:580,radius:85,falloff:300,maxBlur:14},nodes:[{id:"dashboard"},{id:"metrics",parentId:"dashboard"},{id:"chart",parentId:"dashboard",transform:{z:190}},{id:"table",parentId:"dashboard"}]},
+    motion:{durationMs,tracks:rail(floatingPose,[120,80,-330],"x",220)},
   },
 ];
-export const reviews = recipes.map((recipe) =>
-  reviewAuthoring({ scene: recipe.scene, motion: recipe.motion }),
-);
+export const reviews=recipes.map(recipe=>reviewAuthoring({scene:recipe.scene,motion:recipe.motion}));

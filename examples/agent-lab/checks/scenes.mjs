@@ -24,7 +24,13 @@ await writeFile(
   JSON.stringify(cli, null, 2),
 );
 assert.deepEqual(cli, getAuthoringGuide());
-for (const review of reviews) assert.equal(review.valid, true);
+for (const review of reviews) { assert.equal(review.valid, true); assert.deepEqual(review.advice, []); }
+for (const recipe of recipes) {
+  assert.ok(recipe.motion.tracks.some(t=>t.target.kind==='camera'&&['x','y','z'].includes(t.property)&&t.keyframes[0].value!==t.keyframes.at(-1).value));
+  assert.ok(!recipe.motion.tracks.some(t=>t.target.kind==='camera'&&t.property.startsWith('rotate')), 'survey angle remains steady');
+  assert.ok(recipe.scene.focus.maxBlur>=10 && recipe.scene.focus.radius<=150);
+  if(recipe.id!=='plating') assert.ok(recipe.motion.tracks.every(t=>t.target.kind==='camera'),'stationary subjects, moving camera');
+}
 assert.equal(
   reviewAuthoring({
     scene: recipes[0].scene,
@@ -82,9 +88,9 @@ try {
     fullPage: true,
   });
   for (const [id, count] of [
-    ["pullback", 1],
-    ["assembly", 3],
-    ["orbit", 2],
+    ["surface-travel", 1],
+    ["plating", 4],
+    ["floating", 4],
   ]) {
     await page.goto(origin + "?scene=" + id);
     await page.getByText("Ready to inspect", { exact: true }).waitFor();
@@ -116,7 +122,7 @@ try {
       .getByText("Total Revenue", { exact: true })
       .evaluate((el) => (window.__trialLeaf = el));
     const transforms = [];
-    for (const t of [0, 2500, 5000, 7500, 10000]) {
+    for (const t of [0, 3000, 6000, 9000, 12000]) {
       await seek(t);
       assert.equal(
         await page.getByTestId("diagnostics").textContent(),
@@ -169,7 +175,8 @@ try {
     assert.notEqual(await page.getByTestId("time").textContent(), state);
     await page.getByRole("button", { name: "Restart", exact: true }).click();
     assert.match(await page.getByTestId("time").textContent(), /^0.00/);
-    await seek(10000);
+    await seek(12000);
+    await page.getByRole("button", {name:"Inspect flat page",exact:true}).click();
     const chartSelect = page.getByRole("combobox", { name: "Select a value" });
     if (await chartSelect.isVisible()) {
       await chartSelect.click();
@@ -191,6 +198,8 @@ try {
       );
     }
 
+    await page.getByRole("button", {name:"Return to shot",exact:true}).click();
+    assert.equal(await page.getByText("Total Revenue", {exact:true}).evaluate(el=>window.__trialLeaf===el),true);
     if(process.env.TRIAL_PERFORMANCE==='1') {
       await seek(0);
       await page.getByRole('button',{name:'Play',exact:true}).click();

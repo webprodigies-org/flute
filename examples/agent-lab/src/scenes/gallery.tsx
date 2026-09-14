@@ -9,59 +9,34 @@ import {
   type SceneIssue,
 } from "@flute/scene";
 import { Dashboard } from "@/components/dashboard";
-import { SectionCards } from "@/components/section-cards";
-import { ChartAreaInteractive } from "@/components/chart-area-interactive";
-import { DataTable } from "@/components/data-table";
 import { Button } from "@/components/ui/button";
-import data from "@/app/dashboard/data.json";
 import { recipes, reviews, type Recipe } from "./recipes";
 import "./scenes.css";
 
 // SOURCE OF TRUTH: ScenePlayer elapsed presentation clock and live host bindings.
 // WHAT: play, pause, seek and capture share one clock. WHY: deterministic inspection
 // without duplicating Flute evaluation. WHERE: recipes.ts owns all spatial motion.
-function Panel({ kind }: { kind: Recipe["panels"][number]["component"] }) {
-  if (kind === "dashboard") return <Dashboard animate={false} />;
-  if (kind === "metrics") return <SectionCards />;
-  if (kind === "chart") return <ChartAreaInteractive animate={false} />;
-  return <DataTable data={data} />;
-}
 function ScenePlayer({ recipe }: { recipe: Recipe }) {
   const [time, setTime] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [issues, setIssues] = useState<SceneIssue[]>([]);
   const [scale, setScale] = useState(1);
   const [fullSize, setFullSize] = useState(false);
+  const [inspectPage, setInspectPage] = useState(false);
   const viewport = useRef<HTMLDivElement>(null);
   const duration = motionDuration(recipe.motion);
   // Keep host components outside per-frame reconciliation; Scene still updates spatial state.
-  const panels = useMemo(() => recipe.panels.map((panel) => (
-                <Surface
-                  key={panel.id}
-                  id={panel.id}
-                  transform={
-                    recipe.scene.nodes.find((node) => node.id === panel.id)
-                      ?.transform
-                  }
-                  style={{
-                    position: "absolute",
-                    left: panel.left,
-                    top: panel.top,
-                    width: panel.width,
-                  }}
-                >
-                  <div
-                    className="scene-panel @container/main"
-                    data-panel={panel.id}
-                    style={{
-                      height: panel.height,
-                      overflow: panel.height ? "auto" : undefined,
-                    }}
-                  >
-                    <Panel kind={panel.component} />
-                  </div>
-                </Surface>
-              )), [recipe]);
+  const panels = useMemo(() => (
+    <Surface id="dashboard" style={{position:"absolute",left:60,top:20,width:1280}}>
+      <div className="scene-panel @container/main" data-panel="dashboard" style={{height:940}}>
+        <Dashboard animate={false} renderSection={recipe.sections ? (id, content) => (
+          <Surface id={id} transform={inspectPage ? undefined : recipe.scene.nodes.find(node=>node.id===id)?.transform}>
+            <div data-panel={id}>{content}</div>
+          </Surface>
+        ) : undefined} />
+      </div>
+    </Surface>
+  ), [recipe, inspectPage]);
   const seek = useCallback(
     (value: number) => {
       setPlaying(false);
@@ -69,7 +44,8 @@ function ScenePlayer({ recipe }: { recipe: Recipe }) {
     },
     [duration],
   );
-  useSceneCapture({ durationMs: duration, seek });
+  const captureSeek = useCallback((value:number) => { setInspectPage(false); seek(value); }, [seek]);
+  useSceneCapture({ durationMs: duration, seek: captureSeek });
   useEffect(() => {
     const el = viewport.current!;
     const observer = new ResizeObserver(() => setScale(el.clientWidth / 1400));
@@ -97,6 +73,7 @@ function ScenePlayer({ recipe }: { recipe: Recipe }) {
       <div className="scene-controls">
         <Button
           onClick={() => {
+            setInspectPage(false);
             if (time >= duration) setTime(0);
             setPlaying((v) => !v);
           }}
@@ -112,6 +89,9 @@ function ScenePlayer({ recipe }: { recipe: Recipe }) {
           onClick={() => setFullSize((v) => !v)}
         >
           {fullSize ? "Fit scene" : "Inspect at full size"}
+        </Button>
+        <Button variant="outline" aria-pressed={inspectPage} onClick={() => {setPlaying(false);setInspectPage(v=>!v);}}>
+          {inspectPage ? "Return to shot" : "Inspect flat page"}
         </Button>
         <label className="scene-seek">
           Scene time
@@ -146,9 +126,9 @@ function ScenePlayer({ recipe }: { recipe: Recipe }) {
         >
           <SceneErrorBoundary resetKey={recipe.id}>
             <Scene
-              camera={recipe.scene.camera}
-              focus={recipe.scene.focus}
-              motion={recipe.motion}
+              camera={inspectPage ? {} : recipe.scene.camera}
+              focus={inspectPage ? {maxBlur:0} : recipe.scene.focus}
+              motion={inspectPage ? undefined : recipe.motion}
               timeMs={time}
               style={{ width: 1400, height: 980 }}
               onDiagnostics={setIssues}
@@ -167,7 +147,8 @@ function ScenePlayer({ recipe }: { recipe: Recipe }) {
   );
 }
 export function SceneGallery() {
-  const requested = new URLSearchParams(location.search).get("scene");
+  const query = new URLSearchParams(location.search).get("scene");
+  const requested = ({pullback:"surface-travel",assembly:"plating",orbit:"floating"} as Record<string,string>)[query ?? ""] ?? query;
   const recipe = recipes.find((item) => item.id === requested);
   return (
     <main className="scene-gallery" style={{"--flute-void":SCENE_BACKGROUND,background:SCENE_BACKGROUND} as CSSProperties}>
@@ -175,7 +156,7 @@ export function SceneGallery() {
         ← Dashboard
       </a>
       <h1 className="text-3xl font-semibold tracking-tight mt-6">
-        One dashboard. Three perspectives.
+        Camera studies / Revision 2
       </h1>
       <nav aria-label="Scenes" className="scene-nav">
         {recipes.map((item) => (
