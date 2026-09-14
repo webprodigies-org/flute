@@ -49,6 +49,10 @@ it("keeps every preview action in the bottom region and preserves host context, 
   const capture = document.querySelector(bridge().selector)!;
   expect(capture.contains(host)).toBe(true);
   expect(capture.contains(region)).toBe(false);
+  const chrome = document.querySelectorAll("[data-flute-preview-chrome]");
+  expect(chrome).toHaveLength(2);
+  expect(Array.from(chrome).some(element => element === region)).toBe(true);
+  expect(Array.from(chrome).every(element => !capture.contains(element))).toBe(true);
   const slider = within(region).getByRole("slider", {name: "Scene time"});
   fireEvent.change(slider, {target: {value: "2000"}});
   expect(within(region).getByTestId("scene-time").textContent).toBe("0:02 / 0:08");

@@ -11,6 +11,7 @@ import { previewTheme } from "./theme";
  * WHY: installed projects and the product entry share actual controls, not demo replicas.
  * WHERE: session owns lifecycle; core validates/evaluates; Scene renders original children.
  * Stable portals place the canvas inside the viewport and canonical recovery outside capture.
+ * data-flute-preview-chrome marks overlay pixels for the export service to hide in its page.
  * Export opens upward in the scrollable overlay; no viewport space is reserved for controls.
  * Keep children referentially stable during playback. No clone, snapshot or host CSS reset.
  */
@@ -110,8 +111,8 @@ export function ScenePreview({definition: input, children, title = "Untitled sce
         <p>Your live scene will appear here. Open Flute inside your app, then ask your coding agent to compose its first scene.</p>
       </div>}
     </div>
-    <div className="flute-bottom-blur" aria-hidden="true"><i/><i/><i/></div>
-    <footer className="flute-footer flute-chrome" aria-label="Scene controls">
+    <div className="flute-bottom-blur" data-flute-preview-chrome="" aria-hidden="true"><i/><i/><i/></div>
+    <footer className="flute-footer flute-chrome" data-flute-preview-chrome="" aria-label="Scene controls">
       <div className="flute-controls">
         <div className="flute-export-slot" ref={setExportPanel}/>
         {(session.issues.length > 0 || connection.error || !connection.connected) && <section className="flute-message flute-chrome" role="alert">
