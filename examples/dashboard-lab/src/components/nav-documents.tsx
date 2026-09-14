@@ -1,4 +1,4 @@
-import { SidebarLayer as SidebarMenuItem, type SidebarSlot } from "@/scene/sidebar-layer"
+import { SidebarLayer as SidebarMenuItem, SidebarLabel, type SidebarSlot } from "@/scene/sidebar-layer"
 "use client"
 
 import {
@@ -31,7 +31,7 @@ export function NavDocuments({
 
   return (
     <SidebarGroup className="group-data-[collapsible=icon]:hidden">
-      <SidebarGroupLabel>Documents</SidebarGroupLabel>
+      <SidebarLabel><SidebarGroupLabel>Documents</SidebarGroupLabel></SidebarLabel>
       <SidebarMenu>
         {items.map((item) => (
           <SidebarMenuItem slot={item.name as SidebarSlot} key={item.name}>

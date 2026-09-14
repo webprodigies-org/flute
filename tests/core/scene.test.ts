@@ -6,7 +6,7 @@ describe("versioned scene contract", () => {
     const result = validateScene({ nodes: [{ id: "chart" }] });
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.data.version).toBe(2);
+      expect(result.data.version).toBe(3);
       expect(result.data.nodes[0].transform.scale).toBe(1);
       expect(validateScene(JSON.parse(JSON.stringify(result.data)))).toEqual(
         result,
@@ -42,12 +42,12 @@ describe("spatial evaluation", () => {
     }));
     const center = evaluateScene({
       nodes,
-      focus: { z: 0, radius: 0, falloff: 50, maxBlur: 3 },
+      focus: { distance: 1400, fStop:0.7, focalLength:300, maxBlur: 3 },
     });
     expect(center.nodes.map((n) => n.blur)).toEqual([3, 0, 3]);
     const near = evaluateScene({
       nodes,
-      focus: { z: 200, radius: 0, falloff: 50, maxBlur: 3 },
+      focus: { distance: 1200, fStop:0.7, focalLength:300, maxBlur: 3 },
     });
     expect(near.nodes.map((n) => n.blur)).toEqual([3, 3, 0]);
   });
@@ -68,7 +68,7 @@ describe("spatial evaluation", () => {
   it("includes camera rotation against independent focus coordinates", () => {
     const result = evaluateScene({
       camera: { rotateY: 90 },
-      focus: { z: -100 },
+      focus: { distance: 1500 },
       nodes: [{ id: "a", transform: { x: 100 } }],
     });
     expect(result.focusDepth).toBeCloseTo(-100);

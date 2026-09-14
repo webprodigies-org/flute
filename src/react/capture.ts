@@ -17,6 +17,9 @@ export function useSceneCapture({durationMs,seek,selector='[data-flute-capture="
     const bridge:CaptureBridge={...CaptureManifestSchema.parse({version:1,durationMs,selector}),seek:(elapsedMs:number)=>{
       if(!Number.isFinite(elapsedMs)||elapsedMs<0||elapsedMs>durationMs) throw new Error("Capture time is outside the scene.");
       flushSync(()=>current.current(elapsedMs));
+      const viewport=document.querySelector(selector);
+      if(viewport?.matches('[data-flute-valid="false"]') || viewport?.querySelector('[data-flute-valid="false"]'))
+        throw new Error("Correct scene diagnostics before exporting; some content may bypass depth of field.");
     }};
     host.__FLUTE_CAPTURE__=bridge;
     return ()=>{if(host.__FLUTE_CAPTURE__===bridge)delete host.__FLUTE_CAPTURE__};

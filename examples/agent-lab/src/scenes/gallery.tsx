@@ -30,7 +30,7 @@ function ScenePlayer({ recipe }: { recipe: Recipe }) {
     <Surface id="dashboard" style={{position:"absolute",left:60,top:20,width:1280}}>
       <div className="scene-panel @container/main" data-panel="dashboard" style={{height:940}}>
         <Dashboard animate={false} renderSection={recipe.sections ? (id, content) => (
-          <Surface id={id} transform={inspectPage ? undefined : recipe.scene.nodes.find(node=>node.id===id)?.transform}>
+          <Surface id={id} style={id==="sidebar" ? {width:"var(--sidebar-width)",flexShrink:0} : undefined} transform={inspectPage ? undefined : recipe.scene.nodes.find(node=>node.id===id)?.transform}>
             <div data-panel={id}>{content}</div>
           </Surface>
         ) : undefined} />
@@ -156,7 +156,7 @@ export function SceneGallery() {
         ← Dashboard
       </a>
       <h1 className="text-3xl font-semibold tracking-tight mt-6">
-        Camera studies / Revision 2
+        Camera studies / Revision 3 · Camera depth of field
       </h1>
       <nav aria-label="Scenes" className="scene-nav">
         {recipes.map((item) => (

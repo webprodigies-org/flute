@@ -71,7 +71,7 @@ try {
   const installedGuide=JSON.parse(await ok(process.execPath,[cli,'guide','--json']));
   const publicGuide=JSON.parse(await ok(process.execPath,['--input-type=module','-e',"import {getAuthoringGuide} from '@flute/scene'; console.log(JSON.stringify(getAuthoringGuide()))"]));
   assert.deepEqual(installedGuide,publicGuide,'Installed CLI and browser-compatible package share the exact guide');
-  assert.equal(installedGuide.version,1);
+  assert.equal(installedGuide.version,2);
   assert.ok(installedGuide.concepts.some(c=>c.id==='focus'));
   assert.ok((await ok(process.execPath,[cli,'--help'])).includes('flute guide'));
   const guideFailure=await run(process.execPath,[cli,'guide','--unknown']);assert.notEqual(guideFailure.code,0);

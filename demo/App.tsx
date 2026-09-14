@@ -14,14 +14,7 @@ import { RevenueCard, CustomersCard, ActivityCard } from "./cards";
  */
 const authoredDurationMs = 8000;
 const durationMs = motionDuration({durationMs: authoredDurationMs, tracks: []});
-const initialFocus = {
-  x: 40,
-  y: -70,
-  z: 0,
-  radius: 150,
-  falloff: 280,
-  maxBlur: 10,
-} satisfies FocusInput;
+const initialFocus = {distance:1600,fStop:8,focalLength:50,maxBlur:6} satisfies FocusInput;
 const initialCamera = {
   x: 0,
   y: 0,
@@ -80,32 +73,10 @@ function storageMotion(recipe: Recipe): MotionInput {
         },
       ],
     };
-  if (recipe === "travel")
-    return {
-      durationMs: authoredDurationMs,
-      tracks: [
-        {
-          target: { kind: "focus" },
-          property: "x",
-          keyframes: keyframes(40, -230, 150),
-        },
-        {
-          target: { kind: "focus" },
-          property: "y",
-          keyframes: keyframes(-70, -90, 100),
-        },
-        {
-          target: { kind: "focus" },
-          property: "z",
-          keyframes: keyframes(0, 260, 30),
-        },
-        {
-          target: { kind: "focus" },
-          property: "radius",
-          keyframes: keyframes(150, 45, 80),
-        },
-      ],
-    };
+  if (recipe === "travel") return {durationMs:authoredDurationMs,tracks:[
+    {target:{kind:"focus"},property:"distance",keyframes:keyframes(1600,1340,1570)},
+    {target:{kind:"focus"},property:"fStop",keyframes:keyframes(8,4,8)},
+  ]};
   return { durationMs: authoredDurationMs, tracks: [] };
 }
 
@@ -306,7 +277,7 @@ function StorageStudy() {
                     camera={camera}
                     focus={{
                       ...focus,
-                      radius: fault === "invalid" ? -1 : focus.radius,
+                      distance: fault === "invalid" ? -1 : focus.distance,
                     }}
                     motion={motion}
                     timeMs={timeMs}
@@ -531,11 +502,9 @@ function StorageStudy() {
             <div className="slider-grid">
               {(
                 [
-                  { key: "x", label: "Focus horizontal", min: -350, max: 350 },
-                  { key: "y", label: "Focus vertical", min: -250, max: 250 },
-                  { key: "z", label: "Focus depth", min: -350, max: 400 },
-                  { key: "radius", label: "Clear radius", min: 0, max: 500 },
-                  { key: "falloff", label: "Blur falloff", min: 1, max: 600 },
+                  { key: "distance", label: "Focus distance", min: 350, max: 2600 },
+                  { key: "fStop", label: "Aperture f-stop", min: 1, max: 32 },
+                  { key: "focalLength", label: "Focal length", min: 15, max: 100 },
                   { key: "maxBlur", label: "Maximum blur", min: 0, max: 16 },
                 ] as const
               ).map((item) => (
@@ -553,7 +522,7 @@ function StorageStudy() {
               ))}
             </div>
             <p className="control-hint">
-              Centered in the view. Positive depth comes toward you.
+              Distance is measured from the camera. A higher f-stop keeps more depth sharp.
             </p>
           </section>
           <section className="control-section">

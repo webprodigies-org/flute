@@ -30,7 +30,7 @@ try {
  await page.getByRole('button',{name:'Quick Create',exact:true}).click();
  await page.getByRole('link',{name:'Watch sidebar scene'}).click();
  await page.locator('[data-flute-id="user"]').waitFor();
- assert.equal(await page.locator('[data-flute-id]').count(),17);
+ assert.equal(await page.locator('[data-flute-id]').count(),18);
  assert.equal(await page.locator('[data-flute-diagnostics]').count(),0);
  assert.deepEqual(await buttonStyle(),originalStyle,'Surface wrapping must preserve the real menu styles');
  await page.evaluate(()=>window.originalRow=document.querySelector('[data-flute-id="reports"]'));
@@ -86,5 +86,5 @@ try {
  assert.equal(await page.getByTestId('scene-time').textContent(),'0.0 / 22s');
  await page.screenshot({path:'test-results/dashboard-mobile.png'});
  assert.deepEqual(errors,[]);
- console.log('Dashboard: normal UI, 17 surfaces, native menu interaction, stable DOM, replay, mobile and reduced motion passed.');
+ console.log('Dashboard: normal UI, 18 surfaces, native menu interaction, stable DOM, replay, mobile and reduced motion passed.');
 } finally {await browser.close(); server?.kill()}

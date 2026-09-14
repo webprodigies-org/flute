@@ -150,11 +150,11 @@ export function evaluateScene(
     }
   }
   for (const node of scene.nodes) {
-    const field = focusForSurface(getWorld(node.id), scene.focus);
+    const field = focusForSurface(getWorld(node.id), scene.focus, scene.camera.perspective);
     if (
       !Object.values(field).every(Number.isFinite) ||
       field.scale < 1e-8 ||
-      !Number.isFinite((field.radius + field.falloff) / field.scale)
+      !Number.isFinite(field.distance / field.scale)
     )
       return {
         nodes: [],
@@ -168,7 +168,7 @@ export function evaluateScene(
         ],
       };
   }
-  const focusDepth = scene.focus.z;
+  const focusDepth = scene.camera.perspective - scene.focus.distance;
   const nodes = scene.nodes.map((node) => {
     const world = getWorld(node.id),
       z = world[11];
@@ -196,8 +196,8 @@ export function evaluateScene(
       id: node.id,
       world,
       worldPosition: { x: world[3], y: world[7], z },
-      focus: focusForSurface(world, scene.focus),
-      blur: sampleFocus(focusForSurface(world, scene.focus), 0, 0),
+      focus: focusForSurface(world, scene.focus, scene.camera.perspective),
+      blur: sampleFocus(focusForSurface(world, scene.focus, scene.camera.perspective), 0, 0),
       width: m?.width ?? 0,
       height: m?.height ?? 0,
     };
@@ -206,88 +206,56 @@ export function evaluateScene(
 }
 
 /** SOURCE OF TRUTH: FocusField, focusForSurface, sampleFocus, focusMask, uniformFocusBlur.
- * WHAT: a camera-space xyz focus point sampled continuously across a live plane.
- * WHY: one distance law drives masks and tests; an element center cannot describe
- * progressive sharpness. Camera-attached focus stays still as scene content moves.
- * WHERE: react/FocusFilter presents these masks on SourceGraphic without UI clones.
- * Units are scene pixels, origin is the scene center; positive z faces the viewer.
+ * WHAT: camera-axis depth and thin-lens circle of confusion for each live plane.
+ * WHY: equal depth has equal focus regardless of screen position or surface ID.
+ * WHERE: React filters approximate an aperture kernel with Gaussian basis samples.
+ * Camera projection sits at +perspective; distance/focalLength share scene units.
+ * The Gaussian kernel is a realtime approximation, not Blender aperture ray tracing.
  */
 export type FocusField = {
-  x: number;
-  y: number;
-  perpendicular: number;
-  scale: number;
-  radius: number;
-  falloff: number;
-  maxBlur: number;
+  depth:number; depthX:number; depthY:number; scale:number;
+  distance:number; fStop:number; focalLength:number; maxBlur:number; perspective:number;
 };
-export function focusForSurface(
-  m: Matrix,
-  f: SceneDefinition["focus"],
-): FocusField {
-  const scale = Math.hypot(m[0], m[4], m[8]);
-  const dx = f.x - m[3],
-    dy = f.y - m[7],
-    dz = f.z - m[11];
-  return {
-    x: (dx * m[0] + dy * m[4] + dz * m[8]) / (scale * scale),
-    y: (dx * m[1] + dy * m[5] + dz * m[9]) / (scale * scale),
-    perpendicular: Math.abs((dx * m[2] + dy * m[6] + dz * m[10]) / scale),
-    scale,
-    radius: f.radius,
-    falloff: f.falloff,
-    maxBlur: f.maxBlur,
-  };
+export function focusForSurface(m:Matrix, f:SceneDefinition["focus"], perspective=1400):FocusField {
+  return {depth:perspective-m[11],depthX:-m[8],depthY:-m[9],scale:Math.hypot(m[0],m[4],m[8]),...f,perspective};
 }
-export function sampleFocus(f: FocusField, x: number, y: number): number {
-  const distance = Math.hypot(
-    (x - f.x) * f.scale,
-    (y - f.y) * f.scale,
-    f.perpendicular,
-  );
-  const t = Math.max(0, Math.min(1, (distance - f.radius) / f.falloff));
-  return f.maxBlur * t * t * (3 - 2 * t);
+// Match the variance of a circular aperture: Gaussian sigma = CoC diameter / 4.
+export function sampleFocus(f:FocusField,x:number,y:number):number {
+  if(f.maxBlur===0) return 0;
+  const depth=f.depth+f.depthX*x+f.depthY*y;
+  if(depth<=0 || f.distance<=f.focalLength) return f.maxBlur;
+  // Express the kernel on the local plane. CSS projection supplies perspective/depth;
+  // applying that factor here again would double-amplify near-camera blur.
+  const sigma=f.focalLength/(4*f.fStop*(f.distance-f.focalLength))*Math.abs(depth-f.distance);
+  return Math.min(f.maxBlur,sigma);
 }
-/** Uniform field fast path. A whole visual leaf outside the transition needs one
- * Gaussian, and a wholly sharp leaf needs none. Include the filter's support area
- * so a nearby gradient cannot be incorrectly discarded at the leaf's edges.
- * The progressive distance law remains sampleFocus; this only classifies bounds.
- */
-export function uniformFocusBlur(f: FocusField, width: number, height: number): number | undefined {
-  if (f.maxBlur === 0) return 0;
-  const pad = 3 * f.maxBlur / f.scale;
-  const halfWidth = width / 2 + pad, halfHeight = height / 2 + pad;
-  const nearestX = Math.max(-halfWidth, Math.min(halfWidth, f.x));
-  const nearestY = Math.max(-halfHeight, Math.min(halfHeight, f.y));
-  if (sampleFocus(f, nearestX, nearestY) === f.maxBlur) return f.maxBlur / f.scale;
-  const farthestX = f.x >= 0 ? -halfWidth : halfWidth;
-  const farthestY = f.y >= 0 ? -halfHeight : halfHeight;
-  if (sampleFocus(f, farthestX, farthestY) === 0) return 0;
+function depthBounds(f:FocusField,width:number,height:number) {
+  const pad=3*f.maxBlur/f.scale;
+  const extent=Math.abs(f.depthX)*(width/2+pad)+Math.abs(f.depthY)*(height/2+pad);
+  return {min:f.depth-extent,max:f.depth+extent,pad};
+}
+export function uniformFocusBlur(f:FocusField,width:number,height:number):number|undefined {
+  if(f.maxBlur===0) return 0;
+  const {min,max}=depthBounds(f,width,height);
+  if(min===max) return sampleFocus(f,0,0)/f.scale;
+  const at=(depth:number)=>sampleFocus({...f,depth,depthX:0,depthY:0},0,0);
+  if((max<f.distance||min>f.distance)&&Math.min(at(min),at(max))===f.maxBlur) return f.maxBlur/f.scale;
   return undefined;
 }
-export const FOCUS_BANDS = 6;
-// Adjacent Gaussian levels blend with weights summing to one. The spatial field
-// is continuous; the finite Gaussian basis is an approximation, not optical DOF.
-export function focusMask(
-  f: FocusField,
-  width: number,
-  height: number,
-  band: number,
-) {
-  const extent = Math.max(1, (f.radius + f.falloff) / f.scale);
-  return {
-    x: f.x + width / 2,
-    y: f.y + height / 2,
-    radius: extent,
-    stops: Array.from({ length: 33 }, (_, i) => {
-      const b =
-        f.maxBlur === 0
-          ? 0
-          : (sampleFocus(f, f.x + (i / 32) * extent, f.y) / f.maxBlur) *
-            FOCUS_BANDS;
-      return Math.max(0, 1 - Math.abs(b - band));
-    }),
-  };
+export const FOCUS_BANDS=6;
+// Blend adjacent blur samples with normalized weights. A linear depth texture
+// represents a tilted plane exactly; only the blur-kernel basis is approximate.
+export function focusMask(f:FocusField,width:number,height:number,band:number) {
+  const {min,max,pad}=depthBounds(f,width,height);
+  const span=max-min;
+  return {pad,xWeight:span===0?1:Math.abs(f.depthX)*(width+2*pad)/span,
+    yWeight:span===0?0:Math.abs(f.depthY)*(height+2*pad)/span,
+    reverseX:f.depthX<0,reverseY:f.depthY<0,
+    stops:Array.from({length:129},(_,i)=>{
+      const sigma=sampleFocus({...f,depth:min+span*i/128,depthX:0,depthY:0},0,0);
+      const level=f.maxBlur===0?0:sigma/f.maxBlur*FOCUS_BANDS;
+      return Math.max(0,1-Math.abs(level-band));
+    })};
 }
 export function cameraToCss(input: CameraInput = {}): string {
   const c = CameraSchema.parse(input);

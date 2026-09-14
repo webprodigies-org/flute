@@ -21,8 +21,7 @@ const camera = {
   rotateY: -7,
 } satisfies CameraInput;
 const focus = {
-  x: 0, y: 0, z: 0,
-  radius: 240, falloff: 700, maxBlur: 3,
+  distance:1800, fStop:8, maxBlur:6,
 } satisfies FocusInput;
 
 export function ProjectPreview({ children, projectId, enabled }: ProjectPreviewProps) {

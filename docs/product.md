@@ -4,7 +4,7 @@ Flute lets developers compose existing app components into animated perspective 
 
 ## Experience
 
-Install in an existing project, compose real UI with Scene/Surface/Motion, and watch a live preview while refining it through prompts. Surfaces, camera and an independent 3D focal point can move separately. Focus produces progressive radial blur across surfaces and can tighten or widen. Performance is a release priority.
+Install in an existing project, compose real UI with Scene/Surface/Motion, and watch a live preview while refining it through prompts. Surfaces and camera can move separately; camera focus distance and aperture can be animated independently. Depth of field follows camera-axis depth, with equal-depth objects equally focused. Performance is a release priority.
 
 ## Delivered and remaining scope
 
@@ -23,3 +23,5 @@ The installed CLI teaches cinematic concepts through `flute guide`, backed by th
 All scene backgrounds are black void space. The intended family is recognizable application surfaces viewed through deliberate perspective, spatial depth and progressive focus. Reference imagery informs those concepts only; it is not imported as an asset or prescribed as a copied shot. Isolated arbitrary elements without a product relationship are not the default outcome.
 
 The initial three-scene trial passed technical checks but the user rejected its artistic outcome. It is not an accepted visual benchmark. The corrected default starts with a close, dramatic camera pose: one edge or corner near, the opposite side receding, a large surface extending through the frame, and visible progressive focus. Camera translation follows a surface-aligned rail while the page stays posed. Plating combines that camera shot with sections settling into their original slots; micro shots isolate a real detail on its page; floating shots retain visible related background geometry for parallax. These are compositional families with free framing and direction, not fixed templates. An opening still must establish the intended perspective and focus before motion is added; technical validation alone cannot certify that result.
+
+The user superseded the original circular focus requirement with camera depth of field. Scene version 3 uses focus distance, aperture f-stop and focal length, with mild defaults. Native live-DOM filters approximate a lens kernel; aperture-shaped Blender bokeh and ray-traced inter-surface occlusion are not claimed. Unfiltered visible group content is a defect: diagnostics identify missing visual ownership, and export refuses invalid scenes. Existing example sidebar/header content must be covered along with animated sections.

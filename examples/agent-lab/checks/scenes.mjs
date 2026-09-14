@@ -28,7 +28,7 @@ for (const review of reviews) { assert.equal(review.valid, true); assert.deepEqu
 for (const recipe of recipes) {
   assert.ok(recipe.motion.tracks.some(t=>t.target.kind==='camera'&&['x','y','z'].includes(t.property)&&t.keyframes[0].value!==t.keyframes.at(-1).value));
   assert.ok(!recipe.motion.tracks.some(t=>t.target.kind==='camera'&&t.property.startsWith('rotate')), 'survey angle remains steady');
-  assert.ok(recipe.scene.focus.maxBlur>=10 && recipe.scene.focus.radius<=150);
+  assert.ok(recipe.scene.focus.maxBlur<=6 && recipe.scene.focus.fStop>=5.6 && recipe.scene.focus.distance>0);
   if(recipe.id!=='plating') assert.ok(recipe.motion.tracks.every(t=>t.target.kind==='camera'),'stationary subjects, moving camera');
 }
 assert.equal(
@@ -89,8 +89,8 @@ try {
   });
   for (const [id, count] of [
     ["surface-travel", 1],
-    ["plating", 4],
-    ["floating", 4],
+    ["plating", 6],
+    ["floating", 6],
   ]) {
     await page.goto(origin + "?scene=" + id);
     await page.getByText("Ready to inspect", { exact: true }).waitFor();

@@ -62,7 +62,7 @@ it("uses canonical camera and progressive focus while preserving host context, e
   expect(document.querySelectorAll("[data-flute-scene]")).toHaveLength(1);
   expect(document.querySelectorAll("[data-flute-id]")).toHaveLength(1);
   const camera = { perspective: 1800, rotateX: 4, rotateY: -7 };
-  const focus = { x: 0, y: 0, z: 0, radius: 240, falloff: 700, maxBlur: 3 };
+  const focus = { distance:1800, fStop:8, maxBlur:6 };
   const expected = evaluateScene({ camera, focus, nodes: [{ id: "flute-application" }] }, {
     "flute-application": { width, height: 600, offsetX: 0, offsetY: 0 },
   });
