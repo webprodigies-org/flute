@@ -29,7 +29,7 @@
     "test:recipes": "vitest run tests/core/recipes.test.ts tests/project/recipes.test.ts",
     "test:library": "node scripts/check-library.mjs",
     "setup:local": "node scripts/setup-local.mjs",
-    "prepack": "npm run build",
+    "prepack": "node scripts/prepack.mjs",
     "release:local": "node scripts/pack-release.mjs",
     "verify:agent": "npm run verify:reuse && npm run test:agent",
     "test:agent": "node scripts/check-agent.mjs"

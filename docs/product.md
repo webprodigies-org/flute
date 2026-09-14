@@ -20,7 +20,7 @@ Focus follows camera-axis depth through distance and aperture. Equal-depth regio
 
 Local MP4 export at 30/60/120 FPS is delivered through the canonical CLI and live capture clock. The preview supplies an export command; it does not present a nonexistent browser download service. FFmpeg and Chromium are local prerequisites.
 
-Interactive focus editing was mentioned as a future possibility, not authorized delivery in this slice. Recipe reopening is delivered in the current source catalog; broader agent workflows and later hosted/commercial capabilities remain separate matrix work. No builder, account system or licensing infrastructure is added to the current preview.
+Interactive focus editing was mentioned as a future possibility, not authorized delivery in this slice. Recipe reopening is delivered in the current source catalog; the final agent workflow completes the local MVP; hosted/commercial capabilities stay deferred. No builder, account system or licensing infrastructure is added to the current preview.
 
 ## Scene library and scene view
 
@@ -31,3 +31,9 @@ Scene playback fills the full viewport with proportional cover scaling and edge 
 The user explicitly authorized a new separate local project to review multiple scenes after retiring the old demos. `local-project/` is that installed-package host, not product data or a bundled gallery. The product entry remains empty for an unconnected project. Its local test scenes never ship inside the library.
 
 Scene tiles show small cached snapshots of their actual scenes. The coding agent creates or refreshes them using `flute snapshot`; unavailable snapshots fall back to scene numbers. Snapshot generation captures local rendered content, and the list displays ordinary images to keep scrolling inexpensive.
+
+## Local open-source MVP
+
+Flute by [Web Prodigies](https://www.youtube.com/@webprodigies) is an MIT-licensed local package. The final slice combines safe installation, a discoverable FLUTE.md coding-agent handoff, the version-matched conceptual guide and tested source example, one-project scene library, live revision, snapshots and MP4 export. Users bring their existing repository-capable coding agent; no product login, provider subscription connection, multi-project selector or hosted infrastructure is required.
+
+Automatic setup supports the documented npm/Vite/React 19.2 configuration boundary. A local release tarball is installable into an existing app; registry publication is separate. The guide teaches cinematic relationships and shared APIs, leaving composition and artistic overrides to the creator. The executable example proves wiring rather than imposing a common design. Future plans remain deferred and are not part of this MVP.
