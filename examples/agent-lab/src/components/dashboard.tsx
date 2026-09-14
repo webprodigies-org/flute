@@ -9,7 +9,7 @@ import data from "@/app/dashboard/data.json"
 
 // SOURCE OF TRUTH: this dashboard composes the official shadcn dashboard-01 block.
 // The host dashboard owns its components and data.
-export function Dashboard() {
+export function Dashboard({ animate = true }: { animate?: boolean } = {}) {
   return <SidebarProvider style={{
     "--sidebar-width": "17rem", "--header-height": "3.5rem",
   } as CSSProperties}>
@@ -20,7 +20,7 @@ export function Dashboard() {
         <div className="@container/main flex flex-1 flex-col gap-2">
           <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
             <SectionCards />
-            <div className="px-4 lg:px-6"><ChartAreaInteractive /></div>
+            <div className="px-4 lg:px-6"><ChartAreaInteractive animate={animate} /></div>
             <DataTable data={data} />
           </div>
         </div>

@@ -1,0 +1,85 @@
+.scene-gallery {
+  max-width: 1480px;
+  margin: auto;
+  padding: 28px;
+}
+.scene-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 24px 0;
+}
+.scene-nav a {
+  padding: 10px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 14px;
+}
+.scene-nav a[aria-current] {
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+.scene-controls {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+.scene-seek {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 180px;
+  font-size: 14px;
+}
+.scene-seek input {
+  width: 100%;
+  accent-color: var(--primary);
+}
+.scene-controls output {
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.scene-viewport {
+  width: 100%;
+  aspect-ratio: 10 / 7;
+  overflow: hidden;
+  background: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  margin-bottom: 12px;
+}
+.scene-panel {
+  background: var(--background);
+  border-radius: var(--radius);
+  box-shadow: 0 18px 50px #00000012;
+}
+.scene-panel [data-slot="sidebar-wrapper"] {
+  min-height: 940px;
+}
+.scene-panel [data-slot="sidebar-container"] {
+  position: absolute;
+  height: 940px;
+}
+.scene-full-size {
+  aspect-ratio: auto;
+  height: min(75vh, 980px);
+  overflow: auto;
+}
+.scene-seek {
+  white-space: nowrap;
+}
+@media (max-width: 600px) {
+  .scene-gallery {
+    padding: 16px;
+  }
+  .scene-nav {
+    flex-direction: column;
+  }
+  .scene-seek {
+    order: 3;
+    flex-basis: 100%;
+  }
+}
