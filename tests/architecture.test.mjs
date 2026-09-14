@@ -19,6 +19,25 @@ const spatialDoc = `/** SOURCE OF TRUTH: evaluateScene, transformToCss, focusFor
  * WHERE: consumed by React adapter.
  */`;
 const valid = {
+ 'src/core/preview.ts': `/** SOURCE OF TRUTH: PreviewDefinitionSchema, presentPreview.
+ * WHAT: validate source preview revisions.
+ * WHY: preserve a canonical presentation boundary.
+ * WHERE: browser preview calls this operation.
+ */
+ import {z} from 'zod'; export const PreviewDefinitionSchema=z.strictObject({}); export function presentPreview(){return {};}`,
+ 'src/preview/ScenePreview.tsx': `/** SOURCE OF TRUTH: ScenePreview.
+ * WHAT: render the shared preview interface.
+ * WHY: avoid duplicate product shells.
+ * WHERE: installed applications call the component.
+ */
+ export function ScenePreview(){return null;}`,
+ 'src/preview/session.ts': `/** SOURCE OF TRUTH: usePreviewSession.
+ * WHAT: maintain one playback session.
+ * WHY: coordinate capture and preview controls.
+ * WHERE: consumed by the product shell.
+ */
+ export function usePreviewSession(){return {};}`,
+
  'src/core/authoring.ts': `/** SOURCE OF TRUTH: getAuthoringGuide, reviewAuthoring, AuthoringGuideSchema.
  * WHAT: define cinematic concepts and review.
  * WHY: share capabilities across clients.
@@ -287,3 +306,6 @@ test('cascade builder cannot be reimplemented in React',()=>rejects('src/react/c
 test('authoring concepts cannot acquire a competing CLI owner',()=>{
  rejects('src/cli/guide.ts','export function getAuthoringGuide(){return {purpose:"copied"};}', 'canonical-owner');
 });
+
+test('preview cannot establish a competing scene validator',()=>rejects('src/preview/copied.ts','export function presentPreview(){return {};}', 'canonical-owner'));
+test('React cannot bypass the preview session owner',()=>rejects('src/react/copied.ts','export function usePreviewSession(){return {};}', 'canonical-owner'));

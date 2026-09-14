@@ -1,73 +1,32 @@
-import { useState, type ReactNode } from "react";
-import type { CameraInput, FocusInput } from "../core";
-import { Scene, SceneErrorBoundary, Surface } from "../react";
+import { useMemo, useState, type ReactNode } from "react";
+import { Surface } from "../react";
+import type { PreviewDefinitionInput } from "../core";
+import { ScenePreview } from "./ScenePreview";
+import type { PreviewHot } from "./connection";
+export { ScenePreview } from "./ScenePreview";
+export type { ScenePreviewProps } from "./ScenePreview";
+export type { PreviewHot } from "./connection";
 
-/** SOURCE OF TRUTH KEYWORDS: ProjectPreview, installed application preview.
- * WHAT: opt-in page framing around the host's original React children.
- * WHY: reuse live providers, events and state without copying or fetching host UI.
- * WHERE: the installed adapter supplies its development guard; ../react owns
- * registration/recovery and ../core owns all camera and progressive focus math.
- * Query activation is sampled once per mount; navigation back reloads the host.
+/** SOURCE OF TRUTH: ProjectPreview installed application adapter.
+ * WHAT: retain the explicit development/query guard around original host children.
+ * WHY: the real product shell frames live UI without copying data or changing normal routes.
+ * WHERE: CLI injects this adapter; ScenePreview owns all playback and chrome.
  */
-export type ProjectPreviewProps = {
-  children?: ReactNode;
-  projectId: string;
-  enabled: boolean;
+export type ProjectPreviewProps = {children?: ReactNode; projectId: string; enabled: boolean; hot?: PreviewHot};
+const initialDefinition: PreviewDefinitionInput = {
+  scene: {camera: {perspective:1800,rotateX:4,rotateY:-7},focus:{distance:1800,fStop:8,maxBlur:6},nodes:[{id:"flute-application"}]},
 };
-
-const camera = {
-  perspective: 1800,
-  rotateX: 4,
-  rotateY: -7,
-} satisfies CameraInput;
-const focus = {
-  distance:1800, fStop:8, maxBlur:6,
-} satisfies FocusInput;
-
-export function ProjectPreview({ children, projectId, enabled }: ProjectPreviewProps) {
+export function ProjectPreview({children, projectId, enabled, hot}: ProjectPreviewProps) {
   const [entry] = useState(() => {
     if (typeof window === "undefined") return null;
     const url = new URL(window.location.href);
     const requested = url.searchParams.get("flute-preview") === "1";
     url.searchParams.delete("flute-preview");
-    return { requested, back: url.pathname + url.search + url.hash };
+    return {requested, back: url.pathname + url.search + url.hash};
   });
+  const content = useMemo(() => <Surface id="flute-application" style={{width:"100%",minHeight:980}}>{children}</Surface>, [children]);
   if (!enabled || !entry?.requested) return children;
-
-  return (
-    <div data-flute-project={projectId} style={{
-      minHeight: "100vh", width: "100%", boxSizing: "border-box", background: "#edf1f5",
-    }}>
-      <header style={{
-        display: "flex", flexWrap: "wrap", alignItems: "center",
-        justifyContent: "space-between", gap: 16, padding: "20px 24px",
-        color: "#17243a", background: "#fff",
-        borderBottom: "1px solid #d8e0ea",
-        fontFamily: "system-ui, sans-serif", fontSize: 14, lineHeight: 1.5,
-      }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <strong style={{ fontSize: 20, letterSpacing: "-0.04em" }}>Flute</strong>
-          <span style={{
-            border: "1px solid #a6d8c4", borderRadius: 999,
-            padding: "4px 10px", color: "#145840", background: "#e8f7ef",
-          }}>Live preview</span>
-        </div>
-        <a href={entry.back} style={{
-          color: "#244b83", padding: "10px 0", textUnderlineOffset: 4,
-        }}>Back to app</a>
-        <p style={{ flexBasis: "100%", margin: 0, color: "#4b5b70" }}>
-          Your app is live. Interact with it here, and edit your existing code to see changes.
-        </p>
-      </header>
-      <section aria-label="Application preview" style={{ padding: "32px clamp(12px, 4vw, 64px) 64px" }}>
-        <SceneErrorBoundary resetKey={projectId}>
-          <Scene camera={camera} focus={focus} style={{ width: "100%", minHeight: "60vh" }}>
-            <Surface id="flute-application" style={{ width: "100%", minHeight: "60vh" }}>
-              {children}
-            </Surface>
-          </Scene>
-        </SceneErrorBoundary>
-      </section>
-    </div>
-  );
+  return <div data-flute-project={projectId}><ScenePreview title="Your application" definition={initialDefinition} backHref={entry.back} hot={hot}>
+    {content}
+  </ScenePreview></div>;
 }

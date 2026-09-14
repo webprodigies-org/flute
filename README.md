@@ -1,152 +1,61 @@
-# Flute — live spatial scenes
+# Flute
 
-Render in a black void using the canonical SCENE_BACKGROUND backdrop. The UI on each surface retains its original theme. Wrap existing React UI in perspective surfaces, then animate the camera, surfaces and an independent 3D focus point. Components keep their providers, data and interactions.
+A local toolkit for cinematic 3D motion made from real application components. Existing coding agents author the scene; Flute supplies the shared camera, depth of field, motion, browser preview and video export.
 
-## For coding agents
+## Run this repository
 
-Start with `npx flute guide` (or `npx flute guide --json`) from the installed host project. It explains the cinematic concepts, creative choices, actual APIs and verification workflow. You do not need a reference scene. `getAuthoringGuide()` returns that same versioned contract; `reviewAuthoring({scene,motion})` checks technical metadata and supplies non-blocking artistic advice. The live renderer remains the authority on registered components and visual output.
-
-## Run
+Requires Node 22.12 or newer.
 
 ```sh
-npm ci --legacy-peer-deps
-npm run setup:dashboard
+npm ci
 npm run dev
 ```
 
-Use Morphite's managed **app** service when working there. Otherwise Vite uses APP_PORT / PORT / 5173. Node 24 and npm 11 are the tested environment.
+The browser opens the real product shell in its empty state. It does not pretend to be connected to another app. Demo apps and practice screens have been removed.
 
-The default app is the official shadcn `dashboard-01` block in `examples/dashboard-lab`. Open `/?scene=sidebar` and press Play for the tilted sidebar close-up. Fifteen real menu rows protrude and settle while the camera travels down their local axis. `/` is the ordinary dashboard; `/?flute-preview=1` is the basic whole-app development preview. These are different demonstrations. The authored sidebar shot is example code, not automatic CLI choreography.
+## Install into an existing app
 
-`npm run setup:dashboard` builds and packs Flute, installs that actual tarball into the example, and runs canonical CLI init/validation. Run it again after changing the library; restart the dev server so Vite reloads the installed package. Edit `src/components/dashboard.tsx` inside the example for shared UI and `src/scene/sidebar-recipe.ts` for the shot. See the example README for the short map.
-
-The previous study remains available with `npm run dev:storage`. The Storage study demonstrates floating folders, camera movement and progressive focus. Play or seek the scene; compare fixed focus against traveling focus and adjust focus position/width. The dashboard cards use the included `/api/dashboard` fixture through their existing React provider, not a production database. `?fixture=baseline` renders the cards without Flute wrappers.
-
-## Install into a supported project
-
-The launch adapter targets standard, single-root Vite + React applications using npm and a root `index.html` with a `.tsx` or `.jsx` module entry. Unsupported configuration is reported before source edits. The package is local-only during the MVP; build and pack it first:
+The package is currently local, not published to a registry. Build and pack it:
 
 ```sh
 npm run build
-npm pack
+npm pack --pack-destination /tmp
 ```
 
-Inside the host project, with its existing Vite dev server running, use the absolute tarball path:
+With your application's existing dev server running, invoke this checkout's CLI:
 
 ```sh
-npx --yes --package /absolute/path/flute-scene-0.1.0.tgz flute init \
-  --package /absolute/path/flute-scene-0.1.0.tgz \
-  --url http://127.0.0.1:5173
+node /path/to/flute/dist/cli/flute.js init --project /path/to/your-app --package /tmp/flute-scene-0.1.0.tgz --url http://127.0.0.1:5173
 ```
 
-Initialization installs the toolkit and wraps the existing root render expression, preserving its providers and application components. Repeating initialization does not add another wrapper. `flute open --url http://127.0.0.1:5173` verifies the existing dev server and opens `?flute-preview=1`; it never starts a competing server or silently switches ports. Use `--no-open` to verify and print the URL. `flute load` reads setup state; `flute validate` checks the integration. After installation, these commands are available through `npx flute` in the host project.
+Automatic integration supports the checked single-root npm Vite/React configuration, including the supported shadcn React/Tailwind/alias recipe. Unsupported or dynamic configuration is refused before writes. Initialization preserves providers and guards the installed preview with the host development flag. Normal application routes remain normal.
 
-The ordinary app URL keeps the original application view. The preview entry explicitly receives the host's `import.meta.env.DEV`, so a production build cannot activate the preview with a query string. This first preview shows the whole live app on a tilted surface with progressive focus. Source editing uses the host's existing Vite refresh; dedicated refinement controls and saved recipes remain subsequent slices.
+Inside the installed project, `npx flute guide` gives the version-matched cinematic concepts and actual API capabilities. Flute uses the developer's existing coding agent; it does not authenticate to AI providers.
 
-Missing or wrong-port dev servers report an actionable error; start the original host server and retry `open`. The supported configuration includes the standard React plugin, optional zero-argument Tailwind Vite plugin and shadcn’s exact `@` → `./src` alias. React/react-dom must be installed at 19.2.x (pin the version; a caret can install a later minor). Custom roots, other custom/dynamic Vite plugins or configuration, unsupported entry patterns and package managers need an explicit adapter instead of replacing the app. Setup metadata stays in `.flute/`; host `.env` files are not copied. Review generated source changes normally.
+## Real preview interface
 
-## Compose
+`ScenePreview` is exported from `@flute/scene/preview`. It accepts a `definition` containing canonical `scene` metadata, optional `motion`, and viewport `width`/`height`. Its `children` are the application's original `Surface` elements. Keep their element references stable during playback. Supply the host's `import.meta.hot` as `hot` for development connection and source-error status.
 
-```tsx
-<Scene
-  camera={{ perspective: 1400, x: 0, rotateY: -15 }}
-  focus={{ distance: 1400, fStop: 8, focalLength: 50, maxBlur: 6 }}
-  motion={recipe}
-  timeMs={timeMs}
->
-  <Surface id="revenue"><YourRevenueChart /></Surface>
-  <Motion id="customers" transform={{ x: 20, z: 160 }}>
-    <YourCustomersCard />
-  </Motion>
-</Scene>
-```
+The shared interface provides play/pause, replay, seeking, responsive framing, reduced-motion handling, validation diagnostics and an export command. No builder or interactive focus editor is included. Empty/static scenes disable unavailable actions. Invalid metadata retains the last valid settings and cursor; corrections resume the same host tree. A component that throws is recovered through the shared error boundary, so that failed subtree may remount. A full development-server reload can reset in-memory state.
 
-Scene coordinates are pixels centered on the viewport; positive z faces the viewer. Focus is **camera-attached**, so it stays fixed on screen while camera translation moves the scene beneath it. Change focus xyz to move it independently. Camera xyz subtracts from the scene; rotation angles retain the existing stage-rotation convention, not a physical camera-pose API.
+`ProjectPreview` is the guarded bootstrap around an unmodified application. For an authored scene, use `ScenePreview` on its own application route and open that route directly, without the bootstrap `flute-preview=1` query. Do not nest preview shells. Saved-route discovery remains a later slice.
 
-`distance` sets the focal plane measured along the camera axis. Increase `fStop` for gentler, deeper focus; decrease it for stronger separation. `focalLength` and `distance` share scene units; distance must exceed focal length. The default is deliberately mild. Camera movement changes each point's depth automatically, and focus distance can be animated independently. Two objects at the same focal depth can both be sharp, regardless of screen position.
+## Rendering and export
 
-Scene schema is **version 3**. Version 2 circular focus (`x/y/z/radius/falloff`) rejects explicitly. Migrate to `distance = camera.perspective - subjectCameraSpaceZ`, then tune aperture. There is one active focus implementation. The thin-lens circle-of-confusion calculation is projected once; native Gaussian basis filters approximate the aperture kernel. This is not Blender ray tracing or aperture-shaped bokeh.
+Scene version 3 uses camera-axis depth of field: `focus.distance`, `fStop`, `focalLength` and `maxBlur`. Lower f-stop increases separation; equally distant regions may both be sharp. The renderer approximates aperture blur with native Gaussian basis filters and cached raster depth ramps. It does not reproduce ray-traced bokeh or occlusion.
 
-## Animate
+Every visible text/media region needs a visual `Surface` leaf or `content` owner. Spatial groups remain unfiltered to preserve nested 3D. Diagnostics identify uncovered content and capture refuses an invalid scene. Host clipping, portals, pseudo-element paint and selectors tied to exact DOM structure can require adaptation.
 
-```ts
-const recipe = {
-  durationMs: 2000,
-  tracks: [{
-    target: { kind: 'focus' as const },
-    property: 'x' as const,
-    keyframes: [
-      { timeMs: 0, value: -100, easing: 'easeInOut' as const },
-      { timeMs: 2000, value: 150 },
-    ],
-  }],
-};
-```
-
-Tracks target a surface ID, camera or focus. Surface tracks support xyz, rotations, scale and opacity; camera tracks support xyz and rotations; focus tracks support distance, fStop, focalLength and maximum blur. Easing belongs to the outgoing keyframe. Duplicate property tracks reject. Explicit time clamps to the duration and replays deterministically. `useSceneTime()` lets an opt-in component feed that same time into its supported animation API.
-
-Keep wrappers and child identity stable during edits. Adding/removing wrappers around already mounted UI can remount it. For spatial groups, put decoration in `content` and nested surfaces in `children`. Opacity/filters apply only to visual leaves; group fades require tracks on the actual visual surfaces. Host clipping, filters, portals, competing CSS transforms and unusual layout can require adaptation. This does not promise universal component compatibility. The renderer reuses two static linear depth textures through native SVG transfer tables; it never rebuilds mask images during playback. Host CSP must permit the packaged mask asset (or data images when the library bundle inlines it).
-
-## Code map
-
-| Owner | Responsibility |
-| --- | --- |
-| `src/core/scene.ts` | Versioned schemas, inferred types and input validation |
-| `src/core/spatial.ts` | Camera transforms, camera depth-of-field law and depth masks |
-| `src/core/motion.ts` | Validated tracks and deterministic time evaluation |
-| `src/core/resources.ts` | Canonical operation identities and bindings |
-| `src/react/` | Live registration, measurements, visual filters and diagnostics |
-| `src/preview/` | Development-only framing of the installed host application |
-| `src/project/commands.ts` | Trusted, validated project operations |
-| `src/project/services.ts` | Scoped filesystem, package install and browser effects |
-| `src/cli/` | Terminal arguments and result presentation |
-| `demo/` | Storage study and provider/API-backed host components |
-| `scripts/check-architecture.mjs` | Executable dependency and named-owner checks |
-
-Inline SOURCE OF TRUTH comments explain WHAT, WHY and WHERE. Scene metadata never contains React instances, secrets or host database content. The CLI uses canonical project commands. Persistent agent sessions, saved recipes, hosted accounts and still-image output remain later work; Flute does not authenticate to AI providers.
-
-## Verify
+Export uses the same preview clock and live renderer:
 
 ```sh
-npm run verify:motion
+npx flute export --url http://127.0.0.1:5173/your-scene --output scene.mp4 --fps 30
 ```
 
-Runs types, core/React tests, architecture negative fixtures, demo/library builds and Chromium checks including actual pixel sharpness. Install the matching browser with `npx playwright install chromium` if needed. Browser tests start an isolated production preview; FLUTE_TEST_URL can target an existing development server. `npm run build` produces demo assets and the ESM library/types in `dist/library`. React stays a peer dependency. The package remains private during MVP development.
+Choose 30, 60 or 120 FPS. FFmpeg on PATH and Playwright Chromium are required. Use a fresh output filename; existing files are never overwritten. The browser's Export menu supplies the command, while the CLI performs local file/process work.
 
+## Source of truth
 
-## Performance qualification
+Read [architecture](docs/architecture.md) for owners and the linear data flow. [Product](docs/product.md) records the current experience and boundaries. Morphite owns the vertical slice matrix and task stages. Those are the only two files permitted in `docs/`.
 
-`npm run verify:motion` includes `npm run test:performance`: full hardware-accelerated Chromium at 1440×1100, both camera/focus recipes, a 300 ms warmup and six seconds of samples each. Required: average ≥55 FPS, p95 frame interval <20 ms, fewer than 2% intervals over33.4 ms, and zero image-href reconstruction during playback. Reports include GPU identity; software-only headless rendering cannot qualify this hardware budget. Install full Chromium with `npx playwright install chromium`.
-
-See [performance evidence](docs/architecture.md#progressive-focus-performance) for the measured baseline and rendering decision. These measurements qualify the tested scene/device; they are not a guarantee for arbitrary host component complexity or every GPU.
-
-## Launch verification
-
-`npm run verify:launch` includes the existing renderer/performance suite, project command and preview tests, CLI tests, and an independently installed tarball fixture. The installed fixture starts its own Vite server on a free configured port, checks source/config preservation and repeated init, rejects missing/wrong servers, exercises a provider-backed live counter, and checks the normal route and production preview exclusion. It cleans up its temporary project and servers. npm cache must contain the fixture dependencies for its offline initial install.
-
-## Cinematic authoring
-
-`src/core/authoring.ts` owns the installed conceptual guide. The CLI, package consumers and future interfaces can read the same `getAuthoringGuide()` contract and `reviewAuthoring()` operation. Defaults derive from the actual scene/motion schemas. No angle, layout, camera path, palette or entrance pattern is prescribed. Review advice does not block deliberate creative overrides. See `npx flute guide` for the complete concepts and API; avoid keeping a competing prompt or copied guide in an agent-specific file.
-
-## Export MP4 locally
-
-Install FFmpeg on your machine and `npx playwright install chromium`. The CLI uses optional Playwright; if omitted from installation, install it in the project. Register the scene once with `useSceneCapture({durationMs: motionDuration(recipe), seek})`, where seek pauses playback and sets the same elapsed time passed to Scene. Mark the fixed capture viewport `data-flute-capture="scene"`. The dashboard already does this.
-
-From your installed project:
-
-```sh
-npx flute export --url 'http://127.0.0.1:5173/?scene=sidebar' \
-  --output sidebar-60.mp4 --fps 60
-```
-
-Choose 30, 60 or 120 FPS; output resolution defaults 1440×1000 (`--width`/`--height` override it). FPS changes cadence, not animation speed or duration. Use a new relative filename; existing files are never overwritten. Export is offline frame capture and may take longer than playback. It preserves live DOM rendering, without asking for source screenshots. No sound track is produced.
-
-For this repository's example: `npm run export:dashboard -- 60 30`. The Export MP4 panel offers completed sample downloads and a command for new renders. Export uses [Playwright screenshots](https://playwright.dev/docs/screenshots) and [FFmpeg's image stream input](https://ffmpeg.org/ffmpeg-formats.html#image2).
-
-## Fresh-agent scene trial
-
-`npm run verify:agent-trial` installs the package into the clean host, builds three independently authored scenes, publishes their generated assets and runs browser/performance checks. With the usual dashboard dev server running, open `/agent-trial/index.html?scene=pullback` and switch among the three scenes. `assembly` separates and reunites sections; `orbit` moves attention across a foreground chart. The original dashboard and its video downloads remain available.
-
-The trial worker had no conversation or prior scene brief and used installed CLI guidance and public declarations. Parent integration found and corrected a host-rerender performance gap, then added that distinction to the shared guide. The trial record in `examples/agent-lab/README.md` separates independent output from integration changes; this is evidence for one GPT-6 Astra trial.
-
-Mixed spatial groups must give every visible text/media region a Surface leaf or `content` owner. The renderer reports uncovered content, including content from custom host components, instead of silently leaving it sharp. Fix diagnostics before export; capture rejects invalid scenes. Pure layout containers remain unfiltered to retain 3D depth. Host paint on those containers must be isolated on visual leaves; arbitrary CSS cannot be converted into an optical scene automatically.
+`npm run verify:iterate` runs the current product gate, including installed-app HMR, schema/syntax/render-error recovery, reconnection, capture, mobile/keyboard behavior and architecture checks. Test inputs live under `tests/` and disposable temporary directories. `vite.test.config.ts` builds them into ignored `.test-dist`; the normal production build contains only the product entry, package and CLI.

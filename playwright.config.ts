@@ -14,7 +14,7 @@ export default defineConfig({
   webServer: process.env.FLUTE_TEST_URL
     ? undefined
     : {
-        command: `npm run preview -- --port ${process.env.FLUTE_TEST_PORT ?? 4173} --strictPort`,
+        command: `npm run preview -- --config vite.test.config.ts --port ${process.env.FLUTE_TEST_PORT ?? 4173} --strictPort`,
         url: baseURL,
         reuseExistingServer: false,
         timeout: 30000,

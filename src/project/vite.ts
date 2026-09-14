@@ -191,9 +191,10 @@ export function inspectEntry(source: string, filename: string, projectId: string
       || argument.closingElement.tagName.getText(file) !== alias)
       throw fault("conflict", "Existing Flute import/wrapper differs from the generated integration.", filename);
     const attributes = argument.openingElement.attributes.properties;
-    if (attributes.length !== 2
+    if ((attributes.length !== 2 && attributes.length !== 3)
       || attributes[0].getText(file) !== 'projectId="' + projectId + '"'
-      || attributes[1].getText(file).replace(/\s/g, "") !== "enabled={import.meta.env.DEV}")
+      || attributes[1].getText(file).replace(/\s/g, "") !== "enabled={import.meta.env.DEV}"
+      || (attributes.length === 3 && attributes[2].getText(file).replace(/\s/g, "") !== "hot={import.meta.hot}"))
       throw fault("conflict", "Flute project identity or development gate changed.", filename);
     let aliases = 0;
     walk(file, node => { if (ts.isIdentifier(node) && node.text === alias) aliases++; });
@@ -207,7 +208,7 @@ export function inspectEntry(source: string, filename: string, projectId: string
   const end = argument.getEnd();
   const newline = source.includes("\r\n") ? "\r\n" : "\n";
   const prefix = 'import { ProjectPreview as ' + alias + ' } from "' + moduleName + '";' + newline;
-  const wrapped = "<" + alias + ' projectId="' + projectId + '" enabled={import.meta.env.DEV}>{'
+  const wrapped = "<" + alias + ' projectId="' + projectId + '" enabled={import.meta.env.DEV} hot={import.meta.hot}>{'
     + source.slice(start, end) + "}</" + alias + ">";
   const insertion = file.statements.find(ts.isImportDeclaration)!.getStart(file);
   if (insertion > start) unsupported("Place React imports before the root render call.");

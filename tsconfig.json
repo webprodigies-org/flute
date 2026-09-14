@@ -21,12 +21,13 @@
   },
   "include": [
     "src",
-    "demo",
     "tests",
     "vite.config.ts",
     "playwright.config.ts",
     "playwright.performance.config.ts",
     "vite.lib.config.ts",
-    "vite.cli.config.ts"
+    "vite.cli.config.ts",
+    "app",
+    "vite.test.config.ts"
   ]
 }
