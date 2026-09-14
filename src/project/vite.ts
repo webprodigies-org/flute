@@ -29,6 +29,7 @@ ${typed ? 'import type { ComponentProps } from "react";\n' : ''}
 const sceneModules = import.meta.env.DEV ? import.meta.glob("/src/flute/scenes/*.{scene.json,tsx}") : undefined;
 
 export function FluteProjectPreview(props${typed ? ': Omit<ComponentProps<typeof ProjectPreview>, "sceneModules" | "hot">' : ''}) {
+  if (!import.meta.env.DEV) return props.children;
   return <ProjectPreview {...props} sceneModules={sceneModules} hot={import.meta.hot} />;
 }
 `;

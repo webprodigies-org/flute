@@ -86,5 +86,8 @@
     "name": "Web Prodigies",
     "url": "https://www.youtube.com/@webprodigies"
   },
-  "homepage": "https://www.youtube.com/@webprodigies"
+  "homepage": "https://www.youtube.com/@webprodigies",
+  "sideEffects": [
+    "./dist/cli/flute.js"
+  ]
 }

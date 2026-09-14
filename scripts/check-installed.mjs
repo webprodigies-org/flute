@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdtemp, cp, readFile, writeFile, rm, mkdir } from 'node:fs/promises';
+import { mkdtemp, cp, readFile, readdir, writeFile, rm, mkdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -133,6 +133,9 @@ try {
   await page.getByText('Revenue: 12840',{exact:true}).waitFor();
   assert.equal(await page.locator('[data-flute-scene]').count(),0,'Ordinary host URL stays ordinary');
   await ok('npm',['run','build']);
+  const assets=path.join(host,'dist/assets');
+  const productionCode=(await Promise.all((await readdir(assets)).filter(name=>name.endsWith('.js')).map(name=>readFile(path.join(assets,name),'utf8')))).join('\n');
+  assert.ok(!productionCode.includes('flute-library-scroll')&&!productionCode.includes('data-flute-capture'),'Production host must not ship the unused studio renderer');
   const previewPort=await port();const productionOrigin=`http://127.0.0.1:${previewPort}`;
   const production=spawn(process.execPath,['node_modules/vite/bin/vite.js','preview','--host','127.0.0.1','--port',String(previewPort),'--strictPort'],{cwd:host,stdio:'ignore'});processes.push(production);
   await waitFor(productionOrigin,production);
