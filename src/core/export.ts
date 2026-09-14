@@ -19,7 +19,7 @@ export const ExportVideoSchema = z.strictObject({
 });
 export const CaptureManifestSchema = z.strictObject({
   version: z.literal(1),
-  durationMs: z.number().positive().max(120_000),
+  durationMs: z.number().nonnegative().max(120_000),
   selector: z.literal('[data-flute-capture="scene"]'),
 });
 export const ExportVideoResultSchema = z.discriminatedUnion("success", [

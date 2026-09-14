@@ -18,7 +18,7 @@ const ROW=150;
 // Positive X tilt recedes at the top and approaches the viewer at the bottom.
 // The lens stays fixed at the viewport center while the entire list travels through it.
 const camera={perspective:1400,rotateX:42};
-const focus={distance:1400,fStop:1.4,focalLength:220,maxBlur:10};
+const focus={distance:1400,fStop:4,focalLength:220,maxBlur:7};
 const view=matrixFor(TransformSchema.parse({rotateX:camera.rotateX}));
 // Viewport culling consumes the canonical camera matrix, not flat scroll indices.
 // Invert the projected vertical coordinate on this list's z=0 plane. Keep a full
@@ -33,6 +33,11 @@ function visibleRows(scroll:number,height:number,count:number){
  const bottom=localY(height+3*focus.maxBlur);
  return {start:Math.max(0,Math.floor((scroll+top-(height/2-ROW/2))/ROW)-1),
   end:Math.min(count,Math.ceil((scroll+bottom-(height/2-ROW/2))/ROW)+2)};
+}
+// Image failures are local to the thumbnail; a replacement source retries naturally.
+function SnapshotImage({src}:{src:string}){
+ const [failed,setFailed]=useState<string>();
+ return failed===src?null:<img src={src} alt="" loading="lazy" decoding="async" onError={()=>setFailed(src)}/>;
 }
 function selection(){return typeof location==='undefined'?undefined:new URL(location.href).searchParams.get('flute-scene')??undefined;}
 export function SceneLibrary({sources=EMPTY_SOURCES,bindings=EMPTY_BINDINGS,hot,backHref}:SceneLibraryProps){
@@ -66,7 +71,7 @@ export function SceneLibrary({sources=EMPTY_SOURCES,bindings=EMPTY_BINDINGS,hot,
         <Surface id="scene-list-heading" style={{position:'absolute',top:0,width:planeWidth,height:110}}><header className="flute-library-heading"><h1>Your scenes</h1><span>{catalog.scenes.length} perspectives</span></header></Surface>
         {catalog.scenes.slice(start,end).map((scene,index)=>{const number=start+index;return <Surface key={scene.id} id={`scene-row-${scene.id}`} style={{position:'absolute',top:110+number*ROW,width:planeWidth,height:ROW}}>
           <a className="flute-scene-row" data-scene-id={scene.id} onFocus={event=>{if(event.currentTarget.matches(':focus-visible')&&scroller.current)scroller.current.scrollTop=Math.max(0,number*ROW)}} href={destination(scene.id)} onClick={event=>navigate(event,scene.id)}>
-           <span className="flute-scene-number">{String(number+1).padStart(2,'0')}</span><span className="flute-scene-copy"><strong>{scene.title}</strong><span>{scene.description||'A new perspective on your product'}</span></span>
+           <span className="flute-scene-number">{String(number+1).padStart(2,'0')}{scene.snapshot&&<SnapshotImage src={scene.snapshot.image}/>}</span><span className="flute-scene-copy"><strong>{scene.title}</strong><span>{scene.description||'A new perspective on your product'}</span></span>
            <span className="flute-scene-duration">{Math.round((scene.definition.motion?motionDuration(scene.definition.motion):0)/1000)}s <span aria-hidden="true">↗</span></span>
           </a>
          </Surface>})}

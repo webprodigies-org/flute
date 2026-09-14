@@ -16,6 +16,14 @@ try{
  const n=await port();const origin=`http://127.0.0.1:${n}`;
  server=spawn(process.execPath,['node_modules/vite/bin/vite.js','--host','127.0.0.1','--port',String(n),'--strictPort'],{cwd:host,stdio:'ignore'});
  for(let i=0;i<100;i++){try{if((await fetch(origin)).ok)break}catch{}await new Promise(r=>setTimeout(r,100))}
+ // Generate real images through the installed CLI, then verify refresh and static capture.
+ const snap=async(id,time)=>JSON.parse(await run([process.execPath,cli,'snapshot','--scene',id,'--url',origin,...(time===undefined?[]:['--time',String(time)]),'--json']));
+ const platingPath=path.join(host,'src/flute/scenes/plating.scene.json');
+ assert.equal((await snap('plating',0)).success,true);const firstImage=JSON.parse(await readFile(platingPath,'utf8')).snapshot.image;
+ assert.equal((await snap('plating',8000)).success,true);const secondImage=JSON.parse(await readFile(platingPath,'utf8')).snapshot.image;
+ assert.notEqual(firstImage,secondImage,'Snapshot reflects the canonical seek time');
+ const staticPath=path.join(host,'src/flute/scenes/customer-focus.scene.json');const savedStatic=await readFile(staticPath,'utf8');const still=JSON.parse(savedStatic);delete still.definition.motion;await writeFile(staticPath,JSON.stringify(still));
+ assert.equal((await snap('customer-focus')).data.timeMs,0,'Static scenes support snapshots');await writeFile(staticPath,savedStatic);
  const cliList=JSON.parse(await run([process.execPath,cli,'scenes','--json']));assert.equal(cliList.success,true);assert.equal(cliList.data.scenes.length,10);
  browser=await chromium.launch({channel:'chromium',headless:true});const page=await browser.newPage({viewport:{width:1440,height:1000}});
  await page.goto(origin+'/?flute-preview=1');await expect(page.getByRole('heading',{name:'Your scenes',exact:true})).toBeVisible();
@@ -29,8 +37,8 @@ try{
  // Isolate the existing per-surface optical filter with a high-frequency texture.
  const pattern=await page.addStyleTag({content:'.flute-scene-row,.flute-library-heading{background:repeating-linear-gradient(90deg,#000 0 12px,#fff 12px 24px)!important}.flute-scene-row>*,.flute-library-heading>*{visibility:hidden}'});
  const shot=await page.screenshot();
- const contrast=await page.evaluate(async data=>{const img=new Image();img.src=data;await img.decode();const canvas=document.createElement('canvas');canvas.width=img.width;canvas.height=img.height;const ctx=canvas.getContext('2d');ctx.drawImage(img,0,0);return [340,500,820].map(y=>{const p=ctx.getImageData(690,y,60,4).data;const v=Array.from({length:p.length/4},(_,i)=>p[i*4]);return Math.max(...v)-Math.min(...v)})},'data:image/png;base64,'+shot.toString('base64'));
- assert.ok(contrast[1]>200&&contrast[0]<contrast[1]-80&&contrast[2]<contrast[1]-80,`Center stays clear; near/far blur increases: ${contrast}`);
+ const contrast=await page.evaluate(async data=>{const img=new Image();img.src=data;await img.decode();const canvas=document.createElement('canvas');canvas.width=img.width;canvas.height=img.height;const ctx=canvas.getContext('2d');ctx.drawImage(img,0,0);return [160,390,500,610,900].map(y=>{const p=ctx.getImageData(690,y,60,4).data;const v=Array.from({length:p.length/4},(_,i)=>p[i*4]);return Math.max(...v)-Math.min(...v)})},'data:image/png;base64,'+shot.toString('base64'));
+ assert.ok(contrast.slice(1,4).every(value=>value>200)&&contrast[0]<200&&contrast[4]<220,`Three center rows remain readable with gentler outer blur: ${contrast}`);
  await pattern.evaluate(e=>e.remove());
  // Retiring a row may happen only beyond the projected screen, never visibly.
  const transitions=await page.evaluate(async()=>{
@@ -71,6 +79,9 @@ try{
  assert.equal(await page.locator('[data-flute-stage]').getAttribute('style'),angle,'Scrolling must retain camera pose');
  await scroller.evaluate(e=>e.scrollTop=0);
  await scroller.evaluate(e=>e.scrollTop=600);
+ await expect(page.locator('[data-scene-id="plating"] img')).toBeVisible();
+ assert.ok(await page.locator('[data-scene-id="plating"] img').evaluate(e=>e.complete&&e.naturalWidth>0),'Tile contains a decoded real snapshot');
+ assert.equal(await page.locator('iframe').count(),0,'No live scenes run in tiles');
  await page.locator('[data-scene-id="plating"]').click();
  await expect(page.locator('[data-flute-preview]')).toBeVisible();await expect(page.getByRole('button',{name:'Play',exact:true})).toBeEnabled();
  await expect(page.getByText('$128,430',{exact:false}).first()).toBeVisible();

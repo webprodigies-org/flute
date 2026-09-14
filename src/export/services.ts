@@ -3,7 +3,7 @@ import path from "node:path";
 import { spawn } from "node:child_process";
 import type { Browser, Page } from "playwright";
 import type { CaptureBridge, CaptureManifest, ExportVideo } from "../core/export";
-import { canonicalRoot, relativeTarget, scopedPath } from "../project/services";
+import { canonicalRoot, relativeTarget, scopedPath, readText, atomicWrite } from "../project/services";
 import { fault } from "../project/errors";
 
 /** SOURCE OF TRUTH: video capture effects.
@@ -19,7 +19,7 @@ export async function prepareScope(root: string, output: string) {
   catch (error) { if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error; }
   return { root: canonical, output };
 }
-export async function openCapture(input: ExportVideo, signal?: AbortSignal) {
+export async function openCapture(input: Pick<ExportVideo,"url"|"width"|"height">, signal?: AbortSignal) {
   let browser: Browser | undefined;
   let page: Page;
   let aborted = signal?.aborted ?? false;
@@ -65,6 +65,18 @@ export async function openCapture(input: ExportVideo, signal?: AbortSignal) {
         const bridge = (window as unknown as { __FLUTE_CAPTURE__: CaptureBridge }).__FLUTE_CAPTURE__;
         return { version: bridge.version, durationMs: bridge.durationMs, selector: bridge.selector };
       }),
+      async snapshot(timeMs:number, manifest:CaptureManifest){
+        check();
+        await page.waitForLoadState("networkidle",{timeout:10_000});
+        await page.evaluate(()=>document.fonts.ready.then(()=>{}));
+        const locator=page.locator(manifest.selector);
+        if(await locator.count()!==1)throw fault("invalid-capture","Capture must identify exactly one scene viewport.");
+        await page.evaluate(elapsed=>(window as unknown as {__FLUTE_CAPTURE__:CaptureBridge}).__FLUTE_CAPTURE__.seek(elapsed),timeMs);
+        const rect=await locator.boundingBox();
+        if(!rect||rect.width<1||rect.height<1||rect.width>3840||rect.height>3840)throw fault("invalid-capture","Scene viewport must be visible and bounded.");
+        const png=await page.screenshot({clip:rect,type:"png",animations:"disabled",timeout:10_000});check();
+        return "data:image/png;base64,"+png.toString("base64");
+      },
       async encode(scope: { root: string; output: string }, options: ExportVideo, manifest: CaptureManifest, frames: number) {
         let temporary: string | undefined;
         try {
@@ -107,3 +119,8 @@ export async function openCapture(input: ExportVideo, signal?: AbortSignal) {
     };
   } catch (error) { await close(); check(); throw error; }
 }
+
+// Reuse scoped, compare-before-write project effects for cached recipe imagery.
+export const readRecipe=readText;
+export const writeRecipe=atomicWrite;
+export function textBytes(text:string){return Buffer.byteLength(text,"utf8")}

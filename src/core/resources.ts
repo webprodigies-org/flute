@@ -1,4 +1,4 @@
-import {loadSceneRecipes,ListScenesSchema,LoadSceneSchema,OpenSceneSchema} from "./recipes";
+import {SnapshotSceneSchema,loadSceneRecipes,ListScenesSchema,LoadSceneSchema,OpenSceneSchema} from "./recipes";
 import { presentPreview } from "./preview";
 import { getAuthoringGuide, reviewAuthoring } from "./authoring";
 import { ExportVideoSchema } from "./export";
@@ -18,6 +18,7 @@ export const RESOURCES = Object.freeze({
   "list-scenes":ListScenesSchema,
   "load-scene":LoadSceneSchema,
   "open-scene":OpenSceneSchema,
+  "snapshot-scene":SnapshotSceneSchema,
   "authoring-guide": getAuthoringGuide,
   "review-authoring": reviewAuthoring,
   "export-video": ExportVideoSchema,

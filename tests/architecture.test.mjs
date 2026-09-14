@@ -19,12 +19,12 @@ const spatialDoc = `/** SOURCE OF TRUTH: evaluateScene, transformToCss, focusFor
  * WHERE: consumed by React adapter.
  */`;
 const valid = {
- 'src/core/recipes.ts':`/** SOURCE OF TRUTH: SceneRecipeSchema, loadSceneRecipes, ListScenesSchema, LoadSceneSchema, OpenSceneSchema.
+ 'src/core/recipes.ts':`/** SOURCE OF TRUTH: SceneRecipeSchema, SceneSnapshotSchema, SnapshotSceneSchema, loadSceneRecipes, ListScenesSchema, LoadSceneSchema, OpenSceneSchema.
  * WHAT: validate source recipes and selection.
  * WHY: browser and CLI share catalog policy.
  * WHERE: project commands and SceneLibrary call the owner.
  */
- import {z} from 'zod'; export const SceneRecipeSchema=z.strictObject({}); export const ListScenesSchema=z.strictObject({}); export const LoadSceneSchema=z.strictObject({}); export const OpenSceneSchema=z.strictObject({}); export function loadSceneRecipes(){return {};}`,
+ import {z} from 'zod'; export const SceneSnapshotSchema=z.strictObject({}); export const SnapshotSceneSchema=z.strictObject({}); export const SceneRecipeSchema=z.strictObject({}); export const ListScenesSchema=z.strictObject({}); export const LoadSceneSchema=z.strictObject({}); export const OpenSceneSchema=z.strictObject({}); export function loadSceneRecipes(){return {};}`,
  'src/project/recipes.ts':`/** SOURCE OF TRUTH: executeRecipeCommand.
  * WHAT: load project scene recipes.
  * WHY: reads stay scoped behind commands.
@@ -70,12 +70,12 @@ const valid = {
  * WHERE: consumed by export commands.
  */
 import {z} from 'zod'; export const ExportVideoSchema=z.strictObject({}); export const CaptureManifestSchema=z.strictObject({});`,
- 'src/export/commands.ts': `/** SOURCE OF TRUTH: executeVideoExport.
+ 'src/export/commands.ts': `/** SOURCE OF TRUTH: executeVideoExport, executeSceneSnapshot.
  * WHAT: validate and run export requests.
  * WHY: centralize the export policy.
  * WHERE: CLI calls the command.
  */
-export function executeVideoExport(){return {};}`,
+export function executeVideoExport(){return {};} export function executeSceneSnapshot(){return {};}`,
 
  'src/core/choreography.ts': `/** SOURCE OF TRUTH: CascadeSchema, createCascadeTracks.
  * WHAT: define validated entrances.
@@ -333,3 +333,7 @@ test('recipe loader cannot be redeclared in preview',()=>{assert.ok(fixture('src
 test('recipe commands may use scoped services while preview cannot',()=>{assert.ok(fixture('src/preview/leak.ts',"import {readText} from '../project/services'; export const leaked=readText;").some(issue=>issue.rule==='module-boundary'))});
 
 test('CLI cannot duplicate scene request schemas',()=>{assert.ok(fixture('src/cli/repeated.ts',"import {z} from 'zod';export const OpenSceneSchema=z.strictObject({});").some(issue=>issue.rule==='canonical-owner'))});
+test('snapshot schemas and command keep canonical owners',()=>{
+ for(const symbol of ['SceneSnapshotSchema','SnapshotSceneSchema','executeSceneSnapshot'])rejects('src/preview/copied.ts',`export const ${symbol}=()=>({});`,'canonical-owner');
+});
+test('preview cannot call snapshot filesystem or browser effects',()=>rejects('src/preview/capture.ts',"import {openCapture} from '../export/services'; openCapture({});",'module-boundary'));
