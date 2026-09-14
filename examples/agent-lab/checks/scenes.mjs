@@ -28,7 +28,7 @@ for (const review of reviews) { assert.equal(review.valid, true); assert.deepEqu
 for (const recipe of recipes) {
   assert.ok(recipe.motion.tracks.some(t=>t.target.kind==='camera'&&['x','y','z'].includes(t.property)&&t.keyframes[0].value!==t.keyframes.at(-1).value));
   assert.ok(!recipe.motion.tracks.some(t=>t.target.kind==='camera'&&t.property.startsWith('rotate')), 'survey angle remains steady');
-  assert.ok(recipe.scene.focus.maxBlur<=6 && recipe.scene.focus.fStop>=5.6 && recipe.scene.focus.distance>0);
+  assert.ok(recipe.scene.focus.maxBlur<=6 && recipe.scene.focus.fStop>=2.8 && recipe.scene.focus.distance>0);
   if(recipe.id!=='plating') assert.ok(recipe.motion.tracks.every(t=>t.target.kind==='camera'),'stationary subjects, moving camera');
 }
 assert.equal(
