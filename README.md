@@ -29,7 +29,7 @@ Keep your existing dev server if it is already running. Use the URL it prints:
 npx flute open --url http://127.0.0.1:5173
 ```
 
-Setup adds a development-only wrapper and `FLUTE.md`. Repeating setup is safe; conflicting user-owned files get a repair message. Normal app routes and production builds remain ordinary. One installed app owns one scene catalog.
+Setup adds a development-only wrapper, a small React refresh adapter and `FLUTE.md`. Repeating setup is safe; conflicting user-owned files get a repair message. Normal app routes and production builds remain ordinary. One installed app owns one scene catalog.
 
 ## Give your coding agent this prompt
 

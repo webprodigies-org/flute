@@ -59,7 +59,10 @@ try {
   const server=spawn(process.execPath,['node_modules/vite/bin/vite.js','--host','127.0.0.1','--port',String(chosen),'--strictPort'],{cwd:host,stdio:'ignore'});processes.push(server);
   await waitFor(origin,server);
   const parentCli=path.join(root,'dist/cli/flute.js');
-  const initResult=await run(process.execPath,[parentCli,'init','--project',host,'--package',tarball,'--url',origin,'--no-open','--json']);
+  if(process.env.FLUTE_VERIFY_AGENT==='1') await ok('npm',['install','--offline','--ignore-scripts','--no-audit','--no-fund',tarball]);
+  const initResult=process.env.FLUTE_VERIFY_AGENT==='1'
+    ? await run('npm',['exec','--offline','--','flute','init','--url',origin,'--no-open','--json'])
+    : await run(process.execPath,[parentCli,'init','--project',host,'--package',tarball,'--url',origin,'--no-open','--json']);
   if(initResult.code!==0) {
     await mkdir(path.join(root,'test-results'),{recursive:true});
     await writeFile(path.join(root,'test-results/install-debug.txt'),
@@ -68,6 +71,8 @@ try {
   assert.equal(initResult.code,0,initResult.stderr);
   const initialized=JSON.parse(initResult.stdout);
   assert.equal(initialized.success,true);
+  assert.equal(initialized.data.handoff.path,'FLUTE.md');
+  assert.equal(initialized.data.handoff.guideCommand,'npx flute guide --json');
   assert.equal(new URL(initialized.data.url).port,String(chosen));
   const entryAfter=await readFile(path.join(host,'src/main.tsx'),'utf8');
   assert.ok(entryAfter.includes('<DashboardProvider><App /></DashboardProvider>'));
