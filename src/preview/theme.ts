@@ -1,3 +1,4 @@
+import {studioTheme} from './studio-theme';
 /** SOURCE OF TRUTH: previewTheme, flute-bottom-blur, flute-controls.
  * WHAT: edge-to-edge scene surface and one scrollable bottom controls overlay.
  * WHY: three static, masked backdrop layers reveal the actual scene without a reserved dock.
@@ -5,6 +6,7 @@
  * Blur is capped at 320px/half the viewport, never animated, and ignores pointer events.
  */
 export const previewTheme = `
+${studioTheme}
 [data-flute-preview]{position:fixed;inset:0;height:100dvh;overflow:hidden;background:#000;color:#fff;min-height:0;width:100%;box-sizing:border-box;isolation:isolate}
 .flute-chrome{font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;box-sizing:border-box;color:#fff}
 .flute-viewport{position:absolute;inset:0;background:#000;overflow:hidden;display:flex;align-items:center;justify-content:center}
@@ -32,6 +34,7 @@ export const previewTheme = `
 .flute-timeline::-moz-range-thumb{width:14px;height:14px;border:0;border-radius:100%;background:#fff}
 .flute-timeline:disabled{opacity:.45;cursor:default}
 .flute-time{font-size:12px;font-variant-numeric:tabular-nums;color:#fff;white-space:nowrap;min-width:88px}
+.flute-preview-meta{display:flex;align-items:center;justify-content:center;gap:6px 18px;flex-wrap:wrap;flex-shrink:0}
 .flute-status{font-size:12px;color:#e5e5e5;display:flex;gap:7px;align-items:center;justify-content:center;min-height:20px;flex-shrink:0}
 .flute-status-dot{width:5px;height:5px;background:currentColor;border-radius:50%}
 .flute-message,[data-flute-preview] [data-flute-error]{background:#202020;border:1px solid #ffffff30;border-radius:20px;padding:16px 20px;font:13px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#fff;margin:0;max-height:25dvh;overflow:auto;overflow-wrap:anywhere;flex-shrink:0}
@@ -42,7 +45,6 @@ export const previewTheme = `
 .flute-empty p{color:#aaa;line-height:1.8;margin:0;font-size:14px}
 .flute-empty-symbol{display:inline-flex;align-items:center;justify-content:center;width:72px;height:72px;border-radius:26px;background:#202020;color:#fff;font-size:30px}
 .flute-onboarding{flex-shrink:0}.flute-onboarding summary,.flute-export summary{list-style:none}.flute-onboarding summary::-webkit-details-marker,.flute-export summary::-webkit-details-marker{display:none}
-.flute-onboarding p{background:#202020;border-radius:16px;padding:16px;margin:8px 0 0;overflow-wrap:anywhere}
 .flute-export-slot:empty{display:none}
 .flute-export-panel{margin-left:auto;width:min(350px,100%);box-sizing:border-box;padding:22px;background:#202020;border:1px solid #ffffff30;border-radius:24px;white-space:normal;overflow-wrap:anywhere}
 .flute-export-panel p{color:#d4d4d4;line-height:1.6;margin:8px 0 16px}.flute-export-panel select{border:1px solid #ffffff40;background:#333;color:#fff;padding:9px 14px;border-radius:999px;font:inherit;margin-left:12px;min-height:44px;max-width:100%}
