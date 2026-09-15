@@ -82,7 +82,7 @@ function inspectBinding(source) {
     ts.forEachChild(node, walk);
   }
   walk(ast);
-  assert.deepEqual(imports, [['@flute/scene', ['Surface']], ['../../App', ['App', 'DashboardProvider']]]);
+  assert.deepEqual(imports, [['@webprodigies/flute', ['Surface']], ['../../App', ['App', 'DashboardProvider']]]);
   assert.deepEqual(tags, ['DashboardProvider', 'Surface', 'App']);
   assert.deepEqual(ids, ['revenue-dashboard']);
   const functions = ast.statements.filter(ts.isFunctionDeclaration);
@@ -108,5 +108,8 @@ assert(trial.prompts.feedback.includes('Make the reveal take twice as long'));
 assert(trial.prompts.feedback.includes('Keep final camera endpoint unchanged'));
 const hash = value => createHash('sha256').update(value).digest('hex');
 assert.equal(hash(read('initial.scene.json')), trial.evidenceHashes.initialSha256);
-assert.equal(hash(binding), trial.evidenceHashes.bindingSha256);
+// The independent trial predates the public npm namespace. Normalize only its
+// single package import; the original hash still rejects every other source edit.
+assert.equal(binding.split("from '@webprodigies/flute'").length, 2);
+assert.equal(hash(binding.replace("from '@webprodigies/flute'", "from '@flute/scene'")), trial.evidenceHashes.bindingSha256);
 console.log('Agent trial passed: public recipe/review validation, retimed rail, deeper focus, original binding, negative cases and TSX transpilation. Browser/export evidence belongs to parent verification.');

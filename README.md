@@ -8,12 +8,10 @@ Open source under the [MIT license](LICENSE). Runs locally, with your existing c
 
 Automatic setup currently supports **npm + Vite + React 19.2**, with a standard React configuration (including the supported shadcn/Tailwind configuration). Requires **Node 22.12+**. Unsupported configurations get an actionable diagnostic before setup writes.
 
-**Release status:** public publication is being prepared. The command below becomes available after the first verified npm release; a local build is not proof of registry availability.
-
 From your existing app's directory:
 
 ```sh
-npm install @flute/scene
+npm install @webprodigies/flute
 npx flute init
 npm run dev
 ```
@@ -80,7 +78,7 @@ Read [architecture](docs/architecture.md) for canonical code owners and [product
 
 ## Maintainer release
 
-The public source repository is [webprodigies-org/flute](https://github.com/webprodigies-org/flute). The npm publishing account/scope still requires confirmation before the first publication. Release validation refuses missing or mismatched repository metadata. This package is MIT licensed. Never commit npm tokens or login credentials.
+The public source repository is [webprodigies-org/flute](https://github.com/webprodigies-org/flute). The npm package is `@webprodigies/flute`, owned by the verified `webprodigies` account. Release validation refuses missing or mismatched repository metadata. This package is MIT licensed. Never commit npm tokens or login credentials.
 
 1. Run `npm ci`, install Chromium and FFmpeg, then run `npm run verify:release` on a machine with hardware GPU compositing. This includes the existing frame budgets; hosted CI does not qualify hardware performance. Logs remain in `.release/logs/`.
 2. For the first release, sign in with `npm login`, then run `npm run release:publish` from the clean, committed candidate. npm may request browser/2FA approval. This publishes the checked tarball, not local test applications.

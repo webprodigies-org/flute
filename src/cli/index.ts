@@ -26,7 +26,7 @@ flute load [--scene ID] [--project DIR] [--json]
 flute validate [--project DIR]
 flute export --url URL --output FILE [--fps 30|60|120] [--width N --height N] [--project DIR] [--json]
 
-After installing @flute/scene locally, run npx flute init in your npm Vite React 19.2.x app.
+After installing @webprodigies/flute locally, run npx flute init in your npm Vite React 19.2.x app.
 --package is optional when Flute is already installed; it accepts a local .tgz for setup.
 init preserves the existing root/providers and creates FLUTE.md for your coding agent.
 Add --url to initialize and open in one command.

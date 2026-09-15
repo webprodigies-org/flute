@@ -66,7 +66,7 @@ try {
   const parentCli=path.join(root,'dist/cli/flute.js');
   if(registryPackage || process.env.FLUTE_VERIFY_AGENT==='1') await ok('npm',['install','--ignore-scripts','--no-audit','--no-fund',registryPackage ?? tarball]);
   if(registryPackage) {
-    const installed=JSON.parse(await readFile(path.join(host,'node_modules/@flute/scene/package.json'),'utf8'));
+    const installed=JSON.parse(await readFile(path.join(host,'node_modules/@webprodigies/flute/package.json'),'utf8'));
     assert.equal(installed.name+'@'+installed.version,registryPackage,'Install exact published version');
   }
   const initResult=registryPackage || process.env.FLUTE_VERIFY_AGENT==='1'
@@ -87,9 +87,9 @@ try {
   assert.ok(entryAfter.includes('<DashboardProvider><App /></DashboardProvider>'));
   assert.ok(entryAfter.includes('Existing provider composition'));
   assert.notEqual(entryAfter,originalEntry);
-  const cli=path.join(host,'node_modules/@flute/scene/dist/cli/flute.js');
+  const cli=path.join(host,'node_modules/@webprodigies/flute/dist/cli/flute.js');
   const installedGuide=JSON.parse(await ok(process.execPath,[cli,'guide','--json']));
-  const publicGuide=JSON.parse(await ok(process.execPath,['--input-type=module','-e',"import {getAuthoringGuide} from '@flute/scene'; console.log(JSON.stringify(getAuthoringGuide()))"]));
+  const publicGuide=JSON.parse(await ok(process.execPath,['--input-type=module','-e',"import {getAuthoringGuide} from '@webprodigies/flute'; console.log(JSON.stringify(getAuthoringGuide()))"]));
   assert.deepEqual(installedGuide,publicGuide,'Installed CLI and browser-compatible package share the exact guide');
   assert.equal(installedGuide.version,2);
   assert.ok(installedGuide.concepts.some(c=>c.id==='focus'));
@@ -112,7 +112,7 @@ try {
   const wrong=await run(process.execPath,[cli,'open','--project',host,'--url',`http://127.0.0.1:${unrelated.address().port}`,'--no-open','--json']);assert.notEqual(wrong.code,0);
   await mkdir(path.join(host,'src/flute/scenes'),{recursive:true});
   await writeFile(path.join(host,'src/flute/scenes/revenue.scene.json'),JSON.stringify({version:1,id:'revenue',title:'Revenue scene',definition:{scene:{nodes:[{id:'host'}]}}}));
-  await writeFile(path.join(host,'src/flute/scenes/revenue.tsx'),`import {Surface} from '@flute/scene';import {App,DashboardProvider} from '../../App';export default function RevenueScene(){return <DashboardProvider><Surface id="host" style={{width:1400,height:980}}><App/></Surface></DashboardProvider>}`);
+  await writeFile(path.join(host,'src/flute/scenes/revenue.tsx'),`import {Surface} from '@webprodigies/flute';import {App,DashboardProvider} from '../../App';export default function RevenueScene(){return <DashboardProvider><Surface id="host" style={{width:1400,height:980}}><App/></Surface></DashboardProvider>}`);
   browser=await chromium.launch({channel:'chromium',headless:true});
   const page=await browser.newPage({viewport:{width:1440,height:1000}});
   let requests=0;const errors=[];

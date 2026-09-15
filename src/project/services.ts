@@ -168,7 +168,7 @@ export async function openBrowser(root: string, url: string) {
 export async function localPackageSource(root: string, source: string): Promise<string> {
   const filename = path.isAbsolute(source) ? source : await scopedPath(root, source.replace(/^\.\//, ""));
   const stat = await lstat(filename).catch(error => {
-    if (error.code === "ENOENT") throw fault("package-unavailable", "Local Flute tarball was not found. Correct --package to an existing .tgz file, or install @flute/scene locally and run npx flute init.", source);
+    if (error.code === "ENOENT") throw fault("package-unavailable", "Local Flute tarball was not found. Correct --package to an existing .tgz file, or install @webprodigies/flute locally and run npx flute init.", source);
     throw error;
   });
   if (!stat.isFile() || stat.isSymbolicLink()) throw fault("denied-path", "Package source must be a regular local tarball.");

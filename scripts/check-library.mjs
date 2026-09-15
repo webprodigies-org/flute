@@ -10,8 +10,8 @@ try{
  await cp(path.join(root,'local-project'),host,{recursive:true,filter:source=>!source.includes('node_modules')&&!source.includes('/dist')});
  await mkdir(path.join(scratch,'.local-package'));const packed=JSON.parse(await run(['npm','pack','--json',...(process.env.FLUTE_VERIFY_PREBUILT==='1'?['--ignore-scripts']:[]),'--pack-destination',path.join(scratch,'.local-package')],root));
  await run(['npm','install','--force','--ignore-scripts','--no-audit','--no-fund',path.join(scratch,'.local-package',packed[0].filename)]);
- assert.equal((await run([process.execPath,'--input-type=module','-e',"import {RESOURCES} from '@flute/scene'; console.log(typeof RESOURCES['resolve-recipes'])"])).trim(),'function','Use the freshly packed catalog operation');
- const cli=path.join(host,'node_modules/@flute/scene/dist/cli/flute.js');await run([process.execPath,cli,'init']);
+ assert.equal((await run([process.execPath,'--input-type=module','-e',"import {RESOURCES} from '@webprodigies/flute'; console.log(typeof RESOURCES['resolve-recipes'])"])).trim(),'function','Use the freshly packed catalog operation');
+ const cli=path.join(host,'node_modules/@webprodigies/flute/dist/cli/flute.js');await run([process.execPath,cli,'init']);
  await run(['npm','run','build']);
  const n=await port();const origin=`http://127.0.0.1:${n}`;
  server=spawn(process.execPath,['node_modules/vite/bin/vite.js','--host','127.0.0.1','--port',String(n),'--strictPort'],{cwd:host,stdio:'ignore'});

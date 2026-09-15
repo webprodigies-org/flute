@@ -99,5 +99,6 @@
       "Production host bundle excludes unused studio renderer"
     ],
     "visualLimits": "Inspected frames prove live host wiring, tilted camera and focus behavior; minimal test host is not a cinematic design template or universal LLM quality guarantee."
-  }
+  },
+  "releaseAdaptation": "The single package import in scene.tsx.txt was mechanically changed from @flute/scene to @webprodigies/flute for public distribution. Verification normalizes only that import before checking the original immutable binding hash. No new independent authoring trial is claimed."
 }
