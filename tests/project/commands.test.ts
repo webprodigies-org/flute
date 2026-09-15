@@ -142,10 +142,9 @@ describe("trusted project commands", () => {
     'import { createRoot } from "react-dom/client"; const root=createRoot(el); use(root); root.render(<App/>);',
     'import ReactDOM from "react-dom/client"; ReactDOM.createRoot(el).render(<App/>);',
     'import { createRoot } from "react-dom/client"; let root=createRoot(el); root.render(<App/>);',
-  ])("refuses ambiguous root syntax before writing", async source => {
+  ])("uses a portable connection instead of rewriting ambiguous root syntax", async source => {
     const root = await fixture({ source });
-    failure(await run(root), "unsupported-project");
-    expect(await readdir(root)).not.toContain(".flute");
+    expect(success(await run(root)).integration?.kind).toBe("react");
     expect(await readFile(path.join(root, "src/main.tsx"), "utf8")).toBe(source);
   });
   it.each([
@@ -159,11 +158,14 @@ describe("trusted project commands", () => {
     ['npm-shrinkwrap.json', "{}"],
     ['package.json', '{"dependencies":{"vite":"7.3.6"},"scripts":{"dev":"vite"}}'],
     ['package.json', '{"workspaces":["apps/*"]}'],
-  ])("refuses unsupported setup %s before writes", async (file, content) => {
+  ])("keeps custom host %s intact or rejects a missing React package", async (file, content) => {
     const root = await fixture();
     await put(root, file, content);
-    failure(await run(root), "unsupported-project");
-    expect(await readdir(root)).not.toContain(".flute");
+    if(file==="package.json") {
+      failure(await run(root), "unsupported-project");
+      expect(await readdir(root)).not.toContain(".flute");
+    } else expect(success(await run(root)).integration?.kind).toBe("react");
+    expect(await readFile(path.join(root,file),"utf8")).toBe(content);
   });
   it("reports missing package with public installation instructions without mutating the app", async () => {
     const root = await fixture({ installed: false });
@@ -196,7 +198,7 @@ describe("trusted project commands", () => {
     failure(await run(root), "denied-path");
     expect(await readdir(root)).not.toContain(".flute");
   });
-  it.each([".flute", "FLUTE.md", "src/main.tsx", "package-lock.json", "vite.config.ts", "node_modules/@webprodigies/flute"])("denies symlink targets %s before writing", async target => {
+  it.each([".flute", "FLUTE.md", "src/main.tsx", "package-lock.json", "vite.config.ts"])("denies symlink targets %s before writing", async target => {
     const root = await fixture();
     const outside = await fixture();
     const destination = [".flute", "node_modules/@webprodigies/flute"].includes(target) ? outside : path.join(outside, "src/main.tsx");
@@ -292,11 +294,11 @@ describe("trusted project commands", () => {
     expect(inspectEntry(adapted, "main.tsx", id).integrated).toBe(true);
     expect(() => inspectEntry(original.replace('import { createRoot }', 'import type { createRoot }'), "main.tsx", id)).toThrow();
   });
-  it("rejects an unquoted extra module entry instead of overlooking ambiguity", async () => {
+  it("uses a portable connection for ambiguous HTML without rewriting it", async () => {
     const root = await fixture();
     await put(root, "index.html", '<script type="module" src="/src/main.tsx"></script><script type=module src="/src/other.tsx"></script>');
-    failure(await run(root), "unsupported-project");
-    expect(await readdir(root)).not.toContain(".flute");
+    expect(success(await run(root)).integration?.kind).toBe("react");
+    expect(await readFile(path.join(root,"index.html"),"utf8")).toContain("type=module");
   });
   it("repairs a partial package install on a pending retry with an explicit tarball", async () => {
     const root = await fixture({ installed: false });
@@ -542,12 +544,11 @@ describe("generated preview refresh boundary setup", () => {
     expect(write).not.toHaveBeenCalled();
     expect(await readFile(path.join(root, sibling), "utf8")).toBe("// unrelated file");
   });
-  it("refuses config-less installation before any mutation", async () => {
+  it("uses the portable connection when there is no standard Vite config", async () => {
     const root = await fixture();
     await rm(path.join(root, "vite.config.ts"));
-    const write = vi.spyOn(services, "atomicWrite");
-    failure(await run(root), "unsupported-project");
-    expect(write).not.toHaveBeenCalled();
+    expect(success(await run(root)).integration?.kind).toBe("react");
+    expect(await readFile(path.join(root,"src/main.tsx"),"utf8")).toBe(original);
   });
   it("denies symlinked adapter directories before writing", async () => {
     const root = await fixture();

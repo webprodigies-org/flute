@@ -65,7 +65,7 @@ async function packageAt(root: string, target: string) {
 }
 async function inspectProject(root: string) {
   // Preflight every mutation/config target, including unused conflicting lock/config candidates.
-  for (const target of [statePath, pendingPath, "package.json", ...locks, ...configs, "node_modules/@webprodigies/flute/package.json"])
+  for (const target of [statePath, pendingPath, "package.json", ...locks, ...configs])
     await services.scopedPath(root, target);
   const pkg = await packageAt(root, "package.json");
   if (!pkg) throw fault("unsupported-project", "Choose an existing npm Vite React project containing package.json.");
@@ -329,7 +329,19 @@ async function portableHost(root:string, requested?:string):Promise<PortableHost
     // Unusual Next routing remains usable via the same manual React adapter.
     return {adapter:"react",entry:"src/flute/ProjectPreview.jsx"};
   }
-  return deps.vite ? undefined : {adapter:"react",entry:"src/flute/ProjectPreview.jsx"};
+  if (deps.vite) {
+    if (!saved.project && await services.readText(root,pendingPath) === undefined) {
+      try {
+        const host=await inspectProject(root);
+        inspectEntry(host.source,host.entry,"00000000-0000-4000-8000-000000000000");
+      } catch(error) {
+        if (!(error instanceof Error) || !("code" in error) || error.code!=="unsupported-project") throw error;
+        return {adapter:"react",entry:"src/flute/ProjectPreview.jsx"};
+      }
+    }
+    return undefined;
+  }
+  return {adapter:"react",entry:"src/flute/ProjectPreview.jsx"};
 }
 function integrationInfo(project:ProjectState) {
   return {

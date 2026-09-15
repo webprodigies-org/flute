@@ -79,3 +79,8 @@ it("resolves linked renderer dependencies without treating them as mutation targ
  const root=await host("custom");await rename(path.join(root,"node_modules/react"),path.join(root,"react-store"));await symlink(path.join(root,"react-store"),path.join(root,"node_modules/react"));
  success(await run(root));expect(JSON.parse(await readFile(path.join(root,"react-store/package.json"),"utf8")).version).toBe("19.1.0");
 });
+
+it("does not mistake an Electron/custom renderer's Vite dependency for a Vite app",async()=>{
+ const root=await host("custom");const file=path.join(root,"package.json");const pkg=JSON.parse(await readFile(file,"utf8"));pkg.dependencies.vite="7.3.6";pkg.dependencies.electron="42.0.0";pkg.scripts.dev="electron-vite dev";await writeFile(file,JSON.stringify(pkg));
+ expect(success(await run(root)).integration?.kind).toBe("react");expect(await readFile(file,"utf8")).toBe(JSON.stringify(pkg));
+});
