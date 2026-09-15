@@ -96,7 +96,14 @@
     "name": "Web Prodigies",
     "url": "https://www.youtube.com/@webprodigies"
   },
-  "homepage": "https://www.youtube.com/@webprodigies",
+  "homepage": "https://github.com/webprodigies-org/flute#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/webprodigies-org/flute.git"
+  },
+  "bugs": {
+    "url": "https://github.com/webprodigies-org/flute/issues"
+  },
   "sideEffects": [
     "./dist/cli/flute.js"
   ]
