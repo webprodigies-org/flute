@@ -1,8 +1,14 @@
 name: Publish npm package
-# Explicit version tags only. Never publish from pull requests or every main push.
+# Verification is local. Only version/packaging changes need a hosted job.
 on:
   push:
-    tags: ['v*']
+    branches: [main]
+    paths:
+      - package.json
+      - package-lock.json
+      - scripts/release.mjs
+      - .github/workflows/publish.yml
+  workflow_dispatch:
 permissions:
   contents: read
 concurrency:
@@ -10,8 +16,9 @@ concurrency:
   cancel-in-progress: false
 jobs:
   publish:
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 10
     environment: npm
     permissions:
       contents: read
@@ -19,27 +26,19 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          fetch-depth: 0
           persist-credentials: false
-      - name: Require the release commit to belong to main
-        run: git merge-base --is-ancestor HEAD origin/main
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 24
-      - run: npm ci
-      - run: npx --no-install playwright install --with-deps chromium
-      - run: sudo apt-get update && sudo apt-get install -y ffmpeg
-      - run: npm run verify:ci
-      - name: Publish the checked artifact using npm trusted publishing
+      - name: Skip versions already on npm
+        id: release
+        run: node scripts/release.mjs status
+      - name: Install build dependencies
+        if: steps.release.outputs.publish == 'true'
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Build the npm library and CLI
+        if: steps.release.outputs.publish == 'true'
+        run: npm run build:package
+      - name: Publish using npm trusted publishing
+        if: steps.release.outputs.publish == 'true'
         run: node scripts/release.mjs publish
-      - name: Verify fresh public installation and the installed studio
-        run: npm run test:published
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        if: always()
-        with:
-          name: release-evidence
-          include-hidden-files: true
-          path: |
-            .release/
-            test-results/
-          retention-days: 30

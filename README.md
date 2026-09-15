@@ -78,14 +78,17 @@ Read [architecture](docs/architecture.md) for canonical code owners and [product
 
 ## Maintainer release
 
-The public source repository is [webprodigies-org/flute](https://github.com/webprodigies-org/flute). The npm package is `@webprodigies/flute`, owned by the verified `webprodigies` account. Release validation refuses missing or mismatched repository metadata. This package is MIT licensed. Never commit npm tokens or login credentials.
+All tests run locally. GitHub Actions only builds and publishes a new npm version; it does not run verification suites or upload artifacts.
 
-1. Run `npm ci`, install Chromium and FFmpeg, then run `npm run verify:release` on a machine with hardware GPU compositing. This includes the existing frame budgets; hosted CI does not qualify hardware performance. Logs remain in `.release/logs/`.
-2. For the first release, sign in with `npm login`, then run `npm run release:publish` from the clean, committed candidate. npm may request browser/2FA approval. This publishes the checked tarball, not local test applications.
-3. Run `npm run test:published`. It downloads the exact version from the public registry into a fresh npm cache, initializes a separate app, checks the installed guide, scene revision, real browser interactions, export and production exclusion. A failed check means the release is not verified for viewers.
-4. Configure the npm package's trusted publisher for the confirmed GitHub owner/repository, workflow `publish.yml`, environment `npm`, with direct publishing enabled. Restrict that GitHub environment to version tags. No stored npm token is required. See [npm trusted publishing](https://docs.npmjs.com/trusted-publishers/).
-5. For later releases, update the version with `npm version patch --no-git-tag-version`, commit, run the full hardware gate, and push a matching `vX.Y.Z` tag from a commit on `main`. The publishing workflow checks the tag, repository, package contents and CI behavior before publishing, then verifies the public installation. Review the hardware results before pushing the release tag.
+1. Update the package version with `npm version patch --no-git-tag-version`.
+2. Run `npm ci`, install Chromium and FFmpeg, then run `npm run verify:release` locally. This includes architecture, browser, installed-app, export and hardware checks. Logs remain in `.release/logs/`.
+3. Commit the verified version and lockfile, then push to `main`. The publishing workflow checks npm first. If that version already exists, it stops before installing or building. Otherwise it runs `npm run build:package` and publishes through OIDC. npm versions are immutable; changing source without a version bump does not update the public package.
+4. Run `npm run test:published` locally after publication to check the exact public version in a fresh installed app.
 
-Pull requests and main pushes run `verify:ci` on Node 22.12 and 24 with Chromium and FFmpeg. This runs behavior, package and installed-host checks. It explicitly excludes hardware timing measurements; `verify:release` retains those requirements. Release automation cannot certify untested frameworks or every graphics device.
+The public source is [webprodigies-org/flute](https://github.com/webprodigies-org/flute), and the package is `@webprodigies/flute`. npm's trusted publisher uses GitHub owner `webprodigies-org`, repository `flute`, workflow `publish.yml`, environment `npm`, with direct `npm publish` permission. The GitHub environment permits the `main` branch. Never commit npm tokens.
 
-For source-only testing, `npm run release:local` builds a tarball in `.release/`; install that file in a separate app. `npm run setup:local` does this for the repository's isolated local host. These commands do not publish.
+Code-only and documentation-only pushes do not start a workflow. Package/lockfile or publishing-workflow changes can trigger the small version lookup. A failed release can be retried through Actions → Publish npm package → Run workflow on `main`; an existing npm version will safely skip. There is no automatic tag-based or pull-request test workflow.
+
+`verify:ci` remains a local alternative without hardware timing checks; `verify:release` retains the full hardware gate. GitHub does not enforce those local results, so the maintainer is responsible for running them before pushing a release version.
+
+For manual publication, run `npm run release:publish` locally from the clean committed candidate and complete npm's private authentication prompt. For source-only testing, `npm run release:local` builds a tarball in `.release/`; `npm run setup:local` installs it in the isolated local host.

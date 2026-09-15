@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "node scripts/dev.mjs",
-    "build": "npm run lint:architecture && tsc --noEmit && vite build && npm run build:library && npm run build:cli",
+    "build": "npm run lint:architecture && tsc --noEmit && vite build && npm run build:package",
     "typecheck": "tsc --noEmit",
     "test:core": "vitest run tests/core",
     "test:react": "vitest run tests/react",
@@ -38,7 +38,8 @@
     "verify:ci": "node scripts/verify-mvp.mjs --ci && npm run test:release && node scripts/release.mjs check",
     "verify:release": "npm run verify:agent && npm run test:release && node scripts/release.mjs check",
     "test:published": "node scripts/check-published.mjs",
-    "release:publish": "npm run verify:release && node scripts/release.mjs publish"
+    "release:publish": "npm run verify:release && node scripts/release.mjs publish",
+    "build:package": "npm run build:library && npm run build:cli"
   },
   "dependencies": {
     "react-error-boundary": "6.1.5",
