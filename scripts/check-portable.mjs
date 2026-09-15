@@ -19,7 +19,7 @@ try{
  await mkdir(host,{recursive:true});
  const published=process.env.FLUTE_REGISTRY_PACKAGE;
  const packed=published?undefined:JSON.parse(await run('npm',['pack','--ignore-scripts','--json','--pack-destination',scratch],root));
- const tarball=published??path.join(scratch,packed[0].filename);
+ const tarball=published?published.replace(/^@webprodigies\/flute@/,''):path.join(scratch,packed[0].filename);
  const react=kind==='app'?'19.2.0':'18.3.1';
  await put('package.json',JSON.stringify({private:true,type:'module',dependencies:{react,'react-dom':react,'@webprodigies/flute':tarball,...(kind!=='react'?{next:'16.3.5'}:{'@types/react':'^18.3.0','@types/react-dom':'^18.3.0',typescript:'5.9.3'})}}));
  await run('npm',['install','--ignore-scripts','--no-audit','--no-fund',...(published?['--cache',path.join(scratch,'cache'),'--registry','https://registry.npmjs.org/']:[])]);
