@@ -13,15 +13,19 @@ function leaves(name){
    return leaves(match[1]);
  });
 }
+const ci=process.argv.includes('--ci');
 const pending=new Set([...leaves('verify:reuse'),'test:agent']);
-await mkdir(new URL('../test-results/',import.meta.url),{recursive:true});
+// Hosted CI has no qualified hardware GPU. Keep all behavior checks there;
+// maintainers run the unmodified hardware budgets with verify:release locally.
+if(ci)pending.delete('test:performance');
+await mkdir(new URL('../.release/logs/',import.meta.url),{recursive:true});
 async function run(name,prebuilt=false){
  const result=await new Promise(resolve=>{
-  const child=spawn('npm',['run',name],{cwd:root,env:{...process.env,...(prebuilt?{FLUTE_VERIFY_PREBUILT:'1'}:{})},stdio:['ignore','pipe','pipe']});
+  const child=spawn('npm',['run',name],{cwd:root,env:{...process.env,FLUTE_VERIFY_HARDWARE:ci?'0':'1',...(prebuilt?{FLUTE_VERIFY_PREBUILT:'1'}:{})},stdio:['ignore','pipe','pipe']});
   let output='';child.stdout.on('data',value=>output+=value);child.stderr.on('data',value=>output+=value);
   child.on('error',error=>resolve({code:1,output:output+error.message}));child.on('close',code=>resolve({code,output}));
  });
- await writeFile(new URL(`../test-results/gate-${name.replaceAll(':','-')}.log`,import.meta.url),result.output);
+ await writeFile(new URL(`../.release/logs/gate-${name.replaceAll(':','-')}.log`,import.meta.url),result.output);
  if(result.code!==0)throw Error(`${name} failed:\n${result.output.slice(-7000)}`);
  console.log(`${name}: passed`);pending.delete(name);
 }
@@ -36,5 +40,5 @@ try{
  for(const name of exclusive)if(pending.has(name))await run(name,true);
  await checkGroup(installed.filter(name=>pending.has(name)));
  if(pending.size)throw Error(`Unrun checks: ${[...pending]}`);
- console.log('Complete MVP gate passed. Full logs: test-results/gate-*.log');
+ console.log((ci?'CI behavior gate passed; hardware qualification is separate.':'Complete MVP gate passed.')+' Full logs: .release/logs/gate-*.log');
 }catch(error){console.error(error);process.exitCode=1;}

@@ -13,12 +13,14 @@ import { chromium } from 'playwright';
 const root = fileURLToPath(new URL('../', import.meta.url));
 const scratch = await mkdtemp(path.join(tmpdir(), 'flute-installed-'));
 const host = path.join(scratch, 'host');
+const registryPackage = process.env.FLUTE_REGISTRY_PACKAGE;
+const commandEnv = registryPackage ? {...process.env, npm_config_cache:path.join(scratch,'npm-cache'), npm_config_registry:'https://registry.npmjs.org/'} : process.env;
 const processes = [];
 let browser;
 let unrelated;
 function run(command,args,cwd=host) {
   return new Promise((resolve,reject)=>{
-    const child=spawn(command,args,{cwd,env:process.env,stdio:['ignore','pipe','pipe']});
+    const child=spawn(command,args,{cwd,env:commandEnv,stdio:['ignore','pipe','pipe']});
     let stdout='',stderr='';
     child.stdout.on('data',s=>stdout+=s);child.stderr.on('data',s=>stderr+=s);
     const timer=setTimeout(()=>child.kill('SIGTERM'),120000);
@@ -43,8 +45,10 @@ try {
   const originalConfig=await readFile(path.join(host,'vite.config.mjs'),'utf8');
   const originalApp=await readFile(path.join(host,'src/App.tsx'),'utf8');
   const originalPackage=JSON.parse(await readFile(path.join(host,'package.json'),'utf8'));
+  let tarball;
+  if(!registryPackage) {
   const packed=JSON.parse(await ok('npm',['pack','--json',...(process.env.FLUTE_VERIFY_PREBUILT==='1'?['--ignore-scripts']:[]),'--pack-destination',scratch],root));
-  const tarball=path.join(scratch,packed[0].filename);
+  tarball=path.join(scratch,packed[0].filename);
   assert.ok(packed[0].files.some(f=>f.path==='dist/cli/flute.js'));
   assert.ok(packed[0].files.some(f=>f.path==='LICENSE'));
   assert.ok(packed[0].files.some(f=>f.path==='README.md'));
@@ -54,13 +58,18 @@ try {
   assert.notEqual(metadata.private,true);
   assert.ok(packed[0].files.some(f=>f.path==='dist/library/preview.js'));
   assert.ok(!packed[0].files.some(f=>f.path.includes('.env')));
-  await ok('npm',['install','--offline','--ignore-scripts','--no-audit','--no-fund']);
+  }
+  await ok('npm',['install','--ignore-scripts','--no-audit','--no-fund']);
   const chosen=await port();const origin=`http://127.0.0.1:${chosen}`;
   const server=spawn(process.execPath,['node_modules/vite/bin/vite.js','--host','127.0.0.1','--port',String(chosen),'--strictPort'],{cwd:host,stdio:'ignore'});processes.push(server);
   await waitFor(origin,server);
   const parentCli=path.join(root,'dist/cli/flute.js');
-  if(process.env.FLUTE_VERIFY_AGENT==='1') await ok('npm',['install','--offline','--ignore-scripts','--no-audit','--no-fund',tarball]);
-  const initResult=process.env.FLUTE_VERIFY_AGENT==='1'
+  if(registryPackage || process.env.FLUTE_VERIFY_AGENT==='1') await ok('npm',['install','--ignore-scripts','--no-audit','--no-fund',registryPackage ?? tarball]);
+  if(registryPackage) {
+    const installed=JSON.parse(await readFile(path.join(host,'node_modules/@flute/scene/package.json'),'utf8'));
+    assert.equal(installed.name+'@'+installed.version,registryPackage,'Install exact published version');
+  }
+  const initResult=registryPackage || process.env.FLUTE_VERIFY_AGENT==='1'
     ? await run('npm',['exec','--offline','--','flute','init','--url',origin,'--no-open','--json'])
     : await run(process.execPath,[parentCli,'init','--project',host,'--package',tarball,'--url',origin,'--no-open','--json']);
   if(initResult.code!==0) {
@@ -142,7 +151,7 @@ try {
   await page.goto(productionOrigin+'/?flute-preview=1');
   await page.getByRole('heading',{name:'Existing revenue dashboard'}).waitFor();
   assert.equal(await page.locator('[data-flute-scene]').count(),0,'Production build cannot enable developer preview');
-  console.log('Installed tarball: init/retry, source/config preservation, real provider/counter, configured port, missing/wrong server, normal route and production exclusion passed.');
+  console.log((registryPackage ? 'Published '+registryPackage : 'Installed tarball')+': init/retry, source/config preservation, real provider/counter, configured port, missing/wrong server, normal route and production exclusion passed.');
 } finally {
   await browser?.close();
   if(unrelated)await new Promise(r=>unrelated.close(r));

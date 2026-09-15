@@ -118,7 +118,7 @@ async function installationValid(root: string, requireToolkit = true) {
   return true;
 }
 async function sourceForInstall(root: string, source: string | undefined) {
-  if (!source) throw fault("package-unavailable", "Flute is not published yet. Supply --package with a local Flute .tgz package, or install @flute/scene first.");
+  if (!source) throw fault("package-unavailable", "Install Flute in this app with npm install @flute/scene, then run npx flute init. For a local source build, supply --package with its .tgz file.");
   if (!source.endsWith(".tgz") || source.startsWith("-") || source.includes("://"))
     throw fault("invalid-input", "Package source must be an explicit local .tgz file.");
   return services.localPackageSource(root, source);

@@ -165,9 +165,11 @@ describe("trusted project commands", () => {
     failure(await run(root), "unsupported-project");
     expect(await readdir(root)).not.toContain(".flute");
   });
-  it("reports unpublished/missing package without mutating the app", async () => {
+  it("reports missing package with public installation instructions without mutating the app", async () => {
     const root = await fixture({ installed: false });
-    failure(await run(root), "package-unavailable");
+    const result = await run(root);
+    failure(result, "package-unavailable");
+    expect(JSON.stringify(result)).toContain("npm install @flute/scene");
     expect(await readdir(root)).not.toContain(".flute");
     expect(await readFile(path.join(root, "src/main.tsx"), "utf8")).toBe(original);
   });

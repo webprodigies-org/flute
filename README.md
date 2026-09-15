@@ -8,17 +8,12 @@ Open source under the [MIT license](LICENSE). Runs locally, with your existing c
 
 Automatic setup currently supports **npm + Vite + React 19.2**, with a standard React configuration (including the supported shadcn/Tailwind configuration). Requires **Node 22.12+**. Unsupported configurations get an actionable diagnostic before setup writes.
 
-This source release is not published to npm. In the Flute checkout:
+**Release status:** public publication is being prepared. The command below becomes available after the first verified npm release; a local build is not proof of registry availability.
+
+From your existing app's directory:
 
 ```sh
-npm ci
-npm run release:local
-```
-
-Then, from your existing app's directory, install the generated file using its absolute path:
-
-```sh
-npm install /absolute/path/to/flute/.release/flute-scene-0.1.0.tgz
+npm install @flute/scene
 npx flute init
 npm run dev
 ```
@@ -82,3 +77,17 @@ npm run dev
 The separate `local-project/` exercises installation with real scenes; it is not shipped in the package. The unconnected product opens with an honest empty scene list.
 
 Read [architecture](docs/architecture.md) for canonical code owners and [product](docs/product.md) for scope. The installed `flute guide` is the authoritative authoring reference. Build and boundary checks reject architectural drift.
+
+## Maintainer release
+
+The public package name and repository must belong to the publisher. Set the confirmed GitHub `repository` metadata before publishing; release validation refuses missing or mismatched metadata. Public npm packages are MIT licensed. Never commit npm tokens or login credentials.
+
+1. Run `npm ci`, install Chromium and FFmpeg, then run `npm run verify:release` on a machine with hardware GPU compositing. This includes the existing frame budgets; hosted CI does not qualify hardware performance. Logs remain in `.release/logs/`.
+2. For the first release, sign in with `npm login`, then run `npm run release:publish` from the clean, committed candidate. npm may request browser/2FA approval. This publishes the checked tarball, not local test applications.
+3. Run `npm run test:published`. It downloads the exact version from the public registry into a fresh npm cache, initializes a separate app, checks the installed guide, scene revision, real browser interactions, export and production exclusion. A failed check means the release is not verified for viewers.
+4. Configure the npm package's trusted publisher for the confirmed GitHub owner/repository, workflow `publish.yml`, environment `npm`, with direct publishing enabled. Restrict that GitHub environment to version tags. No stored npm token is required. See [npm trusted publishing](https://docs.npmjs.com/trusted-publishers/).
+5. For later releases, update the version with `npm version patch --no-git-tag-version`, commit, run the full hardware gate, and push a matching `vX.Y.Z` tag from a commit on `main`. The publishing workflow checks the tag, repository, package contents and CI behavior before publishing, then verifies the public installation. Review the hardware results before pushing the release tag.
+
+Pull requests and main pushes run `verify:ci` on Node 22.12 and 24 with Chromium and FFmpeg. This runs behavior, package and installed-host checks. It explicitly excludes hardware timing measurements; `verify:release` retains those requirements. Release automation cannot certify untested frameworks or every graphics device.
+
+For source-only testing, `npm run release:local` builds a tarball in `.release/`; install that file in a separate app. `npm run setup:local` does this for the repository's isolated local host. These commands do not publish.

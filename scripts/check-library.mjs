@@ -8,8 +8,8 @@ function run(args,cwd=host){return new Promise((resolve,reject)=>{const p=spawn(
 async function port(){const s=createServer();await new Promise(r=>s.listen(0,'127.0.0.1',r));const n=s.address().port;await new Promise(r=>s.close(r));return n}
 try{
  await cp(path.join(root,'local-project'),host,{recursive:true,filter:source=>!source.includes('node_modules')&&!source.includes('/dist')});
- await mkdir(path.join(scratch,'.local-package'));await run(['npm','pack',...(process.env.FLUTE_VERIFY_PREBUILT==='1'?['--ignore-scripts']:[]),'--pack-destination',path.join(scratch,'.local-package')],root);
- await run(['npm','install','--offline','--force','--ignore-scripts','--no-audit','--no-fund','../.local-package/flute-scene-0.1.0.tgz']);
+ await mkdir(path.join(scratch,'.local-package'));const packed=JSON.parse(await run(['npm','pack','--json',...(process.env.FLUTE_VERIFY_PREBUILT==='1'?['--ignore-scripts']:[]),'--pack-destination',path.join(scratch,'.local-package')],root));
+ await run(['npm','install','--force','--ignore-scripts','--no-audit','--no-fund',path.join(scratch,'.local-package',packed[0].filename)]);
  assert.equal((await run([process.execPath,'--input-type=module','-e',"import {RESOURCES} from '@flute/scene'; console.log(typeof RESOURCES['resolve-recipes'])"])).trim(),'function','Use the freshly packed catalog operation');
  const cli=path.join(host,'node_modules/@flute/scene/dist/cli/flute.js');await run([process.execPath,cli,'init']);
  await run(['npm','run','build']);
@@ -69,9 +69,11 @@ try{
  const fadeShot=await page.screenshot();const fade=await page.evaluate(async data=>{const img=new Image();img.src=data;await img.decode();const c=document.createElement('canvas');c.width=img.width;c.height=img.height;const ctx=c.getContext('2d');ctx.drawImage(img,0,0);return [1,90,200].map(y=>ctx.getImageData(700,y,1,1).data[0])},'data:image/png;base64,'+fadeShot.toString('base64'));
  assert.ok(fade[0]<5&&fade[1]>80&&fade[1]<180&&fade[2]>250,`Top edge fades smoothly into black: ${fade}`);await white.evaluate(e=>e.remove());
 
+ if(process.env.FLUTE_VERIFY_HARDWARE!=='0') {
  const gpu=await (await browser.newBrowserCDPSession()).send('SystemInfo.getInfo');assert.equal(gpu.gpu.featureStatus.gpu_compositing,'enabled');
  const frames=await page.evaluate(()=>new Promise(resolve=>{const values=[];let start=0,last=0;const el=document.querySelector('.flute-library-scroll');function tick(now){if(!start){start=now;last=now}else if(now-start>300)values.push(now-last);last=now;el.scrollTop=450+450*Math.sin((now-start)/1200);if(now-start<3300)requestAnimationFrame(tick);else resolve(values)}requestAnimationFrame(tick)}));
  frames.sort((a,b)=>a-b);const fps=1000/(frames.reduce((a,b)=>a+b,0)/frames.length);const p95=frames[Math.floor(frames.length*.95)];console.log(JSON.stringify({libraryFps:fps,p95,frames:frames.length}));assert.ok(fps>=55&&p95<22,'Library scrolling must meet the hardware frame budget');
+ } else console.log('Hardware scrolling budget not measured on CI; verify:release requires it locally.');
  await page.locator('.flute-library-scroll').evaluate(e=>e.scrollTop=0);
  const angle=await page.locator('[data-flute-stage]').getAttribute('style');
  const scroll=page.getByRole('region',{name:'Scenes'});const scroller=page.locator('.flute-library-scroll');
