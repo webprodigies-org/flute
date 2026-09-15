@@ -1,3 +1,5 @@
+import { portableIntegration, portableCatalog } from "./portable";
+import { discoverRecipes } from "./discovery";
 import { z } from "zod";
 import { RESOURCES } from "../core/resources";
 import { FLUTE_BRAND } from "../core/branding";
@@ -57,7 +59,8 @@ function decode<T>(text: string, schema: z.ZodType<T>, target: string): T {
   catch { throw fault("invalid-file", "Invalid or conflicting project metadata; review " + target + ".", target); }
 }
 async function packageAt(root: string, target: string) {
-  const source = await services.readText(root, target);
+  const dependency=/^node_modules\/(react|react-dom|@webprodigies\/flute)\/package.json$/.exec(target);
+  const source = dependency ? await services.readDependency(root,dependency[1]) : await services.readText(root, target);
   return source === undefined ? undefined : decode(source, PackageSchema, target);
 }
 async function inspectProject(root: string) {
@@ -73,10 +76,10 @@ async function inspectProject(root: string) {
   if (existingLocks.some(lock => !["package-lock.json", "npm-shrinkwrap.json"].includes(lock)) || existingLocks.length > 1)
     throw fault("unsupported-project", "Resolve conflicting or non-npm lockfiles before setup.");
   const dependencies = { ...pkg.devDependencies, ...pkg.dependencies };
-  if (!dependencies.vite || !/^([~^])?19\.2\.\d+$/.test(dependencies.react ?? "")
-    || !/^([~^])?19\.2\.\d+$/.test(dependencies["react-dom"] ?? "")
+  if (!dependencies.vite || !dependencies.react
+    || !dependencies["react-dom"]
     || !/^vite(?:\s+--host(?:[ =](?:localhost|127\.0\.0\.1|\[::1\]))?)?(?:\s+--port[ =]\d+)?(?:\s+--strictPort)?$/.test(pkg.scripts?.dev ?? ""))
-    throw fault("unsupported-project", "Automatic setup requires React/react-dom 19.2.x, Vite and a standard npm dev script (vite).");
+    throw fault("unsupported-project", "Vite entry setup requires a standard Vite dev script. Use flute init --adapter react for a custom renderer without changing its build tool.");
   const found: string[] = [];
   for (const target of configs) {
     const source = await services.readText(root, target);
@@ -94,8 +97,8 @@ async function inspectProject(root: string) {
 async function hostDependenciesValid(root: string) {
   for (const name of ["react", "react-dom"]) {
     const installed = await packageAt(root, "node_modules/" + name + "/package.json");
-    if (!installed?.version || !/^19\.2\.\d+$/.test(installed.version))
-      throw fault("missing-installation", `Missing or incompatible installed ${name}. Run npm install in this project's root to install its declared React 19.2.x dependencies, then retry npx flute init.`, "node_modules/" + name + "/package.json");
+    if (!installed?.version || !/^(?:18\.(?:[2-9]|[1-9]\d+)\.\d+|19\.\d+\.\d+)$/.test(installed.version))
+      throw fault("missing-installation", `Missing or incompatible installed ${name}. Run npm install in this project's root to install its declared React 18.2+ or 19.x dependencies, then retry npx flute init.`, "node_modules/" + name + "/package.json");
   }
 }
 async function installationValid(root: string, requireToolkit = true) {
@@ -113,7 +116,7 @@ async function installationValid(root: string, requireToolkit = true) {
   const target = typeof preview === "string" ? preview
     : preview && typeof preview === "object" && !Array.isArray(preview) ? (preview as Record<string, unknown>).import : undefined;
   if (typeof target !== "string" || !target.startsWith("./")
-    || await services.readText(root, "node_modules/@webprodigies/flute/" + target.slice(2)) === undefined)
+    || await services.readDependency(root, "@webprodigies/flute", target.slice(2)) === undefined)
     throw fault("missing-installation", "Installed @webprodigies/flute lacks the preview entry. Install the supported Flute package and retry.");
   return true;
 }
@@ -141,11 +144,13 @@ async function previewAdapterFor(root: string, entry: string) {
       throw fault("conflict", "A file conflicts with Flute's preview adapter import. Move or rename it before setup.", candidate);
   }
   const existing = await services.readText(root, adapter.path);
-  if (existing !== undefined && existing !== adapter.text)
+  if (existing !== undefined && existing !== adapter.text && existing !== adapter.text.replace("scene.json,tsx,jsx", "scene.json,tsx"))
     throw fault("conflict", "Flute preview adapter already contains different content. Move or rename it, then retry flute init.", adapter.path);
   return { ...adapter, existing };
 }
-async function initialize(root: string, packageSource: string | undefined): Promise<ProjectResult> {
+async function initialize(root: string, packageSource: string | undefined, requestedAdapter?: string): Promise<ProjectResult> {
+  const portable = await portableHost(root, requestedAdapter);
+  if (portable) return initializePortable(root, portable, packageSource);
   const host = await inspectProject(root);
   const adapter = await previewAdapterFor(root, host.entry);
   const adapterText = adapter.existing;
@@ -204,7 +209,7 @@ async function initialize(root: string, packageSource: string | undefined): Prom
   if (handoffText === undefined) await services.atomicWrite(root, generated.handoff.path, generated.text, undefined);
   else if (await services.readText(root, generated.handoff.path) !== generated.text)
     throw fault("conflict", "FLUTE.md changed during setup; review it before retrying npx flute init.", generated.handoff.path);
-  if (adapterText === undefined) await services.atomicWrite(root, adapter.path, adapter.text, undefined);
+  if (adapterText !== adapter.text) await services.atomicWrite(root, adapter.path, adapter.text, adapterText);
   if (adapted.text !== host.source) await services.atomicWrite(root, host.entry, adapted.text, host.source);
   const state = JSON.stringify(project, null, 2) + "\n";
   if (!saved.project) await services.atomicWrite(root, statePath, state, saved.text);
@@ -212,6 +217,8 @@ async function initialize(root: string, packageSource: string | undefined): Prom
   return { success: true, data: { project, changed: true, handoff: generated.handoff } };
 }
 async function load(root: string) {
+  const portable = await stateFor(root);
+  if (portable.project?.adapter) { await verifyPortable(root, portable.project); return portable.project; }
   const host = await inspectProject(root);
   const saved = await stateFor(root);
   if (!saved.project) throw fault("not-initialized", "Run flute init in this project first.");
@@ -231,6 +238,15 @@ async function load(root: string) {
 }
 async function openPreview(root: string, input: z.output<typeof RESOURCES["open-preview"]>) {
   const project = await load(root);
+  if (project.adapter) {
+    if (project.adapter === "react") throw fault("manual-preview", "Open your React renderer's route with ?flute-preview=1 after mounting src/flute/ProjectPreview.jsx. Electron renderers keep their own navigation and dev server.");
+    const url = new URL("/flute?flute-preview=1", input.url).href;
+    const html = await services.fetchText(url, 30_000);
+    if (!html.includes('name="flute-project"') || !html.includes(project.projectId))
+      throw fault("wrong-dev-server", "This URL does not serve this project's development Flute route. Start the existing app and check its origin.");
+    if (input.launch) await services.openBrowser(root, url);
+    return {success:true as const,data:{project,url}};
+  }
   // Atomic entry edits and npm changes can briefly leave Vite serving its old module.
   // Retry identity checks within a fixed budget; never accept a different project.
   let matched = false;
@@ -267,7 +283,8 @@ export async function executeProjectCommand(operation: unknown, input: unknown, 
     if (!context || typeof context.root !== "string") throw fault("invalid-scope", "Provide an absolute local project root.");
     const root = await services.canonicalRoot(context.root);
     let result: ProjectResult;
-    if (operation === "init-project") result = await initialize(root, (parsed.data as z.output<typeof RESOURCES["init-project"]>).packageSource);
+    if (operation === "init-project") result = await initialize(root, (parsed.data as z.output<typeof RESOURCES["init-project"]>).packageSource, (parsed.data as z.output<typeof RESOURCES["init-project"]>).adapter);
+    else if (operation === "sync-project") result = await synchronize(root);
     else if (operation === "open-preview") result = await openPreview(root, parsed.data as z.output<typeof RESOURCES["open-preview"]>);
     else result = { success: true, data: { project: await load(root) } };
     return ProjectResultSchema.parse(result);
@@ -279,4 +296,162 @@ export async function executeProjectCommand(operation: unknown, input: unknown, 
       ...(known && typeof error.target === "string" ? { path: error.target } : {}),
     }] };
   }
+}
+
+
+// SOURCE OF TRUTH: portable project setup and sync.
+// WHAT: additive framework connections with a journal and exact owned-file comparisons.
+// WHY: unknown React hosts keep their entry/config; known routing adapters only add a studio route.
+// WHERE: portable.ts generates imports; discovery.ts validates the same catalog as the CLI.
+const ManagedSchema = z.strictObject({project:ProjectStateSchema,files:z.record(z.string(),z.string())});
+const managedPath = ".flute/integration.json";
+const portablePendingPath = ".flute/integration-pending.json";
+type PortableHost = {adapter:"react"|"next-app"|"next-pages";entry:string};
+async function portableHost(root:string, requested?:string):Promise<PortableHost|undefined> {
+  const pkg = await packageAt(root,"package.json");
+  if (!pkg) throw fault("unsupported-project","Run flute init in your existing React application's package directory.");
+  const deps = {...pkg.devDependencies,...pkg.dependencies};
+  if (!deps.react || !deps["react-dom"]) throw fault("unsupported-project","This package needs a React DOM renderer. Run setup in the web/renderer package containing React and react-dom.");
+  const saved = await stateFor(root);
+  if (saved.project?.adapter) return {adapter:saved.project.adapter,entry:saved.project.entry};
+  if (requested === "react") return {adapter:"react",entry:"src/flute/ProjectPreview.jsx"};
+  if (deps.next) {
+    for (const base of ["app","src/app"]) {
+      for (const extension of ["tsx","jsx","js"]) {
+        if (await services.isRegularFile(root,base+"/layout."+extension))
+          return {adapter:"next-app",entry:base+"/flute/page.jsx"};
+      }
+    }
+    for (const base of ["pages","src/pages"]) {
+      if ((await services.scanDirectory(root,base,1024)).length)
+        return {adapter:"next-pages",entry:base+"/flute.jsx"};
+    }
+    // Unusual Next routing remains usable via the same manual React adapter.
+    return {adapter:"react",entry:"src/flute/ProjectPreview.jsx"};
+  }
+  return deps.vite ? undefined : {adapter:"react",entry:"src/flute/ProjectPreview.jsx"};
+}
+function integrationInfo(project:ProjectState) {
+  return {
+    kind:project.adapter!,component:"src/flute/ProjectPreview.jsx",
+    ...(project.adapter === "react" ? {} : {route:"/flute"}),
+    instructions:project.adapter === "react"
+      ? "One host connection remains: import { FluteProjectPreview } from src/flute/ProjectPreview.jsx and wrap the existing UI inside its providers with enabled={yourDevelopmentFlag}. Open that renderer with ?flute-preview=1. Do not change its bundler, router or Electron main/preload. After adding/removing scene files run npx flute sync."
+      : "Start the existing Next.js app and open /flute (development only). Existing layouts/providers stay intact. After adding/removing scene files run npx flute sync; metadata and component edits use the host's hot reload.",
+  };
+}
+async function catalogSource(root:string) {
+  const catalog = await discoverRecipes(root);
+  if (catalog.issues.length) throw fault("invalid-scenes",catalog.issues.map(issue=>issue.path+": "+issue.message).join("\n"));
+  return portableCatalog(catalog.scenes);
+}
+async function portableFiles(root:string, project:ProjectState, catalog:string) {
+  const allowed=project.adapter==="next-app" ? ["app/flute/page.jsx","src/app/flute/page.jsx"]
+    : project.adapter==="next-pages" ? ["pages/flute.jsx","src/pages/flute.jsx"] : ["src/flute/ProjectPreview.jsx"];
+  if(!allowed.includes(project.entry))throw fault("conflict","Recorded entry is not a valid host connection.");
+  const files = portableIntegration(project,catalog);
+  // Alternative source extensions must not shadow our generated route/component.
+  for (const target of Object.keys(files)) {
+    await services.scopedPath(root,target);
+    if (/\.jsx$/.test(target)) for (const extension of ["js","tsx","ts","mjs"]) {
+      const other=target.replace(/\.jsx$/,"."+extension);
+      if (await services.isRegularFile(root,other)) throw fault("conflict","An existing file owns this route or component; use --adapter react to choose a manual connection instead.",other);
+    }
+  }
+  if(project.adapter === "next-app") for(const extension of ["ts","js"]) {
+    const other=project.entry.replace(/page.jsx$/,"route."+extension);
+    if(await services.isRegularFile(root,other))throw fault("conflict","An existing route handler owns /flute. Use --adapter react.",other);
+  }
+  return files;
+}
+async function initializePortable(root:string, host:PortableHost, packageSource?:string):Promise<ProjectResult> {
+  const saved=await stateFor(root);
+  const pendingText=await services.readText(root,portablePendingPath);
+  const pending=pendingText===undefined?undefined:decode(pendingText,ManagedSchema,portablePendingPath);
+  const existingText=await services.readText(root,managedPath);
+  const existing=existingText===undefined?undefined:decode(existingText,ManagedSchema,managedPath);
+  const project=saved.project??pending?.project??ProjectStateSchema.parse({version:1,projectId:services.newProjectId(),entry:host.entry,packageManager:"npm",adapter:host.adapter});
+  if(project.adapter!==host.adapter||project.entry!==host.entry)throw fault("conflict","Existing Flute setup uses another host connection.");
+  for(const record of [pending,existing])if(record && JSON.stringify(record.project)!==JSON.stringify(project))throw fault("conflict","Flute setup identity changed; inspect .flute before retrying.");
+  const catalog=existing?.files["src/flute/catalog.js"]??pending?.files["src/flute/catalog.js"]??await catalogSource(root);
+  const files=await portableFiles(root,project,catalog);
+  const generated=agentHandoff();
+  files[generated.handoff.path]=generated.text;
+  if(pending && JSON.stringify(pending.files)!==JSON.stringify(files))throw fault("conflict","Pending setup differs from the generated connection; review it before retrying.");
+  if(existing && JSON.stringify(existing.files)!==JSON.stringify(files))throw fault("conflict","Managed Flute files differ from this installed adapter.");
+  // Finish all conflict/dependency checks before any writes.
+  for(const [target,text] of Object.entries(files)) {
+    const current=await services.readText(root,target);
+    if(current!==undefined && current!==text)throw fault("conflict","Flute will not overwrite an existing or edited file. Preserve it before retrying.",target);
+  }
+  await hostDependenciesValid(root);
+  const installed=await installationValid(root,false);
+  const source=installed?undefined:await sourceForInstall(root,packageSource);
+  if(existing && saved.project && !pending) {
+    await verifyPortable(root,project);
+    return {success:true,data:{project,changed:false,handoff:generated.handoff,integration:integrationInfo(project)}};
+  }
+  const journal=JSON.stringify({project,files},null,2)+"\n";
+  if(!pendingText)await services.atomicWrite(root,portablePendingPath,journal,undefined);
+  if(source){await services.installPackage(root,source);await installationValid(root);}
+  for(const [target,text] of Object.entries(files)) {
+    const current=await services.readText(root,target);
+    if(current===undefined)await services.atomicWrite(root,target,text,undefined);
+    else if(current!==text)throw fault("conflict","File changed during setup.",target);
+  }
+  if(!existing)await services.atomicWrite(root,managedPath,journal,undefined);
+  if(!saved.project)await services.atomicWrite(root,statePath,JSON.stringify(project,null,2)+"\n",saved.text);
+  await services.removeText(root,portablePendingPath,pendingText??journal);
+  return {success:true,data:{project,changed:true,handoff:generated.handoff,integration:integrationInfo(project)}};
+}
+async function verifyPortable(root:string,project:ProjectState) {
+  if(await services.readText(root,portablePendingPath)!==undefined)throw fault("incomplete-setup","Run flute init to resume interrupted setup.");
+  const text=await services.readText(root,managedPath);
+  if(text===undefined)throw fault("incomplete-setup","Missing managed connection. Run flute init.");
+  const managed=decode(text,ManagedSchema,managedPath);
+  if(JSON.stringify(managed.project)!==JSON.stringify(project))throw fault("conflict","Managed project identity differs.");
+  const expected=await portableFiles(root,project,managed.files["src/flute/catalog.js"]??"");
+  expected["FLUTE.md"]=agentHandoff().text;
+  if(JSON.stringify(expected)!==JSON.stringify(managed.files))throw fault("conflict","Managed file list differs from the canonical connection.");
+  for(const [target,content] of Object.entries(expected))if(await services.readText(root,target)!==content)throw fault("conflict","Generated connection changed or is missing. Keep customizations in your scene components.",target);
+  await installationValid(root);
+}
+async function synchronize(root:string):Promise<ProjectResult> {
+  const project=(await stateFor(root)).project;
+  if(!project)throw fault("not-initialized","Run flute init first.");
+  if(!project.adapter){await load(root);return {success:true,data:{project,changed:false}};}
+  const transactionPath=".flute/catalog-pending.json";
+  const interrupted=await services.readText(root,transactionPath);
+  if(interrupted!==undefined) {
+    const pending=decode(interrupted,z.strictObject({before:z.string(),after:z.string()}),transactionPath);
+    const recordText=await services.readText(root,managedPath);
+    if(recordText===undefined)throw fault("conflict","Missing catalog ownership record.");
+    const record=decode(recordText,ManagedSchema,managedPath);
+    const current=await services.readText(root,"src/flute/catalog.js");
+    if(![pending.before,pending.after].includes(record.files["src/flute/catalog.js"]) || ![pending.before,pending.after].includes(current??""))
+      throw fault("conflict","Catalog changed during interrupted sync.");
+    if(current!==pending.after)await services.atomicWrite(root,"src/flute/catalog.js",pending.after,current);
+    if(record.files["src/flute/catalog.js"]!==pending.after) {
+      record.files["src/flute/catalog.js"]=pending.after;
+      await services.atomicWrite(root,managedPath,JSON.stringify(record,null,2)+"\n",recordText);
+    }
+    await services.removeText(root,transactionPath,interrupted);
+  }
+  await verifyPortable(root,project);
+  const target="src/flute/catalog.js";
+  const text=await catalogSource(root);
+  const savedText=(await services.readText(root,managedPath))!;
+  const managed=decode(savedText,ManagedSchema,managedPath);
+  const original=managed.files[target];
+  if(text===original)return {success:true,data:{project,changed:false}};
+  // Journal registry replacement so a crash between registry/ownership writes is recoverable.
+  const transaction=JSON.stringify({before:original,after:text});
+  const pending=await services.readText(root,transactionPath);
+  if(pending!==undefined&&pending!==transaction)throw fault("conflict","A catalog sync is pending. Restore the previous file set before retrying.");
+  if(pending===undefined)await services.atomicWrite(root,transactionPath,transaction,undefined);
+  await services.atomicWrite(root,target,text,original);
+  managed.files[target]=text;
+  await services.atomicWrite(root,managedPath,JSON.stringify(managed,null,2)+"\n",savedText);
+  await services.removeText(root,transactionPath,transaction);
+  return {success:true,data:{project,changed:true}};
 }

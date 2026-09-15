@@ -14,7 +14,7 @@ function leaves(name){
  });
 }
 const ci=process.argv.includes('--ci');
-const pending=new Set([...leaves('verify:reuse'),'test:agent']);
+const pending=new Set([...leaves('verify:reuse'),'test:agent','test:portable:app','test:portable:pages','test:portable:react']);
 // Hosted CI has no qualified hardware GPU. Keep all behavior checks there;
 // maintainers run the unmodified hardware budgets with verify:release locally.
 if(ci)pending.delete('test:performance');
@@ -33,7 +33,7 @@ try{
  // This tests prepack as well as the same canonical build used by verify:reuse.
  await run('release:local');pending.delete('build');
  const exclusive=['test:browser','test:performance','test:library'];
- const installed=['test:installed','test:iterate','test:agent'];
+ const installed=['test:installed','test:iterate','test:agent','test:portable:app','test:portable:pages','test:portable:react'];
  const independent=[...pending].filter(name=>!exclusive.includes(name)&&!installed.includes(name));
  const checkGroup=async names=>{const results=await Promise.allSettled(names.map(name=>run(name,true)));const failures=results.filter(result=>result.status==='rejected');if(failures.length)throw new AggregateError(failures.map(result=>result.reason),'Verification failed');};
  await checkGroup(independent);

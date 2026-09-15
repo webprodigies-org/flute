@@ -18,15 +18,16 @@ ${FLUTE_BRAND.url}
 Start with npx flute guide to learn spatial composition, camera, focus and motion.
 
 flute guide [--json]
-flute init [--project DIR] [--package TARBALL] [--url ORIGIN] [--no-open]
+flute init [--adapter auto|react] [--project DIR] [--package TARBALL] [--url ORIGIN] [--no-open]
 flute open [--scene ID] [--project DIR] [--url ORIGIN] [--no-open]
+flute sync [--project DIR]
 flute scenes [--project DIR] [--json]
 flute snapshot --scene ID --url ORIGIN [--time MS] [--project DIR] [--json]
 flute load [--scene ID] [--project DIR] [--json]
 flute validate [--project DIR]
 flute export --url URL --output FILE [--fps 30|60|120] [--width N --height N] [--project DIR] [--json]
 
-After installing @webprodigies/flute locally, run npx flute init in your npm Vite React 19.2.x app.
+After installing @webprodigies/flute locally, run npx flute init in your React DOM app (React 18.2+ or 19). Next.js and Vite have automatic connections; other hosts get a portable React wrapper.
 --package is optional when Flute is already installed; it accepts a local .tgz for setup.
 init preserves the existing root/providers and creates FLUTE.md for your coding agent.
 Add --url to initialize and open in one command.
@@ -37,13 +38,13 @@ open reuses your running dev server (APP_PORT / PORT / 5173); it never starts an
 function output(result: ProjectResult, json: boolean): CliResult {
   if (!result.success) return { code: 1, stdout: "", stderr: json ? JSON.stringify(result) + "\n" : result.issues.map(i => `${i.code}${i.path ? ` (${i.path})` : ""}: ${i.message}`).join("\n") + "\n" };
   const message = result.data.url ?? (result.data.project
-    ? `Project ready: ${result.data.project.entry}${result.data.changed ? " (initialized)" : ""}.\nUse your running dev server, or start it with npm run dev. Then run npx flute open --url <origin printed by Vite>.`
+    ? `Project ${result.data.integration?.kind === "react" ? "connection generated" : "ready"}: ${result.data.project.entry}${result.data.changed ? " (initialized)" : ""}.\nUse your running dev server, or start it with npm run dev. Then run npx flute open --url <origin printed by your app>.`
     : "Project command completed.");
   const handoff = result.data.handoff;
   const next = handoff
     ? `\nAgent handoff: ${handoff.path}\nCopy this prompt into your coding agent (replace <page route or component path>):\n${handoff.prompt}`
     : "\nScene authoring: run npx flute guide before composing animations.";
-  return { code: 0, stdout: (json ? JSON.stringify(result) : `${FLUTE_BRAND.title}\n${FLUTE_BRAND.url}\n${message}${next}`) + "\n", stderr: "" };
+  return { code: 0, stdout: (json ? JSON.stringify(result) : `${FLUTE_BRAND.title}\n${FLUTE_BRAND.url}\n${message}${result.data.integration ? "\n" + result.data.integration.instructions : ""}${next}`) + "\n", stderr: "" };
 }
 function recipeOutput(result: RecipeCommandResult, json: boolean): CliResult {
   const issues = result.success ? result.data.issues : result.issues;
@@ -64,13 +65,13 @@ export async function runCli(argv: string[], environment: Environment, execute: 
     const text=[guide.purpose,guide.creativeFreedom,...guide.concepts.map(c=>`## ${c.title}\n${c.meaning}\nHow it works: ${c.mechanism}\nCreative choices: ${c.choices}\nWatch for: ${c.pitfalls}\nVerify: ${c.verify}`),"## Workflow\n"+guide.workflow.map((s,i)=>`${i+1}. ${s}`).join("\n"),"## Installed API and defaults\n"+JSON.stringify(guide.capabilities,null,2)].join("\n\n");
     return {code:0,stdout:(args[0]==="--json"?JSON.stringify(guide):`${FLUTE_BRAND.title}\n${FLUTE_BRAND.url}\n\n${text}`)+"\n",stderr:""};
   }
-  const aliases = { init: "init-project", open: "open-preview", load: "load-project", validate: "validate-project" } as const;
+  const aliases = { init: "init-project", sync: "sync-project", open: "open-preview", load: "load-project", validate: "validate-project" } as const;
   const fail = (message: string): CliResult => ({ code: 2, stdout: "", stderr: message + "\n\n" + usage });
   if (command !== "snapshot" && command !== "export" && command !== "scenes" && !Object.hasOwn(aliases, command)) return fail(`Unknown command: ${command}`);
   const flags = new Map<string, string | true>();
   for (let i = 0; i < args.length; i++) {
     const flag = args[i];
-    if (!(command === "snapshot" ? ["--project","--url","--scene","--time","--json"] : command === "export" ? ["--project", "--url", "--output", "--fps", "--width", "--height", "--json"] : ["--project", "--package", "--url", "--no-open", "--json", "--scene"]).includes(flag)) return fail(`Unknown option: ${flag}`);
+    if (!(command === "snapshot" ? ["--project","--url","--scene","--time","--json"] : command === "export" ? ["--project", "--url", "--output", "--fps", "--width", "--height", "--json"] : ["--project", "--package", "--url", "--no-open", "--json", "--scene", "--adapter"]).includes(flag)) return fail(`Unknown option: ${flag}`);
     if (flags.has(flag)) return fail(`Duplicate option: ${flag}`);
     if (["--no-open", "--json"].includes(flag)) flags.set(flag, true);
     else {
@@ -79,9 +80,10 @@ export async function runCli(argv: string[], environment: Environment, execute: 
       flags.set(flag, value);
     }
   }
+  if (flags.has("--adapter") && command !== "init") return fail("--adapter is only valid for init.");
   if (flags.has("--package") && command !== "init") return fail("--package is only valid for init.");
   if (flags.has("--scene") && !["load", "open", "snapshot"].includes(command)) return fail("--scene is only valid for load, open or snapshot.");
-  if (["load", "validate", "scenes"].includes(command) && (flags.has("--url") || flags.has("--no-open"))) return fail("Preview options require init or open.");
+  if (["load", "validate", "scenes", "sync"].includes(command) && (flags.has("--url") || flags.has("--no-open"))) return fail("Preview options require init or open.");
   if (command === "init" && flags.has("--no-open") && !flags.has("--url")) return fail("init --no-open requires --url. To initialize without opening a browser, run npx flute init.");
   const context = { root: flags.get("--project") as string ?? environment.root };
   const json = flags.has("--json");
@@ -111,7 +113,7 @@ export async function runCli(argv: string[], environment: Environment, execute: 
       return { code: 0, stdout: (json ? JSON.stringify(result) : `Exported ${result.data.output} (${result.data.frames} frames at ${result.data.fps} FPS).`) + "\n", stderr: "" };
     } catch { return { code: 1, stdout: "", stderr: "Video export failed unexpectedly. Check the local scene server and retry.\n" }; }
   }
-  const input = command === "init" ? { ...(flags.has("--package") ? { packageSource: flags.get("--package") } : {}) }
+  const input = command === "init" ? { ...(flags.has("--adapter") ? {adapter:flags.get("--adapter")} : {}), ...(flags.has("--package") ? { packageSource: flags.get("--package") } : {}) }
     : command === "open" ? { url: flags.get("--url") ?? `http://127.0.0.1:${environment.port ?? "5173"}`, launch: !flags.has("--no-open") } : {};
   try {
     const result = await execute(aliases[command as keyof typeof aliases], input, context);

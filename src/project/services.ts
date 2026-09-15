@@ -1,3 +1,4 @@
+import { createRequire } from "node:module";
 import { constants } from "node:fs";
 import { lstat, realpath, open, opendir, mkdir, rename, link, unlink } from "node:fs/promises";
 import path from "node:path";
@@ -138,8 +139,8 @@ export async function installPackage(root: string, source: string) {
   await run(root, process.platform === "win32" ? "npm.cmd" : "npm",
     ["install", "--ignore-scripts", "--no-audit", "--no-fund", "--", source]);
 }
-export async function fetchText(url: string): Promise<string> {
-  const response = await fetch(url, { redirect: "error", signal: AbortSignal.timeout(3000) });
+export async function fetchText(url: string, timeoutMs = 3000): Promise<string> {
+  const response = await fetch(url, { redirect: "error", signal: AbortSignal.timeout(timeoutMs) });
   if (!response.ok || Number(response.headers.get("content-length") ?? 0) > 2_000_000) {
     await response.body?.cancel();
     throw fault("missing-dev-server", "Dev server did not return a supported response.");
@@ -177,4 +178,18 @@ export async function localPackageSource(root: string, source: string): Promise<
 
 export function pause(milliseconds: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, milliseconds));
+}
+
+/** Read-only dependency resolution; hoisted and pnpm-linked packages are not mutation targets. */
+export async function readDependency(root:string,name:string,target="package.json"):Promise<string|undefined> {
+  if (!["react","react-dom","@webprodigies/flute"].includes(name)) throw fault("invalid-input","Unknown runtime dependency.");
+  relativeTarget(target);
+  const candidates=createRequire(path.join(root,"package.json")).resolve.paths(name)??[];
+  for(const modules of candidates) {
+    let directory:string;
+    try { directory=await realpath(path.join(modules,name)); }
+    catch(error) { if((error as NodeJS.ErrnoException).code==="ENOENT")continue;throw error; }
+    return readText(directory,target);
+  }
+  return undefined;
 }

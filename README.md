@@ -6,7 +6,7 @@ Open source under the [MIT license](LICENSE). Runs locally, with your existing c
 
 ## Install into your app
 
-Automatic setup currently supports **npm + Vite + React 19.2**, with a standard React configuration (including the supported shadcn/Tailwind configuration). Requires **Node 22.12+**. Unsupported configurations get an actionable diagnostic before setup writes.
+**React DOM 18.2+ or 19**, with **Node 22.12+** for the CLI. The renderer is independent of your router and build tool. Setup has automatic connections for Next.js App/Pages Router and standard Vite projects; other React hosts use the same portable wrapper without changing frameworks.
 
 From your existing app's directory:
 
@@ -22,7 +22,27 @@ Keep your existing dev server if it is already running. Use the URL it prints:
 npx flute open --url http://127.0.0.1:5173
 ```
 
-Setup adds a development-only wrapper, a small React refresh adapter and `FLUTE.md`. Repeating setup is safe; conflicting user-owned files get a repair message. Normal app routes and production builds remain ordinary. One installed app owns one scene catalog.
+In Next.js, open `/flute` on your existing dev server (usually port 3000). Setup adds this development-only route without rewriting your app/layout/providers. In Vite, setup connects the existing root. Both create `FLUTE.md`. Repeating setup is safe; conflicting user-owned files get a repair message. Normal app routes and production builds remain ordinary. One installed app owns one scene catalog.
+
+## Other React hosts (including Electron renderers)
+
+Run `npx flute init --adapter react`. Setup creates a framework-independent wrapper and tells your agent how to connect it. It deliberately does not guess or replace your application root:
+
+```jsx
+import { FluteProjectPreview } from "./flute/ProjectPreview";
+
+<ExistingProviders>
+  <FluteProjectPreview enabled={yourDevelopmentFlag}>
+    <ExistingApp />
+  </FluteProjectPreview>
+</ExistingProviders>
+```
+
+For production bundle exclusion, have your agent load the generated module only behind your bundler’s compile-time development condition. The `enabled` prop is a runtime guard, not a substitute for removing development imports. Next and Vite automatic connections include their native compile-time guards.
+
+Use your host's actual development flag, then open its route with `?flute-preview=1`. For a dedicated route, pass `active`. This uses the existing React renderer, including Electron's renderer process; no changes to main/preload, security settings or build tools. A React Native application without browser DOM is not supported.
+
+The underlying `ProjectPreview` export accepts `projectId`, `enabled`, optional `active`, `sceneModules` (lazy module loaders) and `children`. This is the shared integration contract; named framework connections are conveniences, not renderer dependencies. Next.js scene bindings are client components: keep server-only imports in the host's server layer and supply their data through that boundary.
 
 ## Give your coding agent this prompt
 
@@ -34,9 +54,9 @@ The guide explains concepts, tradeoffs, exact APIs and a tested file-pair exampl
 
 ## Scenes and studio
 
-The agent creates `src/flute/scenes/my-shot.scene.json` and matching `my-shot.tsx`. JSON owns the scene definition; the component imports actual host UI and returns stable `Surface` elements. The shared studio supplies the camera renderer, playback and capture—no separate scene editor or duplicated renderer.
+The agent creates `src/flute/scenes/my-shot.scene.json` and matching `my-shot.tsx` or `my-shot.jsx` (one component per recipe). JSON owns the scene definition; the component imports actual host UI and returns stable `Surface` elements. The shared studio supplies the camera renderer, playback and capture—no separate scene editor or duplicated renderer.
 
-Open the scene library, select a scene, play or seek, and revise its source through your running dev server.
+Outside Vite, run `npx flute sync` after adding/removing scene pairs. Existing file edits use your host’s hot reload. Open the scene library, select a scene, play or seek, and revise its source through your running dev server.
 
 ```sh
 npx flute scenes

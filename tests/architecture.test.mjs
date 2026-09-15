@@ -19,6 +19,8 @@ const spatialDoc = `/** SOURCE OF TRUTH: evaluateScene, transformToCss, focusFor
  * WHERE: consumed by React adapter.
  */`;
 const valid = {
+ 'src/project/discovery.ts':`/** SOURCE OF TRUTH: discoverRecipes. WHAT: read scoped recipes. WHY: share discovery policy. WHERE: project commands call this owner. */ export function discoverRecipes(){return {}}`,
+ 'src/project/portable.ts':`/** SOURCE OF TRUTH: portableIntegration, portableCatalog. WHAT: generate host connection source. WHY: reuse shared rendering contracts. WHERE: project commands write generated files. */ export function portableIntegration(){return {}} export function portableCatalog(){return ''}`,
  'src/core/recipes.ts':`/** SOURCE OF TRUTH: SceneRecipeSchema, SceneSnapshotSchema, SnapshotSceneSchema, loadSceneRecipes, ListScenesSchema, LoadSceneSchema, OpenSceneSchema.
  * WHAT: validate source recipes and selection.
  * WHY: browser and CLI share catalog policy.
@@ -85,7 +87,7 @@ export function executeVideoExport(){return {};} export function executeSceneSna
  */
 import {z} from 'zod'; export const CascadeSchema=z.strictObject({}); export function createCascadeTracks(){return [];}`,
 
-  'src/core/project.ts': `/** SOURCE OF TRUTH: InitProjectSchema.\n * WHAT: validate project command inputs.\n * WHY: keep adapters using contracts.\n * WHERE: consumed by trusted commands.\n */\nimport { z } from 'zod'; export const InitProjectSchema=z.strictObject({});`,
+  'src/core/project.ts': `/** SOURCE OF TRUTH: InitProjectSchema, SyncProjectSchema.\n * WHAT: validate project command inputs.\n * WHY: keep adapters using contracts.\n * WHERE: consumed by trusted commands.\n */\nimport { z } from 'zod'; export const InitProjectSchema=z.strictObject({}); export const SyncProjectSchema=z.strictObject({});`,
   'src/project/commands.ts': `/** SOURCE OF TRUTH: executeProjectCommand.\n * WHAT: execute validated project commands.\n * WHY: protect scoped project state.\n * WHERE: invoked through CLI adapters.\n */\nexport async function executeProjectCommand(){return {};}`, 
   'src/core/scene.ts': `${sceneDoc}\nimport { z } from 'zod';\nexport const TransformSchema = z.strictObject({ x: z.number() });\nexport const SceneSchema = z.strictObject({ transform: TransformSchema }).superRefine(() => {});`,
   'src/core/spatial.ts': `${spatialDoc}\nimport { SceneSchema } from './scene';\nexport function evaluateScene(input: unknown) { return SceneSchema.parse(input); }\nexport const transformToCss = () => 'none'; export const focusForSurface=()=>0; export const sampleFocus=()=>0; export const focusMask=()=>''; export const cameraToCss=()=>''; export const uniformFocusBlur=()=>0;`,
@@ -340,3 +342,9 @@ test('snapshot schemas and command keep canonical owners',()=>{
 test('preview cannot call snapshot filesystem or browser effects',()=>rejects('src/preview/capture.ts',"import {openCapture} from '../export/services'; openCapture({});",'module-boundary'));
 
 test("rejects another branding owner",()=>{ rejects("src/preview/brand.ts", "export const FLUTE_BRAND=Object.freeze({});", "canonical-owner"); });
+
+// Framework adapters must reuse the shared owners, never establish competing policy.
+test('framework connection cannot duplicate canonical recipe discovery', () => {
+  const issues=checkArchitecture({'src/project/other.ts':'export async function discoverRecipes() { return {}; }'});
+  assert.ok(issues.length);
+});

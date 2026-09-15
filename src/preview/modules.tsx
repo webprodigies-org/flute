@@ -2,9 +2,9 @@ import {useEffect,useState,type ComponentType} from 'react';
 import {SceneLibrary} from './SceneLibrary';
 import {usePreviewConnection,type PreviewHot} from './connection';
 /** SOURCE OF TRUTH: SceneModules adapter.
- * WHAT: load explicitly supplied Vite source modules only for the development library.
+ * WHAT: load explicitly supplied host source modules only for the development library.
  * WHY: normal app entry and production never import authored scene modules.
- * WHERE: generated ProjectPreview passes a lazy glob; core load-scene validates metadata.
+ * WHERE: host adapter passes lazy module loaders; core load-scene validates metadata.
  */
 export type SceneModules=Record<string,()=>Promise<unknown>>;
 const pause=()=>{};
@@ -23,7 +23,7 @@ export function SceneModuleLibrary({modules,hot,backHref}:{modules:SceneModules;
      const value=await loader();const item=value&&typeof value==='object'&&'default' in value?value.default:undefined;
      const normalized=path.replace(/^\//,'');
      if(path.endsWith('.scene.json'))sources[normalized]=item;
-     else if(path.endsWith('.tsx')&&(typeof item==='function'||(typeof item==='object'&&item!==null)))bindings[normalized]=item as ComponentType;
+     else if(/\.[jt]sx$/.test(path)&&(typeof item==='function'||(typeof item==='object'&&item!==null)))bindings[normalized]=item as ComponentType;
     }));
     const failed=results.find(result=>result.status==='rejected');
     if(failed?.status==='rejected')throw failed.reason;

@@ -157,7 +157,7 @@ describe("trusted project commands", () => {
     ['index.html', '<script type="module" src="/src/main.tsx"></script><script type="module" src="/src/other.tsx"></script>'],
     ['yarn.lock', "conflicting"],
     ['npm-shrinkwrap.json', "{}"],
-    ['package.json', '{"dependencies":{"react":"18.3.0","react-dom":"18.3.0","vite":"7.3.6"},"scripts":{"dev":"vite"}}'],
+    ['package.json', '{"dependencies":{"vite":"7.3.6"},"scripts":{"dev":"vite"}}'],
     ['package.json', '{"workspaces":["apps/*"]}'],
   ])("refuses unsupported setup %s before writes", async (file, content) => {
     const root = await fixture();
@@ -557,4 +557,12 @@ describe("generated preview refresh boundary setup", () => {
     expect(await readdir(root)).not.toContain(".flute");
     expect(await readdir(path.join(outside, "src"))).toEqual(["main.tsx"]);
   });
+});
+
+it("upgrades the prior TSX-only Vite glob without replacing host UI",async()=>{
+ const root=await fixture();success(await run(root));
+ const adapter="src/flute/ProjectPreview.tsx";
+ const text=await readFile(path.join(root,adapter),"utf8");
+ await put(root,adapter,text.replace("scene.json,tsx,jsx","scene.json,tsx"));
+ success(await run(root));expect(await readFile(path.join(root,adapter),"utf8")).toBe(text);
 });

@@ -49,8 +49,8 @@ export async function openCapture(input: Pick<ExportVideo,"url"|"width"|"height"
     });
     await page.goto(input.url, { waitUntil: "load", timeout: 30_000 });
     // Product chrome can visually overlap the capture rectangle. Hide its semantic
-    // marker only in this private export page; the user's preview stays untouched.
-    await page.addStyleTag({content:'[data-flute-preview-chrome]{visibility:hidden!important}'});
+    // marker and host development-tools portal only in this private export page; the user's preview stays untouched.
+    await page.addStyleTag({content:'[data-flute-preview-chrome],nextjs-portal{visibility:hidden!important}'});
     try { await page.waitForFunction(() => typeof (window as unknown as { __FLUTE_CAPTURE__?: CaptureBridge }).__FLUTE_CAPTURE__?.seek === "function", undefined, { timeout: 5000 }); }
     catch { throw fault("missing-capture", "This page has no ready Flute capture bridge. Open a scene with capture enabled and retry."); }
     await page.evaluate(async () => {

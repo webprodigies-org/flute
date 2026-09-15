@@ -47,7 +47,7 @@ const CatalogInputSchema = z.strictObject({
 });
 const SourceSchema = z.strictObject({ path: z.string(), document: z.unknown() });
 const sourcePattern = /^src\/flute\/scenes\/([a-z0-9]+(?:-[a-z0-9]+)*)\.scene\.json$/;
-const bindingPattern = /^src\/flute\/scenes\/[a-z0-9]+(?:-[a-z0-9]+)*\.tsx$/;
+const bindingPattern = /^src\/flute\/scenes\/[a-z0-9]+(?:-[a-z0-9]+)*\.[jt]sx$/;
 const compare = (a: string, b: string) => a < b ? -1 : a > b ? 1 : 0;
 
 export function loadSceneRecipes(input: unknown): SceneCatalog {
@@ -96,7 +96,12 @@ export function loadSceneRecipes(input: unknown): SceneCatalog {
       issues.push({ path, message: `Scene ID "${value.id}" must match filename "${match[1]}".` });
       continue;
     }
-    const binding = `${SCENE_RECIPE_DIRECTORY}/${value.id}.tsx`;
+    const candidates = ["tsx", "jsx"].map(extension => `${SCENE_RECIPE_DIRECTORY}/${value.id}.${extension}`).filter(path => bindings.has(path));
+    if (candidates.length > 1) {
+      issues.push({path,message:"Keep only one JSX or TSX component for this scene."});
+      continue;
+    }
+    const binding = candidates[0] ?? `${SCENE_RECIPE_DIRECTORY}/${value.id}.tsx`;
     if (!bindings.has(binding)) {
       issues.push({ path, message: `Missing local component ${binding}. Add its default component export to reopen this recipe.` });
       continue;

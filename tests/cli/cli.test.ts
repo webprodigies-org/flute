@@ -120,3 +120,11 @@ it('routes snapshot arguments through the shared operation and preserves validat
  snapshotter.mockResolvedValue({success:false,issues:[{code:'source-changed',message:'Retry after editing.'}]});
  expect((await runCli(['snapshot','--scene','demo','--url','http://localhost:5173'],{root:'/project'},undefined,undefined,undefined,snapshotter)).stderr).toContain('Retry after editing.');
 });
+
+it("routes portable init and registry sync through canonical commands",async()=>{
+ const execute=vi.fn().mockResolvedValue(ready);
+ await runCli(["init","--adapter","react"],context,execute);
+ await runCli(["sync"],context,execute);
+ expect(execute.mock.calls).toEqual([["init-project",{adapter:"react"},context],["sync-project",{},context]]);
+ expect((await runCli(["sync","--adapter","react"],context,execute)).code).toBe(2);
+});
