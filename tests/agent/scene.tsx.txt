@@ -1,4 +1,4 @@
-import { Surface } from '@flute/scene';
+import { Surface } from '@webprodigies/flute';
 import { App, DashboardProvider } from '../../App';
 
 // SOURCE OF TRUTH: AgentSurvey binding.

@@ -1,4 +1,4 @@
-import {Surface} from '@flute/scene';
+import {Surface} from '@webprodigies/flute';
 import {Dashboard,DashboardProvider,Sidebar,Revenue,Customers,Projects,Heading} from './dashboard';
 export function WholeScene(){return <DashboardProvider><Surface id="dashboard" style={{width:1400,height:900}}><Dashboard/></Surface></DashboardProvider>}
 export function PlatingScene(){return <DashboardProvider><Surface id="dashboard" style={{width:1400,height:900}} content={<div className="orbit-dashboard" style={{position:"absolute",left:0,top:0,borderRadius:24}}/>}>

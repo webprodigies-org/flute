@@ -1,0 +1,45 @@
+name: Publish npm package
+# Explicit version tags only. Never publish from pull requests or every main push.
+on:
+  push:
+    tags: ['v*']
+permissions:
+  contents: read
+concurrency:
+  group: npm-publish
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    environment: npm
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Require the release commit to belong to main
+        run: git merge-base --is-ancestor HEAD origin/main
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+      - run: npm ci
+      - run: npx --no-install playwright install --with-deps chromium
+      - run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - run: npm run verify:ci
+      - name: Publish the checked artifact using npm trusted publishing
+        run: node scripts/release.mjs publish
+      - name: Verify fresh public installation and the installed studio
+        run: npm run test:published
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: release-evidence
+          include-hidden-files: true
+          path: |
+            .release/
+            test-results/
+          retention-days: 30

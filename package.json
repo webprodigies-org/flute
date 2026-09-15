@@ -1,5 +1,5 @@
 {
-  "name": "@flute/scene",
+  "name": "@webprodigies/flute",
   "version": "0.1.0",
   "type": "module",
   "scripts": {
@@ -16,7 +16,7 @@
     "verify:motion": "npm run typecheck && npm run test:core && npm run test:react && npm run test:architecture && npm run build && npm run test:browser && npm run test:performance",
     "test:performance": "playwright test --config playwright.performance.config.ts",
     "lint:architecture": "node scripts/check-architecture.mjs",
-    "build:cli": "vite build --config vite.cli.config.ts",
+    "build:cli": "vite build --config vite.cli.config.ts && node scripts/finalize-cli.mjs",
     "test:launch": "vitest run tests/project tests/preview tests/cli",
     "test:installed": "node scripts/check-installed.mjs",
     "verify:launch": "npm run verify:motion && npm run test:launch && npm run test:installed",
@@ -30,9 +30,15 @@
     "test:library": "node scripts/check-library.mjs",
     "setup:local": "node scripts/setup-local.mjs",
     "prepack": "node scripts/prepack.mjs",
+    "prepublishOnly": "npm run verify:release && node scripts/release.mjs publish-check",
     "release:local": "node scripts/pack-release.mjs",
     "verify:agent": "node scripts/verify-mvp.mjs",
-    "test:agent": "node scripts/check-agent.mjs"
+    "test:agent": "node scripts/check-agent.mjs",
+    "test:release": "node --test tests/release.test.mjs",
+    "verify:ci": "node scripts/verify-mvp.mjs --ci && npm run test:release && node scripts/release.mjs check",
+    "verify:release": "npm run verify:agent && npm run test:release && node scripts/release.mjs check",
+    "test:published": "node scripts/check-published.mjs",
+    "release:publish": "npm run verify:release && node scripts/release.mjs publish"
   },
   "dependencies": {
     "react-error-boundary": "6.1.5",
@@ -82,11 +88,22 @@
   },
   "description": "Cinematic 3D scenes from your live React application. Flute by Web Prodigies.",
   "license": "MIT",
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
   "author": {
     "name": "Web Prodigies",
     "url": "https://www.youtube.com/@webprodigies"
   },
-  "homepage": "https://www.youtube.com/@webprodigies",
+  "homepage": "https://github.com/webprodigies-org/flute#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/webprodigies-org/flute.git"
+  },
+  "bugs": {
+    "url": "https://github.com/webprodigies-org/flute/issues"
+  },
   "sideEffects": [
     "./dist/cli/flute.js"
   ]

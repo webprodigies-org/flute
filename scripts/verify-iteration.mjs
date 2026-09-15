@@ -6,10 +6,10 @@ import {expect} from '@playwright/test';
 // Tests mutate only the disposable installed host, never project source or state.
 export async function verifyIteration({page,host,origin,server,processes,waitFor,root,originalApp}) {
  const file=name=>path.join(host,'src',name);
- const sceneSource=distance=>`import type {PreviewDefinitionInput} from '@flute/scene';
+ const sceneSource=distance=>`import type {PreviewDefinitionInput} from '@webprodigies/flute';
  export const definition:PreviewDefinitionInput={width:1400,height:980,scene:{camera:{perspective:1800,rotateY:-18},focus:{distance:${distance},fStop:2.8},nodes:[{id:'host'}]},motion:{durationMs:4000,tracks:[{target:{kind:'camera'},property:'x',keyframes:[{timeMs:0,value:-100},{timeMs:4000,value:100}]}]}};`;
  const shell=`import {App as Host,DashboardProvider} from './Host';
- import {Surface} from '@flute/scene';import {ScenePreview} from '@flute/scene/preview';import {definition} from './scene';
+ import {Surface} from '@webprodigies/flute';import {ScenePreview} from '@webprodigies/flute/preview';import {definition} from './scene';
  export {DashboardProvider};const content=<Surface id="host" style={{width:1100,height:850,left:150,top:60}}><Host/></Surface>;
  export function App(){return <ScenePreview title="Existing project" definition={definition} hot={import.meta.hot}>{content}</ScenePreview>}`;
  await writeFile(file('Host.tsx'),originalApp);

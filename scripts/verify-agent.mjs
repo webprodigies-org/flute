@@ -22,7 +22,7 @@ export async function verifyAgent({page,host,origin,root,cli,ok,installedGuide})
  const binding=await fixture('scene.tsx.txt');
  await writeFile(path.join(recipeDirectory,`${initial.id}.scene.json`),JSON.stringify(initial));
  await writeFile(path.join(recipeDirectory,`${initial.id}.tsx`),binding);
- await ok('npm',['install','--offline','--ignore-scripts','--no-audit','--no-fund','--save-dev','@types/react@19.2.0','@types/react-dom@19.2.0']);
+ await ok('npm',['install','--ignore-scripts','--no-audit','--no-fund','--save-dev','@types/react@19.2.0','@types/react-dom@19.2.0']);
  await ok(process.execPath,['node_modules/typescript/bin/tsc','--noEmit','--strict','--skipLibCheck','--jsx','react-jsx','--moduleResolution','bundler','--module','esnext','--target','es2022','--lib','es2022,dom','--types','vite/client','src/main.tsx',example.componentPath,`src/flute/scenes/${initial.id}.tsx`]);
  await ok('npm',['run','build']);
  await ok(process.execPath,[path.join(root,'scripts/check-agent-trial.mjs')],root);
