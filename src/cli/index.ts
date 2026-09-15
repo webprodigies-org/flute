@@ -1,5 +1,6 @@
 import { RESOURCES } from "../core/resources";
 import { FLUTE_BRAND } from "../core/branding";
+import { formatOnboarding, terminalWelcome, type TerminalOptions } from "./terminal";
 import { executeSceneSnapshot, executeVideoExport } from "../export/commands";
 import { executeProjectCommand } from "../project/commands";
 import { executeRecipeCommand, type RecipeCommandResult } from "../project/recipes";
@@ -10,13 +11,14 @@ import type { ProjectResult } from "../core/project";
  * WHY: installation policy and side effects remain behind the project command boundary.
  * WHERE: cli/main invokes this adapter; project/commands validates and executes requests.
  */
-type Environment = { root: string; port?: string };
+type Environment = { root: string; port?: string; terminal?: TerminalOptions; progress?: (text: string) => void };
 type Execute = typeof executeProjectCommand;
 export type CliResult = { code: number; stdout: string; stderr: string };
 const usage = `${FLUTE_BRAND.title} — cinematic 3D motion from your real application UI.
 ${FLUTE_BRAND.url}
 Start with npx flute guide to learn spatial composition, camera, focus and motion.
 
+flute --version
 flute guide [--json]
 flute init [--adapter auto|react] [--project DIR] [--package TARBALL] [--url ORIGIN] [--no-open]
 flute open [--scene ID] [--project DIR] [--url ORIGIN] [--no-open]
@@ -35,8 +37,9 @@ open reuses your running dev server (APP_PORT / PORT / 5173); it never starts an
 --no-open verifies and prints the preview URL without launching a browser.
 --json prints the canonical command result for scripts.
 `;
-function output(result: ProjectResult, json: boolean): CliResult {
+function output(result: ProjectResult, json: boolean, onboarding?: { terminal?: TerminalOptions; streamed: boolean }): CliResult {
   if (!result.success) return { code: 1, stdout: "", stderr: json ? JSON.stringify(result) + "\n" : result.issues.map(i => `${i.code}${i.path ? ` (${i.path})` : ""}: ${i.message}`).join("\n") + "\n" };
+  if (onboarding && !json) return {code:0, stdout:formatOnboarding(result, onboarding.terminal, !onboarding.streamed), stderr:""};
   const message = result.data.url ?? (result.data.project
     ? `Project ${result.data.integration?.kind === "react" ? "connection generated" : "ready"}: ${result.data.project.entry}${result.data.changed ? " (initialized)" : ""}.\nUse your running dev server, or start it with npm run dev. Then run npx flute open --url <origin printed by your app>.`
     : "Project command completed.");
@@ -56,8 +59,10 @@ function recipeOutput(result: RecipeCommandResult, json: boolean): CliResult {
   return { code: 0, stdout: (json ? JSON.stringify(result) : text) + "\n", stderr: !json && diagnostics ? diagnostics + "\n" : "" };
 }
 export async function runCli(argv: string[], environment: Environment, execute: Execute = executeProjectCommand, exporter: typeof executeVideoExport = executeVideoExport, recipes: typeof executeRecipeCommand = executeRecipeCommand, snapshotter:typeof executeSceneSnapshot=executeSceneSnapshot): Promise<CliResult> {
+  if (argv.length === 1 && ["--version", "-v"].includes(argv[0]))
+    return {code:0, stdout:(environment.terminal?.version ?? "development") + "\n", stderr:""};
   if (argv.length === 0 || (argv.length === 1 && ["--help", "-h", "help"].includes(argv[0])))
-    return { code: 0, stdout: usage, stderr: "" };
+    return { code: 0, stdout: environment.terminal?.interactive ? terminalWelcome(environment.terminal) + usage.split("\n").slice(2).join("\n") : usage, stderr: "" };
   const [command, ...args] = argv;
   if(command === "guide") {
     if(args.length>1 || (args.length===1 && args[0]!=="--json"))return {code:2,stdout:"",stderr:"Usage: flute guide [--json]\n"};
@@ -115,13 +120,15 @@ export async function runCli(argv: string[], environment: Environment, execute: 
   }
   const input = command === "init" ? { ...(flags.has("--adapter") ? {adapter:flags.get("--adapter")} : {}), ...(flags.has("--package") ? { packageSource: flags.get("--package") } : {}) }
     : command === "open" ? { url: flags.get("--url") ?? `http://127.0.0.1:${environment.port ?? "5173"}`, launch: !flags.has("--no-open") } : {};
+  const onboarding = command === "init" ? {terminal:environment.terminal, streamed:!json && !!environment.progress} : undefined;
+  if (onboarding?.streamed) environment.progress!(terminalWelcome(environment.terminal) + "Preparing your project…\n");
   try {
     const result = await execute(aliases[command as keyof typeof aliases], input, context);
-    if (!result.success || command !== "init" || !flags.has("--url")) return output(result, json);
+    if (!result.success || command !== "init" || !flags.has("--url")) return output(result, json, onboarding);
     const opened = await execute("open-preview", { url: flags.get("--url"), launch: !flags.has("--no-open") }, context);
-    if (opened.success) return output({ success: true, data: { ...result.data, ...opened.data } }, json);
+    if (opened.success) return output({ success: true, data: { ...result.data, ...opened.data } }, json, onboarding);
     const failure = output(opened, json);
-    return json ? failure : { ...failure, stdout: output(result, false).stdout };
+    return json ? failure : { ...failure, stdout: output(result, false, onboarding).stdout };
   } catch {
     return {code:1,stdout:"",stderr:"Project command failed unexpectedly. Your setup may be incomplete; run flute validate, correct the reported issue and retry.\n"};
   }

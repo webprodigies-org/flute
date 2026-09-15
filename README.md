@@ -8,9 +8,10 @@ Open source under the [MIT license](LICENSE). Runs locally, with your existing c
 
 **React DOM 18.2+ or 19**, with **Node 22.12+** for the CLI. The renderer is independent of your router and build tool. Setup has automatic connections for Next.js App/Pages Router and standard Vite projects; other React hosts use the same portable wrapper without changing frameworks.
 
-From your existing app's directory:
+From your existing app's directory, **create a separate Git branch before installing**. Flute adds integration and scene files to your codebase; a branch keeps those changes separate while you create and review your animations. Commit or stash any existing work first:
 
 ```sh
+git switch -c flute-scenes
 npm install @webprodigies/flute
 npx flute init
 npm run dev
