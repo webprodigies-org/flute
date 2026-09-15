@@ -79,14 +79,18 @@ test('scene cover fills every viewport and the bottom backdrop progressively blu
    return [650,760,940].map(y=>{const p=ctx.getImageData(24,y,48,4).data;const values=Array.from({length:p.length/4},(_,i)=>p[i*4]);return Math.max(...values)-Math.min(...values)});
   },'data:image/png;base64,'+shot.toString('base64'));
  };
- const blurred=await contrast();
- expect(blurred[0]).toBeGreaterThan(240);
- expect(blurred[1]).toBeLessThan(blurred[0]-30);
- expect(blurred[2]).toBeLessThan(blurred[1]-30);
- expect(blurred[2]).toBeLessThan(20);
+ // ResizeObserver layout and Chromium's backdrop compositor settle separately.
+ // Wait for the rendered result after rapid viewport changes; retain every pixel
+ // assertion so missing blur, flat blur and tint-only replacements still fail.
+ await expect(async()=>{
+  const blurred=await contrast();
+  expect(blurred[0]).toBeGreaterThan(240);
+  expect(blurred[1]).toBeLessThan(blurred[0]-30);
+  expect(blurred[2]).toBeLessThan(blurred[1]-30);
+  expect(blurred[2]).toBeLessThan(20);
+ }).toPass({timeout:7000});
  await page.addStyleTag({content:'.flute-bottom-blur i{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}'});
- const tintOnly=await contrast();
- expect(tintOnly[2]).toBeGreaterThan(150);
+ await expect.poll(async()=>(await contrast())[2]).toBeGreaterThan(150);
 });
 
 test('onboarding stays reachable on small screens and recovers a denied clipboard',async({page})=>{
